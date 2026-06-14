@@ -36,6 +36,8 @@ Current Figma-aligned screen set:
 
 6. `Profil` (`Profile`)  
    - Welcome/settings/about/logout structure.
+   - No real user accounts or authentication in the current MVP.
+   - Profile/settings data is mocked for now; logout is a placeholder action.
 
 7. `Windanlage melden` (`ReportWindTurbine`, optional in MVP)  
    - Report form (`Karte Plus`) with image upload, location, type, description, submit.
@@ -110,7 +112,7 @@ For each feature task:
 - Navigation shell and feature placeholders exist.
 - Data layer interfaces exist, but SQLite implementation is still scaffold-level.
 - SQL schema files are placeholders and need real table/query definitions.
-- Profile settings store is not implemented yet.
+- Profile UI currently uses mocked state; profile settings persistence and authentication are not implemented yet.
 
 Current schema mapping references:
 - favorites -> `composeApp/src/commonMain/sqldelight/app/data/local/db/Favorite.sq`
@@ -121,6 +123,7 @@ Current schema mapping references:
 ## Non-Goals (for now)
 - No backend dependency required for baseline feature development.
 - No cross-device sync yet.
+- No actual user account or authentication system yet.
 - No analytics/telemetry requirement yet.
 - No automated test implementation. Do not spend project time writing unit, integration, UI, or snapshot tests.
 

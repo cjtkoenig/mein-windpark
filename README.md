@@ -38,7 +38,10 @@ The current MVP direction follows the Figma screens and route model below.
 ### Profil (`Profile`)
 
 - Show profile/settings/about/logout structure.
-- Persist profile settings through a preferences/settings store (to be added).
+- Use mocked profile/settings data for now.
+- There are no real user accounts or authentication in the current MVP.
+- Treat logout as a placeholder action until account/auth behavior is introduced.
+- Persist profile settings through a preferences/settings store later if needed.
 
 ### Windanlage melden (`ReportWindTurbine`, optional in MVP)
 
@@ -85,7 +88,7 @@ Current schema mapping targets:
 - parks -> `composeApp/src/commonMain/sqldelight/app/data/local/db/WindPark.sq`
 - production/stats -> `composeApp/src/commonMain/sqldelight/app/data/local/db/Production.sq`
 
-There is no backend dependency, cross-device sync, or analytics requirement in the current baseline.
+There is no backend dependency, cross-device sync, analytics, user account, or authentication requirement in the current baseline.
 
 ## Project Structure
 
@@ -141,6 +144,7 @@ Shared reusable UI components to prefer in `commonMain`:
 - Data layer interfaces exist.
 - SQLite implementation is still scaffold-level.
 - SQL schema files are placeholders and need real table and query definitions.
+- Profile UI currently uses mocked state; profile settings persistence and authentication are not implemented yet.
 
 ## UI Implementation Order (Current Roadmap)
 

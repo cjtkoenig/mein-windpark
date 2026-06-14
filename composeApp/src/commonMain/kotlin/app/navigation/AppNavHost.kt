@@ -28,12 +28,14 @@ import app.feature.favorites.FavoritesScreen
 import app.feature.faq.FaqScreen
 import app.feature.map.MapScreen
 import app.feature.profile.ProfileScreen
+import app.feature.profile.ProfileViewModel
 import app.feature.start.StartScreen
 import app.feature.stats.StatsScreen
 
 @Composable
 fun AppNavHost() {
     var currentRoute: Route by remember { mutableStateOf(Route.Start) }
+    val profileViewModel = remember { ProfileViewModel() }
 
     Scaffold(
         bottomBar = {
@@ -74,7 +76,15 @@ fun AppNavHost() {
                 Route.Faq -> FaqScreen(
                     onBackClick = { currentRoute = Route.Map },
                 )
-                Route.Profile -> ProfileScreen()
+                Route.Profile -> ProfileScreen(
+                    onBackClick = { currentRoute = Route.Map },
+                    uiState = profileViewModel.uiState,
+                    onNotificationsChanged = profileViewModel::setNotificationsEnabled,
+                    onDarkModeChanged = profileViewModel::setDarkModeEnabled,
+                    onLanguageClick = profileViewModel::onLanguageClick,
+                    onPrivacyClick = profileViewModel::onPrivacyClick,
+                    onLogoutClick = profileViewModel::onLogoutClick,
+                )
                 is Route.Detail -> ParkDetailScreen(
                     parkId = route.parkId,
                     onBack = { currentRoute = Route.Map },
