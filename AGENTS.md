@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Purpose
-`Mein Windpark` is a Kotlin Multiplatform app (Android + iOS) that makes wind energy transparent for users in Germany.
+`windklar` is a Kotlin Multiplatform app (Android + iOS) that makes wind energy transparent for users in Germany.
 
 ## Project Context
 This project is part of a university seminar. The app is developed for the Umweltbundesamt as the seminar "customer".

@@ -1,6 +1,6 @@
-# Mein Windpark
+# windklar
 
-`Mein Windpark` is a Kotlin Multiplatform app for Android and iOS that makes wind energy more transparent for users in Germany.
+`windklar` is a Kotlin Multiplatform app for Android and iOS that makes wind energy more transparent for users in Germany.
 
 The app helps users discover nearby wind parks, search for specific parks, revisit recent parks, understand local production context for a wind park and its `Gemeinde`, and read practical answers to common questions and skeptical critiques about wind energy.
 

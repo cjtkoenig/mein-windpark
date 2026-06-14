@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		A2F0E4F8C651074DCC33CF11 /* Mein Windpark.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Mein Windpark.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A2F0E4F8C651074DCC33CF11 /* windklar.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = windklar.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -59,7 +59,7 @@
 		06E1733BBAB545F9E59F3FC6 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A2F0E4F8C651074DCC33CF11 /* Mein Windpark.app */,
+				A2F0E4F8C651074DCC33CF11 /* windklar.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -87,7 +87,7 @@
 			packageProductDependencies = (
 			);
 			productName = iosApp;
-			productReference = A2F0E4F8C651074DCC33CF11 /* Mein Windpark.app */;
+			productReference = A2F0E4F8C651074DCC33CF11 /* windklar.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */

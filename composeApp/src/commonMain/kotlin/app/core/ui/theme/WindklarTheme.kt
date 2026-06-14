@@ -7,7 +7,7 @@ import androidx.compose.runtime.Composable
 private val LightColors = lightColorScheme()
 
 @Composable
-fun MeinWindparkTheme(content: @Composable () -> Unit) {
+fun WindklarTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = LightColors,
         content = content,
