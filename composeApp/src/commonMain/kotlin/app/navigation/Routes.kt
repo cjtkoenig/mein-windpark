@@ -11,12 +11,20 @@ sealed interface Route {
         override val title: String = "Karte"
     }
 
-    data object Search : Route {
-        override val title: String = "Suche"
+    data object Stats : Route {
+        override val title: String = "Stats"
+    }
+
+    data object Favorites : Route {
+        override val title: String = "Favoriten"
     }
 
     data object Faq : Route {
         override val title: String = "FAQ"
+    }
+
+    data object Profile : Route {
+        override val title: String = "Profil"
     }
 
     data class Detail(val parkId: String) : Route {
@@ -26,6 +34,8 @@ sealed interface Route {
 
 val topLevelRoutes: List<Route> = listOf(
     Route.Map,
-    Route.Search,
+    Route.Stats,
+    Route.Favorites,
     Route.Faq,
+    Route.Profile,
 )
