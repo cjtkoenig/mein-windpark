@@ -2,34 +2,69 @@
 
 `Mein Windpark` is a Kotlin Multiplatform app for Android and iOS that makes wind energy more transparent for users in Germany.
 
-The app helps users discover nearby wind parks, search for specific parks, revisit recently opened parks, understand local production context for a wind park and its `Gemeinde`, and read practical answers to common questions and skeptical critiques about wind energy.
+The app helps users discover nearby wind parks, search for specific parks, revisit recent parks, understand local production context for a wind park and its `Gemeinde`, and read practical answers to common questions and skeptical critiques about wind energy.
 
 ## Product Scope
 
-The current MVP has three top-level pages plus a shared detail flow.
+The current MVP direction follows the Figma screens and route model below.
 
-### Map
+### Startseite (`Start`)
+
+- Full-screen hero entry with CTA.
+- No bottom navigation on this screen.
+
+### Karte (`Map`)
 
 - Display wind parks on a map.
-- Open a selected wind park detail page.
-- Mark wind parks as favorites.
+- Include search directly in the map flow (not as a bottom-nav tab).
+- Support filter chips, map actions, preview card/sheet behavior, and park detail entry.
+- Allow favoriting parks.
 
-### Search
+### Favoriten (`Favorites`)
 
-- Search for wind parks directly.
-- Keep a local history of recently opened wind parks.
-- Open a wind park detail page from search results or history.
+- Show saved parks with key park metadata.
+- Open park detail from favorites.
 
-### Park Detail / Production
+### FAQ (`Faq`)
+
+- Explain core wind-energy topics in practical language.
+- Support collapsed and expanded accordion states.
+
+### Stats (`Stats`)
+
+- Show municipality and production context with chart-based UI.
+- Implement charts as Compose/Canvas UI, not static exported images.
+
+### Profil (`Profile`)
+
+- Show profile/settings/about/logout structure.
+- Persist profile settings through a preferences/settings store (to be added).
+
+### Windanlage melden (`ReportWindTurbine`, optional in MVP)
+
+- Report form flow (`Karte Plus`) with image upload, location, type, description, and submit action.
+
+### Park Detail / Production (cross-flow)
 
 - Show production-related data for a selected wind park.
 - Connect the park view with relevant municipality (`Gemeinde`) context.
-- Be reachable from both the Map and Search pages.
+- Be reachable from map search/results, map preview, and favorites.
 
-### FAQ
+## Navigation Model
 
-- Answer core wind-energy questions in clear, practical language.
-- Address common skeptical critiques, for example concerns about birds and nature impact.
+Bottom navigation is owned by `AppNavHost` and should not be duplicated in feature screens.
+
+Current route model:
+
+- `Start`
+- `Map`
+- `Stats`
+- `Favorites`
+- `Faq`
+- `Profile`
+- `ReportWindTurbine` (only if report flow is in MVP)
+
+Search is part of the map flow (dedicated route launched from map search or modal/overlay on top of `Map`), not a bottom-nav item.
 
 ## Data Strategy
 
@@ -43,6 +78,13 @@ The app is local-first for now. Data is stored on the device with SQLite.
 UI -> ViewModel/UseCase -> Repository -> Local DB/DAO
 ```
 
+Current schema mapping targets:
+
+- favorites -> `composeApp/src/commonMain/sqldelight/app/data/local/db/Favorite.sq`
+- search history -> `composeApp/src/commonMain/sqldelight/app/data/local/db/SearchHistory.sq`
+- parks -> `composeApp/src/commonMain/sqldelight/app/data/local/db/WindPark.sq`
+- production/stats -> `composeApp/src/commonMain/sqldelight/app/data/local/db/Production.sq`
+
 There is no backend dependency, cross-device sync, or analytics requirement in the current baseline.
 
 ## Project Structure
@@ -54,11 +96,12 @@ This is a Kotlin Multiplatform project targeting Android and iOS.
 
 Shared app code lives under `composeApp/src/commonMain/kotlin/app`:
 
-- `navigation/`: routes and shared app navigation host.
+- `navigation/`: routes and app navigation host.
 - `feature/map/`: map screen, state, and view model.
-- `feature/search/`: search screen, state, history behavior, and view model.
+- `feature/search/`: search logic/state used from the map flow.
 - `feature/detail/`: wind park detail and production context flow.
 - `feature/faq/`: FAQ screen, state, and content.
+- `feature/favorites/`, `feature/stats/`, `feature/profile/`, `feature/report/`: remaining MVP feature packages.
 - `core/`: shared UI primitives, models, and utilities.
 - `data/`: repository interfaces, local entities/DAO contracts, and seed import contracts.
 
@@ -75,8 +118,22 @@ Platform-specific code should stay thin:
 - Prefer shared code in `commonMain` unless a platform API requires otherwise.
 - Keep navigation behavior explicit, including back behavior.
 - Add or adjust repository contracts when data behavior changes.
-- Add tests proportional to the risk and blast radius of a change.
+- Do not add or update tests in this seminar project.
 - Replace temporary placeholders progressively with production UI and state.
+- Do not import Figma-generated React/Tailwind code. Use Figma as layout reference and implement directly in Compose.
+
+Shared reusable UI components to prefer in `commonMain`:
+
+- `WindKlarTopBar`
+- `WindKlarBottomNav`
+- `GradientHeaderScaffold`
+- `PrimaryButton`
+- `SecondaryButton`
+- `MetricChip`
+- `InfoCard`
+- `FaqAccordionItem`
+- `ParkListItem`
+- `MapPreviewCard`
 
 ## Current Baseline
 
@@ -84,6 +141,16 @@ Platform-specific code should stay thin:
 - Data layer interfaces exist.
 - SQLite implementation is still scaffold-level.
 - SQL schema files are placeholders and need real table and query definitions.
+
+## UI Implementation Order (Current Roadmap)
+
+1. Startseite (`Start`)
+2. Karte (`Map`) with integrated Search and bottom-nav shell
+3. Windanlage melden (`Karte Plus` / `ReportWindTurbine`)
+4. Favoriten (`Favorites`)
+5. FAQ (`Faq`) with collapsed/expanded states
+6. Stats (`Stats`)
+7. Profil (`Profile`)
 
 ## Build And Run
 
@@ -113,4 +180,4 @@ A vertical feature slice is considered done when:
 - State and actions are wired through ViewModel and repository boundaries.
 - Required local persistence is implemented, not only declared through interfaces.
 - Navigation behavior is explicit.
-- Non-obvious behavior is documented in focused comments or tests.
+- Non-obvious behavior is documented in focused code comments.

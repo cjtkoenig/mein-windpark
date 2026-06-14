@@ -16,27 +16,34 @@ import app.feature.detail.ParkDetailScreen
 import app.feature.faq.FaqScreen
 import app.feature.map.MapScreen
 import app.feature.search.SearchScreen
+import app.feature.start.StartScreen
 
 @Composable
 fun AppNavHost() {
-    var currentRoute: Route by remember { mutableStateOf(Route.Map) }
+    var currentRoute: Route by remember { mutableStateOf(Route.Start) }
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                topLevelRoutes.forEach { route ->
-                    NavigationBarItem(
-                        selected = currentRoute.isSameTopLevelRoute(route),
-                        onClick = { currentRoute = route },
-                        icon = { Text(route.navIconLabel()) },
-                        label = { Text(route.title) },
-                    )
+            if (currentRoute.isTopLevelRoute()) {
+                NavigationBar {
+                    topLevelRoutes.forEach { route ->
+                        NavigationBarItem(
+                            selected = currentRoute.isSameTopLevelRoute(route),
+                            onClick = { currentRoute = route },
+                            icon = { Text(route.navIconLabel()) },
+                            label = { Text(route.title) },
+                        )
+                    }
                 }
             }
         },
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
             when (val route = currentRoute) {
+                Route.Start -> StartScreen(
+                    onGetStartedClick = { currentRoute = Route.Map },
+                )
+
                 Route.Map -> MapScreen(
                     onParkSelected = { parkId -> currentRoute = Route.Detail(parkId) },
                 )
@@ -58,7 +65,11 @@ fun AppNavHost() {
 private fun Route.isSameTopLevelRoute(other: Route): Boolean =
     this::class == other::class
 
+private fun Route.isTopLevelRoute(): Boolean =
+    this is Route.Map || this is Route.Search || this is Route.Faq
+
 private fun Route.navIconLabel(): String = when (this) {
+    Route.Start -> ""
     Route.Map -> "K"
     Route.Search -> "S"
     Route.Faq -> "?"

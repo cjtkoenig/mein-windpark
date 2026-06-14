@@ -15,24 +15,37 @@ Primary user value:
 - Read a practical FAQ that addresses common wind-energy questions and skepticism.
 
 ## Product Scope (Current MVP Direction)
-The app has 3 top-level pages plus a detail flow:
+Current Figma-aligned screen set:
 
-1. `Map` page  
-   - Show wind parks on a map.  
-   - Allow opening a park detail.  
-   - Allow favoriting a park.
+1. `Startseite` (`Start`)  
+   - Full-screen hero with CTA.
+   - No bottom navigation.
 
-2. `Search` page  
-   - Search for wind parks.  
-   - Keep local search history.  
-   - Allow opening park detail directly.
+2. `Karte` (`Map`)  
+   - Map with integrated search, filter chips, map actions, and park preview/sheet patterns.
+   - Allows opening park detail and favoriting parks.
 
-3. `FAQ` page  
-   - Explain core wind-energy topics and common critiques (example: impact on birds).
+3. `Favoriten` (`Favorites`)  
+   - Saved parks list with metadata and detail entry.
 
-Cross-page:
-- `Park Detail / Production` view for a selected wind park and related municipality data.
-- Reachable from both Map and Search.
+4. `FAQ` (`Faq`)  
+   - Accordion-based content in collapsed/expanded states.
+
+5. `Stats` (`Stats`)  
+   - Municipality and production context with chart-based UI.
+
+6. `Profil` (`Profile`)  
+   - Welcome/settings/about/logout structure.
+
+7. `Windanlage melden` (`ReportWindTurbine`, optional in MVP)  
+   - Report form (`Karte Plus`) with image upload, location, type, description, submit.
+
+Cross-flow:
+- `Park Detail / Production` for a selected wind park and related municipality data.
+- Reachable from map search/results, map preview, and favorites.
+
+Important product decision:
+- `Search` is part of `Map` flow (route launched from map search or modal/overlay on top of map), not a bottom-nav tab.
 
 ## Data Strategy
 - Local-first storage for now: SQLite on device.
@@ -48,7 +61,7 @@ Cross-page:
 
 Inside `composeApp/src/commonMain/kotlin/app`:
 - `navigation/`: routes + app nav host.
-- `feature/map/`, `feature/search/`, `feature/detail/`, `feature/faq/`: feature UI/state/viewmodel.
+- `feature/map/`, `feature/search/`, `feature/detail/`, `feature/faq/`, `feature/favorites/`, `feature/stats/`, `feature/profile/`, `feature/report/`: feature UI/state/viewmodel.
 - `core/`: shared UI primitives, models, utilities.
 - `data/`: repository interfaces, local entities/DAO contracts, seed import contracts.
 
@@ -61,6 +74,29 @@ Platform-specific code must stay thin:
 - Keep one package per feature.
 - Prefer shared code in `commonMain` unless platform API forces otherwise.
 - Keep architecture explicit and boring: avoid hidden side effects.
+- Bottom nav is owned by `AppNavHost`; do not duplicate bottom-nav ownership inside feature screens.
+- Route model should be:
+  - `Start`
+  - `Map`
+  - `Stats`
+  - `Favorites`
+  - `Faq`
+  - `Profile`
+  - `ReportWindTurbine` (only if report flow belongs in MVP)
+- Do not import Figma-generated React/Tailwind code; use Figma only as layout reference and implement in Compose.
+- Chart screens must be real Compose UI (`Compose`/`Canvas`), not static images.
+
+Shared UI building blocks to prefer in `commonMain`:
+- `WindKlarTopBar`
+- `WindKlarBottomNav`
+- `GradientHeaderScaffold`
+- `PrimaryButton`
+- `SecondaryButton`
+- `MetricChip`
+- `InfoCard`
+- `FaqAccordionItem`
+- `ParkListItem`
+- `MapPreviewCard`
 
 ## Quality Bar for New Tasks
 For each feature task:
@@ -74,12 +110,28 @@ For each feature task:
 - Navigation shell and feature placeholders exist.
 - Data layer interfaces exist, but SQLite implementation is still scaffold-level.
 - SQL schema files are placeholders and need real table/query definitions.
+- Profile settings store is not implemented yet.
+
+Current schema mapping references:
+- favorites -> `composeApp/src/commonMain/sqldelight/app/data/local/db/Favorite.sq`
+- search history -> `composeApp/src/commonMain/sqldelight/app/data/local/db/SearchHistory.sq`
+- parks -> `composeApp/src/commonMain/sqldelight/app/data/local/db/WindPark.sq`
+- production/stats -> `composeApp/src/commonMain/sqldelight/app/data/local/db/Production.sq`
 
 ## Non-Goals (for now)
 - No backend dependency required for baseline feature development.
 - No cross-device sync yet.
 - No analytics/telemetry requirement yet.
 - No automated test implementation. Do not spend project time writing unit, integration, UI, or snapshot tests.
+
+## UI Build Order (Current Roadmap)
+1. implement `Startseite`
+2. implement `Karte` with Search and bottom nav shell
+3. implement report form `Karte Plus` (`Windanlage melden`)
+4. implement `Favoriten`
+5. implement `FAQ` with collapsed/expanded state
+6. implement `Stats`
+7. implement `Profil`
 
 ## Definition of Done (per vertical slice)
 A feature slice is done when:

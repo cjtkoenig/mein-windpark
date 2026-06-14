@@ -3,6 +3,10 @@ package app.navigation
 sealed interface Route {
     val title: String
 
+    data object Start : Route {
+        override val title: String = "Start"
+    }
+
     data object Map : Route {
         override val title: String = "Karte"
     }
