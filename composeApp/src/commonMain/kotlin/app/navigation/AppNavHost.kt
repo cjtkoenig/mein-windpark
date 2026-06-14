@@ -71,7 +71,9 @@ fun AppNavHost() {
                     onParkSelected = { parkId -> currentRoute = Route.Detail(parkId) },
                 )
 
-                Route.Faq -> FaqScreen()
+                Route.Faq -> FaqScreen(
+                    onBackClick = { currentRoute = Route.Map },
+                )
                 Route.Profile -> ProfileScreen()
                 is Route.Detail -> ParkDetailScreen(
                     parkId = route.parkId,
