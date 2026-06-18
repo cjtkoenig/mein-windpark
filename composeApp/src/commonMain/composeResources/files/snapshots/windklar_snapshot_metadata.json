@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "snapshotMetadata": {
+    "snapshotId": "2026-06-18-mvp",
+    "sourceName": "UBA/MaStR Snapshot",
+    "sourceUrl": "https://www.marktstammdatenregister.de/MaStR/Datendownload",
+    "attribution": "Datenquelle: Marktstammdatenregister (UBA-Aufbereitung)",
+    "mastrExportDate": "2025-02-10",
+    "processedAt": "2026-06-18T00:00:00Z",
+    "pipelineVersion": "2.0.0",
+    "checksumSha256": "f0fe085afb9e44cf956a1d625c84217b4d888d48ea542f418f252aaf1879df8b",
+    "limitations": [
+      "Nur Anlagen in Deutschland enthalten.",
+      "Berechnungen beruhen auf standardisierten Volllaststunden-Annahmen."
+    ]
+  }
+}
