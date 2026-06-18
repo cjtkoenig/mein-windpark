@@ -28,6 +28,7 @@ class ParkDetailViewModel(
             val park = repository.getWindPark(parkId)
             val turbines = repository.getWindTurbinesForPark(parkId)
             val metrics = repository.getMetricsForPark(parkId)
+            val assumptions = repository.getSnapshotAssumptions()
             val isFav = repository.isFavorite(parkId)
             val attribution = repository.getSnapshotAttribution()
             
@@ -36,6 +37,7 @@ class ParkDetailViewModel(
                 park = park,
                 turbines = turbines,
                 metrics = metrics,
+                assumptions = assumptions,
                 isFavorite = isFav,
                 attribution = attribution
             )

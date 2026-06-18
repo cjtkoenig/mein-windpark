@@ -44,7 +44,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.core.model.Metric
+import app.core.model.SnapshotAssumption
 import app.core.model.WindTurbine
+import app.core.ui.components.formatDataQuality
+import app.core.ui.components.qualityColors
 
 private val ScreenBackground = Color(0xFFF8FAF7)
 private val PrimaryGreen = Color(0xFF2D5A2D)
@@ -171,12 +174,13 @@ fun ParkDetailScreen(
             SummaryCard(
                 turbineCount = park.turbineCount,
                 installedCapacityKw = park.installedCapacityKw,
-                sourceName = park.sourceName,
                 dataQuality = park.dataQuality
             )
 
             // Citizen Impact Dashboard
             CitizenImpactDashboard(metrics = uiState.metrics)
+
+            CalculationAssumptionsCard(assumptions = uiState.assumptions)
 
             // Individual Turbines List
             TurbinesSection(turbines = uiState.turbines)
@@ -193,9 +197,9 @@ fun ParkDetailScreen(
 private fun SummaryCard(
     turbineCount: Int,
     installedCapacityKw: Long?,
-    sourceName: String,
     dataQuality: String
 ) {
+    val quality = qualityColors(dataQuality)
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -226,17 +230,16 @@ private fun SummaryCard(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     shape = RoundedCornerShape(4.dp),
-                    color = PaleGreen
+                    color = quality.container
                 ) {
                     Text(
                         text = "Stammdaten: ${formatDataQuality(dataQuality)}",
-                        color = PrimaryGreen,
+                        color = quality.content,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                     )
                 }
-                Text("Quelle: $sourceName", color = MutedGreen, fontSize = 11.sp)
             }
         }
     }
@@ -276,15 +279,15 @@ private fun CitizenImpactDashboard(metrics: List<Metric>) {
                 label = "Jahresproduktion",
                 value = prodVal,
                 note = prodMetric?.calculationNote,
-                quality = prodMetric?.dataQuality ?: "estimated"
+                quality = prodMetric?.dataQuality ?: "missing"
             )
 
             ImpactRow(
                 icon = Icons.Outlined.Eco,
-                label = "Vermeidbare CO2-Emissionen",
+                label = "Vermiedene CO2-Emissionen",
                 value = co2Val,
                 note = co2Metric?.calculationNote,
-                quality = co2Metric?.dataQuality ?: "estimated"
+                quality = co2Metric?.dataQuality ?: "missing"
             )
 
             ImpactRow(
@@ -292,15 +295,16 @@ private fun CitizenImpactDashboard(metrics: List<Metric>) {
                 label = "Versorgte Haushalte",
                 value = houseVal,
                 note = houseMetric?.calculationNote,
-                quality = houseMetric?.dataQuality ?: "estimated"
+                quality = houseMetric?.dataQuality ?: "missing"
             )
 
             ImpactRow(
                 icon = Icons.Outlined.MonetizationOn,
                 label = "Kommunale Beteiligung (§6 EEG)",
                 value = muniVal,
-                note = "Geschätzte Beteiligung von ca. 0,2 ct/kWh der Jahresproduktion. Achtung: Keine bestätigte Auszahlung.",
-                quality = muniMetric?.dataQuality ?: "estimated"
+                note = muniMetric?.calculationNote
+                    ?: "Geschätzte mögliche kommunale Beteiligung nach §6 EEG. Grundlage: 0,2 ct/kWh und geschätzte Jahresproduktion. Keine bestätigte Auszahlung.",
+                quality = muniMetric?.dataQuality ?: "missing"
             )
         }
     }
@@ -314,6 +318,7 @@ private fun ImpactRow(
     note: String?,
     quality: String
 ) {
+    val qualityColor = qualityColors(quality)
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -342,11 +347,11 @@ private fun ImpactRow(
                 Text(label, color = DarkGreen, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 Surface(
                     shape = RoundedCornerShape(4.dp),
-                    color = if (quality == "official") Color(0xFFC8E6C9) else Color(0xFFFFECB3)
+                    color = qualityColor.container
                 ) {
                     Text(
                         text = formatDataQuality(quality).uppercase(),
-                        color = if (quality == "official") Color(0xFF2D5A2D) else Color(0xFFB78103),
+                        color = qualityColor.content,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -363,6 +368,79 @@ private fun ImpactRow(
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun CalculationAssumptionsCard(assumptions: List<SnapshotAssumption>) {
+    val orderedAssumptionIds = listOf(
+        "full_load_hours",
+        "emission_factor_kg_per_kwh",
+        "household_consumption_kwh",
+        "municipal_benefit_eur_per_kwh",
+    )
+    val visibleAssumptions = orderedAssumptionIds.mapNotNull { id ->
+        assumptions.firstOrNull { it.id == id }
+    }
+
+    if (visibleAssumptions.isEmpty()) return
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White,
+        shadowElevation = 8.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "Welche Annahmen stecken dahinter?",
+                color = DarkGreen,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+            Text(
+                text = "Diese Werte erklären, wie WindKlar die geschätzten Wirkungswerte berechnet.",
+                color = MutedGreen,
+                fontSize = 12.sp,
+                lineHeight = 17.sp
+            )
+
+            visibleAssumptions.forEach { assumption ->
+                AssumptionRow(assumption = assumption)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AssumptionRow(assumption: SnapshotAssumption) {
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            Text(
+                text = assumption.label,
+                color = DarkGreen,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = "${formatAssumptionValue(assumption.value)} ${assumption.unit}",
+                color = PrimaryGreen,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.End,
+                modifier = Modifier.padding(start = 12.dp)
+            )
         }
     }
 }
@@ -451,12 +529,32 @@ private fun TurbineCard(turbine: WindTurbine) {
                     Text(diamStr, color = DarkGreen, fontSize = 13.sp)
                 }
             }
+
+            val qualityColor = qualityColors(turbine.dataQuality)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = qualityColor.container
+                ) {
+                    Text(
+                        text = "Stammdaten: ${formatDataQuality(turbine.dataQuality)}",
+                        color = qualityColor.content,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
 private fun DataSourceAttributionCard(attribution: String) {
+    val normalizedAttribution = attribution.removePrefix("Quelle:").trim().ifBlank {
+        "Marktstammdatenregister der Bundesnetzagentur"
+    }
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -482,7 +580,7 @@ private fun DataSourceAttributionCard(attribution: String) {
                     fontSize = 12.sp
                 )
                 Text(
-                    text = "Berechnete Werte beruhen auf typischen Durchschnittsannahmen. Regionale Unterschiede (wie tatsächliche Windgeschwindigkeiten) können zu Abweichungen führen. Quelle: $attribution.",
+                    text = "Berechnete Werte beruhen auf typischen Durchschnittsannahmen. Regionale Unterschiede können zu Abweichungen führen. Quelle: $normalizedAttribution.",
                     color = Color(0xFF5D4037),
                     fontSize = 11.sp,
                     lineHeight = 15.sp,
@@ -503,17 +601,16 @@ private fun formatNumber(number: Int): String {
     return number.toString().reversed().chunked(3).joinToString(".").reversed()
 }
 
+private fun formatAssumptionValue(value: Double): String {
+    val roundedInt = value.toInt()
+    return if (value == roundedInt.toDouble()) {
+        formatNumber(roundedInt)
+    } else {
+        value.toString().replace(".", ",")
+    }
+}
+
 private fun formatTurbineCount(count: Int): String {
     val unit = if (count == 1) "Windrad" else "Windräder"
     return "$count $unit"
-}
-
-private fun formatDataQuality(quality: String): String = when (quality.lowercase()) {
-    "official" -> "Offiziell"
-    "measured" -> "Gemessen"
-    "derived" -> "Abgeleitet"
-    "estimated" -> "Geschätzt"
-    "simulated" -> "Simuliert"
-    "missing" -> "Fehlend"
-    else -> quality
 }

@@ -3,6 +3,7 @@ package app.feature.detail
 import app.core.model.WindPark
 import app.core.model.WindTurbine
 import app.core.model.Metric
+import app.core.model.SnapshotAssumption
 
 data class ParkDetailUiState(
     val parkId: String,
@@ -10,7 +11,7 @@ data class ParkDetailUiState(
     val park: WindPark? = null,
     val turbines: List<WindTurbine> = emptyList(),
     val metrics: List<Metric> = emptyList(),
+    val assumptions: List<SnapshotAssumption> = emptyList(),
     val isFavorite: Boolean = false,
     val attribution: String = "",
 )
-
