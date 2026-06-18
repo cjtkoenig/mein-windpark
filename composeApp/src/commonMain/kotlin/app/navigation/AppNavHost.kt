@@ -152,6 +152,7 @@ fun AppNavHost(database: AppDatabase) {
 
     val repository = remember(database) { SqlDelightWindParkRepository(database) }
     var currentRoute: Route by remember { mutableStateOf(Route.Start) }
+    var detailBackRoute: Route by remember { mutableStateOf(Route.Map) }
 
     val mapViewModel = remember(repository) { MapViewModel(repository) }
     val favoritesViewModel = remember(repository) { FavoritesViewModel(repository) }
@@ -183,7 +184,10 @@ fun AppNavHost(database: AppDatabase) {
 
                 Route.Map -> MapScreen(
                     viewModel = mapViewModel,
-                    onParkSelected = { parkId -> currentRoute = Route.Detail(parkId) },
+                    onParkSelected = { parkId ->
+                        detailBackRoute = Route.Map
+                        currentRoute = Route.Detail(parkId)
+                    },
                 )
 
                 Route.Stats -> StatsScreen(
@@ -194,7 +198,10 @@ fun AppNavHost(database: AppDatabase) {
                 Route.Favorites -> FavoritesScreen(
                     viewModel = favoritesViewModel,
                     onBackClick = { currentRoute = Route.Map },
-                    onParkSelected = { parkId -> currentRoute = Route.Detail(parkId) },
+                    onParkSelected = { parkId ->
+                        detailBackRoute = Route.Favorites
+                        currentRoute = Route.Detail(parkId)
+                    },
                 )
 
                 Route.Faq -> FaqScreen(
@@ -210,7 +217,7 @@ fun AppNavHost(database: AppDatabase) {
                     val detailViewModel = remember(route.parkId) { ParkDetailViewModel(route.parkId, repository) }
                     ParkDetailScreen(
                         viewModel = detailViewModel,
-                        onBack = { currentRoute = Route.Map },
+                        onBack = { currentRoute = detailBackRoute },
                     )
                 }
             }
@@ -237,4 +244,3 @@ private fun Route.navIcon(selected: Boolean): ImageVector = when (this) {
     Route.Start -> Icons.Outlined.Map
     is Route.Detail -> Icons.Outlined.Map
 }
-
