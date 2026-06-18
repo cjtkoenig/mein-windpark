@@ -2,17 +2,25 @@ package app.data.repository
 
 import app.core.model.WindPark
 import app.core.model.Metric
+import app.core.model.SnapshotAssumption
 import app.core.model.WindTurbine
 import app.data.local.dao.*
 import app.data.local.entity.WindParkEntity
 import app.data.local.db.AppDatabase
+import app.data.snapshot.SnapshotAssumptionDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 class SqlDelightWindParkRepository(
     private val database: AppDatabase,
+    private val json: Json = Json {
+        ignoreUnknownKeys = true
+        explicitNulls = false
+    },
 ) : WindParkRepository {
     private val windParkDao: WindParkDao = SqlDelightWindParkDao(database)
     private val windTurbineDao: WindTurbineDao = SqlDelightWindTurbineDao(database)
@@ -155,6 +163,24 @@ class SqlDelightWindParkRepository(
     override suspend fun getSnapshotLimitations(): List<String> = withContext(Dispatchers.IO) {
         val raw = snapshotMetadataDao.getLatest()?.limitations ?: ""
         if (raw.isBlank()) emptyList() else raw.split("\n")
+    }
+
+    override suspend fun getSnapshotAssumptions(): List<SnapshotAssumption> = withContext(Dispatchers.IO) {
+        val raw = snapshotMetadataDao.getLatest()?.assumptions_json ?: return@withContext emptyList()
+        runCatching {
+            json.decodeFromString<List<SnapshotAssumptionDto>>(raw).map { assumption ->
+                SnapshotAssumption(
+                    id = assumption.id,
+                    label = assumption.label,
+                    value = assumption.value,
+                    unit = assumption.unit,
+                    sourceName = assumption.sourceName,
+                    sourceUrl = assumption.sourceUrl,
+                    sourceDate = assumption.sourceDate,
+                    calculationNote = assumption.calculationNote,
+                )
+            }
+        }.getOrDefault(emptyList())
     }
 
     private fun WindParkEntity.toDomain(isFavorite: Boolean) = WindPark(

@@ -2,6 +2,7 @@ package app.data.repository
 
 import app.core.model.WindPark
 import app.core.model.Metric
+import app.core.model.SnapshotAssumption
 import app.core.model.WindTurbine
 
 interface WindParkRepository {
@@ -40,5 +41,5 @@ interface WindParkRepository {
     
     suspend fun getSnapshotAttribution(): String
     suspend fun getSnapshotLimitations(): List<String>
+    suspend fun getSnapshotAssumptions(): List<SnapshotAssumption>
 }
-
