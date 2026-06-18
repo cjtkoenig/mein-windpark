@@ -12,16 +12,21 @@ import zipfile
 from collections import defaultdict
 from copy import deepcopy
 from datetime import datetime, timezone
+from math import cos, radians, sqrt
 from pathlib import Path
 from typing import Any, Iterable
 
-PIPELINE_VERSION = "0.1.0"
+PIPELINE_VERSION = "0.2.0"
 SOURCE_NAME = "Marktstammdatenregister der Bundesnetzagentur"
 SOURCE_URL = "https://www.marktstammdatenregister.de/MaStR/Datendownload"
 ATTRIBUTION = "Quelle: Marktstammdatenregister der Bundesnetzagentur"
+BKG_VG250_SOURCE_NAME = "BKG VG250 Verwaltungsgebiete"
+BKG_VG250_SOURCE_URL = "https://gdz.bkg.bund.de/index.php/default/digitale-geodaten/verwaltungsgebiete.html"
 VALID_QUALITIES = {"official", "measured", "derived", "estimated", "simulated", "missing"}
 GERMANY_LAT_RANGE = (47.0, 55.2)
 GERMANY_LON_RANGE = (5.5, 15.5)
+BOUNDARY_TOLERANCE_KM = 1.0
+SPATIAL_INDEX_DEGREES = 0.25
 
 DEFAULT_ASSUMPTIONS = {
     "full_load_hours": {
@@ -80,6 +85,11 @@ FIELD_ALIASES = {
     "rotorDiameterM": ["rotordiameterm", "rotordurchmesser"],
 }
 
+MUNICIPALITY_FIELD_ALIASES = {
+    "id": ["ags", "gemeindeid", "gemeindeschluessel", "municipalityid", "municipality_id", "rs"],
+    "name": ["gen", "gemeinde", "gemeindename", "name", "municipality", "municipalityname"],
+}
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="WindKlar MaStR snapshot pipeline")
@@ -93,6 +103,14 @@ def main(argv: list[str] | None = None) -> int:
     normalize_parser.add_argument("--input", required=True)
     normalize_parser.add_argument("--output", default="data/intermediate/wind_turbines.jsonl")
 
+    clean_parser = subparsers.add_parser("clean", help="Clean turbines against BKG VG250 municipality geometry")
+    clean_parser.add_argument("--input", required=True)
+    clean_parser.add_argument("--municipalities", required=True)
+    clean_parser.add_argument("--output", default="data/intermediate/wind_turbines_clean.jsonl")
+    clean_parser.add_argument("--report", default=f"data/snapshots/windklar_cleaning_report_{today()}.json")
+    clean_parser.add_argument("--metrics-output")
+    clean_parser.add_argument("--boundary-tolerance-km", type=float, default=BOUNDARY_TOLERANCE_KM)
+
     aggregate_parser = subparsers.add_parser("aggregate", help="Build derived wind park aggregates")
     aggregate_parser.add_argument("--input", required=True)
     aggregate_parser.add_argument("--output", default="data/intermediate/wind_parks.json")
@@ -102,6 +120,7 @@ def main(argv: list[str] | None = None) -> int:
     calculate_parser.add_argument("--parks", required=True)
     calculate_parser.add_argument("--output", required=True)
     calculate_parser.add_argument("--mastr-export-date", default=today())
+    calculate_parser.add_argument("--cleaning-report")
 
     validate_parser = subparsers.add_parser("validate", help="Validate an app snapshot")
     validate_parser.add_argument("snapshot")
@@ -114,10 +133,20 @@ def main(argv: list[str] | None = None) -> int:
         return fetch(args.source_url, Path(args.output_dir))
     if args.command == "normalize":
         return normalize(Path(args.input), Path(args.output))
+    if args.command == "clean":
+        return clean(
+            Path(args.input),
+            Path(args.municipalities),
+            Path(args.output),
+            Path(args.report),
+            Path(args.metrics_output) if args.metrics_output else None,
+            args.boundary_tolerance_km,
+        )
     if args.command == "aggregate":
         return aggregate(Path(args.input), Path(args.output))
     if args.command == "calculate":
-        return calculate(Path(args.turbines), Path(args.parks), Path(args.output), args.mastr_export_date)
+        cleaning_report = Path(args.cleaning_report) if args.cleaning_report else None
+        return calculate(Path(args.turbines), Path(args.parks), Path(args.output), args.mastr_export_date, cleaning_report)
     if args.command == "validate":
         return validate(Path(args.snapshot))
     if args.command == "smoke":
@@ -152,6 +181,125 @@ def normalize(input_path: Path, output_path: Path) -> int:
     return 0 if count > 0 else 2
 
 
+def clean(
+    input_path: Path,
+    municipalities_path: Path,
+    output_path: Path,
+    report_path: Path,
+    metrics_output_path: Path | None,
+    boundary_tolerance_km: float,
+) -> int:
+    municipalities = load_municipalities(municipalities_path)
+    if not municipalities:
+        print(f"ERROR: No municipality polygons found in {municipalities_path}", file=sys.stderr)
+        return 2
+    spatial_index = build_spatial_index(municipalities)
+
+    seen_by_id: dict[str, dict[str, Any]] = {}
+    kept: list[dict[str, Any]] = []
+    excluded: list[dict[str, Any]] = []
+    warnings: list[dict[str, Any]] = []
+    duplicate_bit_equal_count = 0
+
+    input_count = 0
+    for turbine in read_jsonl(input_path):
+        input_count += 1
+        reason = basic_turbine_error(turbine)
+        if reason:
+            excluded.append(exclusion(turbine, reason))
+            continue
+
+        turbine_id = turbine["id"]
+        previous = seen_by_id.get(turbine_id)
+        if previous is not None:
+            if canonical_json(previous) == canonical_json(turbine):
+                duplicate_bit_equal_count += 1
+            else:
+                excluded.append(exclusion(turbine, "duplicate_turbine_id_conflict"))
+            continue
+        seen_by_id[turbine_id] = turbine
+
+        municipality_id = normalize_municipality_id(turbine.get("municipalityId"))
+        if municipality_id is None:
+            excluded.append(exclusion(turbine, "invalid_municipality_id"))
+            continue
+        turbine["municipalityId"] = municipality_id
+
+        lat = turbine["latitude"]
+        lon = turbine["longitude"]
+        candidates = municipalities_containing_point(municipalities, spatial_index, lon, lat)
+        matched = first_matching_municipality(candidates, municipality_id)
+        if matched is not None:
+            kept.append(turbine)
+            continue
+
+        detected = candidates[0] if len(candidates) == 1 else None
+        expected = municipalities.get(municipality_id)
+        if not candidates and expected is not None:
+            distance_km = distance_to_geometry_km(lon, lat, expected["geometry"])
+            if distance_km <= boundary_tolerance_km:
+                warnings.append(
+                    warning(
+                        "municipality_boundary_ambiguous",
+                        turbine,
+                        expected,
+                        distanceKm=round(distance_km, 3),
+                    )
+                )
+                kept.append(turbine)
+                continue
+
+        if detected is not None:
+            excluded.append(exclusion(turbine, "municipality_coordinate_mismatch", detected))
+        else:
+            excluded.append(exclusion(turbine, "coordinate_outside_municipality_reference"))
+
+    warnings.extend(mixed_municipality_wind_park_warnings(kept))
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8", newline="\n") as handle:
+        for turbine in sorted(kept, key=lambda item: item["id"]):
+            handle.write(json.dumps(turbine, sort_keys=True, ensure_ascii=True) + "\n")
+
+    report = {
+        "summary": {
+            "inputCount": input_count,
+            "keptCount": len(kept),
+            "excludedCount": len(excluded),
+            "boundaryAmbiguousCount": count_by_code(warnings, "municipality_boundary_ambiguous"),
+            "duplicateBitEqualCount": duplicate_bit_equal_count,
+            "duplicateConflictCount": count_by_code(excluded, "duplicate_turbine_id_conflict"),
+            "mixedMunicipalityWindParkCount": count_by_code(warnings, "mixed_municipality_wind_park"),
+            "boundaryToleranceKm": boundary_tolerance_km,
+        },
+        "excluded": sorted(excluded, key=lambda item: (item["reasonCode"], item.get("turbineId") or "")),
+        "warnings": sorted(warnings, key=lambda item: (item["reasonCode"], item.get("turbineId") or item.get("windParkKey") or "")),
+        "sources": {
+            "mastr": {
+                "sourceName": SOURCE_NAME,
+                "sourceUrl": SOURCE_URL,
+            },
+            "municipalities": {
+                "sourceName": BKG_VG250_SOURCE_NAME,
+                "sourceUrl": BKG_VG250_SOURCE_URL,
+                "path": str(municipalities_path),
+            },
+            "pipelineVersion": PIPELINE_VERSION,
+            "processedAt": now_iso(),
+        },
+    }
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(report_path, report)
+    metrics_path = metrics_output_path or report_path.with_name(f"{report_path.stem}_metrics.json")
+    metrics_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(metrics_path, cleaning_metrics(report))
+
+    print(f"Wrote {len(kept)} cleaned wind turbines to {output_path}")
+    print(f"Wrote cleaning report with {len(excluded)} exclusions to {report_path}")
+    print(f"Wrote cleaning metrics to {metrics_path}")
+    return 0 if kept else 2
+
+
 def aggregate(input_path: Path, output_path: Path) -> int:
     turbines = list(read_jsonl(input_path))
     parks_by_key: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -163,8 +311,7 @@ def aggregate(input_path: Path, output_path: Path) -> int:
         lat = sum(t["latitude"] for t in group) / len(group)
         lon = sum(t["longitude"] for t in group) / len(group)
         capacity = sum(t.get("installedCapacityKw") or 0 for t in group) or None
-        municipality_id = first_present(group, "municipalityId") or "unknown"
-        municipality_name = first_present(group, "municipalityName") or "Unbekannte Gemeinde"
+        municipality_id, municipality_name = representative_municipality(group)
         wind_park_name = first_present(group, "windParkName") or f"Windpark {municipality_name}"
         park_id = first_present(group, "windParkId")
         if not park_id:
@@ -194,7 +341,13 @@ def aggregate(input_path: Path, output_path: Path) -> int:
     return 0 if parks else 2
 
 
-def calculate(turbines_path: Path, parks_path: Path, output_path: Path, mastr_export_date: str) -> int:
+def calculate(
+    turbines_path: Path,
+    parks_path: Path,
+    output_path: Path,
+    mastr_export_date: str,
+    cleaning_report_path: Path | None = None,
+) -> int:
     turbines = list(read_jsonl(turbines_path))
     parks = json.loads(parks_path.read_text(encoding="utf-8"))
     park_by_id = {park["id"]: park for park in parks}
@@ -202,7 +355,7 @@ def calculate(turbines_path: Path, parks_path: Path, output_path: Path, mastr_ex
         if not turbine.get("windParkId") or turbine["windParkId"] not in park_by_id:
             turbine["windParkId"] = find_park_for_turbine(turbine, parks)
 
-    snapshot = build_snapshot(turbines, parks, mastr_export_date)
+    snapshot = build_snapshot(turbines, parks, mastr_export_date, cleaning_report=read_optional_cleaning_report(cleaning_report_path))
     output_path.parent.mkdir(parents=True, exist_ok=True)
     write_json(output_path, snapshot)
     print(f"Wrote app snapshot to {output_path}")
@@ -292,12 +445,23 @@ def build_snapshot(
     parks: list[dict[str, Any]],
     mastr_export_date: str,
     snapshot_id: str | None = None,
+    cleaning_report: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     assumptions = [
         {"id": key, **value}
         for key, value in sorted(DEFAULT_ASSUMPTIONS.items())
     ]
     metrics = build_metrics(parks)
+    limitations = [
+        "Die Gruppierung von Windparks beruht auf einer algorithmischen Zuordnung bei der Vorverarbeitung.",
+        "Die berechneten Kennzahlen zur Klimawirkung sind Schätzwerte des MVP und keine offiziellen Messdaten.",
+    ]
+    excluded_count = cleaning_excluded_count(cleaning_report)
+    if excluded_count:
+        limitations.append(
+            f"{excluded_count} Windanlagen wurden wegen nicht plausibler Gemeinde-Koordinaten-Zuordnung aus dem MVP-Snapshot ausgeschlossen."
+        )
+
     snapshot = {
         "schemaVersion": "1",
         "snapshotMetadata": {
@@ -309,10 +473,7 @@ def build_snapshot(
             "processedAt": now_iso(),
             "pipelineVersion": PIPELINE_VERSION,
             "checksumSha256": "",
-            "limitations": [
-                "Die Gruppierung von Windparks beruht auf einer algorithmischen Zuordnung bei der Vorverarbeitung.",
-                "Die berechneten Kennzahlen zur Klimawirkung sind Schätzwerte des MVP und keine offiziellen Messdaten.",
-            ],
+            "limitations": limitations,
         },
         "assumptions": assumptions,
         "windTurbines": sorted((snapshot_turbine(turbine) for turbine in turbines), key=lambda item: item["id"]),
@@ -440,6 +601,382 @@ def normalize_row(row: dict[str, Any]) -> dict[str, Any] | None:
         "sourceUpdatedAt": today(),
         "dataQuality": "official",
     }
+
+
+def load_municipalities(path: Path) -> dict[str, dict[str, Any]]:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    features = data.get("features", []) if isinstance(data, dict) else []
+    municipalities: dict[str, dict[str, Any]] = {}
+    for feature in features:
+        if not isinstance(feature, dict):
+            continue
+        geometry = feature.get("geometry")
+        if not geometry or geometry.get("type") not in {"Polygon", "MultiPolygon"}:
+            continue
+        properties = feature.get("properties") or {}
+        normalized = {clean_key(str(key)): value for key, value in properties.items()}
+        municipality_id = normalize_municipality_id(pick_municipality_field(normalized, "id"))
+        if municipality_id is None:
+            continue
+        municipality = {
+            "id": municipality_id,
+            "name": as_text(pick_municipality_field(normalized, "name")) or municipality_id,
+            "geometry": geometry,
+            "bbox": geometry_bbox(geometry),
+        }
+        municipalities.setdefault(municipality_id, municipality)
+    return municipalities
+
+
+def basic_turbine_error(turbine: dict[str, Any]) -> str | None:
+    for key in ["id", "latitude", "longitude", "municipalityId", "municipalityName"]:
+        if turbine.get(key) in (None, ""):
+            return f"missing_{key}"
+    lat = parse_float(turbine.get("latitude"))
+    lon = parse_float(turbine.get("longitude"))
+    if lat is None or lon is None:
+        return "invalid_coordinates"
+    turbine["latitude"] = lat
+    turbine["longitude"] = lon
+    if not in_germany(lat, lon):
+        return "coordinates_outside_germany_bounds"
+    if normalize_municipality_id(turbine.get("municipalityId")) is None:
+        return "invalid_municipality_id"
+    return None
+
+
+def normalize_municipality_id(value: Any) -> str | None:
+    text = as_text(value)
+    if text is None:
+        return None
+    digits = "".join(char for char in text if char.isdigit())
+    if len(digits) == 8:
+        return digits
+    if 1 <= len(digits) < 8:
+        return digits.zfill(8)
+    if len(digits) > 8:
+        return digits[:8]
+    return None
+
+
+def pick_municipality_field(row: dict[str, Any], canonical: str) -> Any:
+    for alias in MUNICIPALITY_FIELD_ALIASES[canonical]:
+        if alias in row and row[alias] not in (None, ""):
+            return row[alias]
+    return None
+
+
+def municipalities_containing_point(
+    municipalities: dict[str, dict[str, Any]],
+    spatial_index: dict[tuple[int, int], set[str]],
+    lon: float,
+    lat: float,
+) -> list[dict[str, Any]]:
+    matches = []
+    for municipality_id in spatial_index.get(spatial_cell(lon, lat), set()):
+        municipality = municipalities[municipality_id]
+        if bbox_contains_point(municipality["bbox"], lon, lat) and point_in_geometry(lon, lat, municipality["geometry"]):
+            matches.append(municipality)
+    return matches
+
+
+def build_spatial_index(municipalities: dict[str, dict[str, Any]]) -> dict[tuple[int, int], set[str]]:
+    index: dict[tuple[int, int], set[str]] = defaultdict(set)
+    for municipality_id, municipality in municipalities.items():
+        min_lon, min_lat, max_lon, max_lat = municipality["bbox"]
+        min_lon_cell, min_lat_cell = spatial_cell(min_lon, min_lat)
+        max_lon_cell, max_lat_cell = spatial_cell(max_lon, max_lat)
+        for lon_cell in range(min_lon_cell, max_lon_cell + 1):
+            for lat_cell in range(min_lat_cell, max_lat_cell + 1):
+                index[(lon_cell, lat_cell)].add(municipality_id)
+    return index
+
+
+def spatial_cell(lon: float, lat: float) -> tuple[int, int]:
+    return int(lon / SPATIAL_INDEX_DEGREES), int(lat / SPATIAL_INDEX_DEGREES)
+
+
+def first_matching_municipality(candidates: list[dict[str, Any]], municipality_id: str) -> dict[str, Any] | None:
+    for candidate in candidates:
+        if candidate["id"] == municipality_id:
+            return candidate
+    return None
+
+
+def exclusion(
+    turbine: dict[str, Any],
+    reason_code: str,
+    detected_municipality: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    return {
+        "reasonCode": reason_code,
+        "turbineId": turbine.get("id"),
+        "originalMunicipalityId": turbine.get("municipalityId"),
+        "originalMunicipalityName": turbine.get("municipalityName"),
+        "detectedMunicipalityId": detected_municipality.get("id") if detected_municipality else None,
+        "detectedMunicipalityName": detected_municipality.get("name") if detected_municipality else None,
+        "latitude": turbine.get("latitude"),
+        "longitude": turbine.get("longitude"),
+    }
+
+
+def warning(
+    reason_code: str,
+    turbine: dict[str, Any],
+    municipality: dict[str, Any] | None = None,
+    **extra: Any,
+) -> dict[str, Any]:
+    result = {
+        "reasonCode": reason_code,
+        "turbineId": turbine.get("id"),
+        "municipalityId": turbine.get("municipalityId"),
+        "municipalityName": turbine.get("municipalityName"),
+        "referenceMunicipalityId": municipality.get("id") if municipality else None,
+        "referenceMunicipalityName": municipality.get("name") if municipality else None,
+        "latitude": turbine.get("latitude"),
+        "longitude": turbine.get("longitude"),
+    }
+    result.update(extra)
+    return result
+
+
+def mixed_municipality_wind_park_warnings(turbines: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    warnings = []
+    groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for turbine in turbines:
+        groups[park_group_key(turbine)].append(turbine)
+    for key, group in sorted(groups.items()):
+        municipality_ids = {turbine.get("municipalityId") for turbine in group if turbine.get("municipalityId")}
+        if len(municipality_ids) <= 1:
+            continue
+        representative_id, representative_name = representative_municipality(group)
+        warnings.append(
+            {
+                "reasonCode": "mixed_municipality_wind_park",
+                "windParkKey": key,
+                "windParkId": first_present(group, "windParkId"),
+                "windParkName": first_present(group, "windParkName"),
+                "representativeMunicipalityId": representative_id,
+                "representativeMunicipalityName": representative_name,
+                "municipalityIds": sorted(municipality_ids),
+                "turbineCount": len(group),
+            }
+        )
+    return warnings
+
+
+def representative_municipality(group: list[dict[str, Any]]) -> tuple[str, str]:
+    by_municipality: dict[str, dict[str, Any]] = {}
+    for turbine in group:
+        municipality_id = turbine.get("municipalityId") or "unknown"
+        entry = by_municipality.setdefault(
+            municipality_id,
+            {
+                "id": municipality_id,
+                "name": turbine.get("municipalityName") or "Unbekannte Gemeinde",
+                "count": 0,
+                "capacity": 0,
+            },
+        )
+        entry["count"] += 1
+        entry["capacity"] += turbine.get("installedCapacityKw") or 0
+    representative = sorted(
+        by_municipality.values(),
+        key=lambda item: (-item["count"], -item["capacity"], item["id"]),
+    )[0]
+    return representative["id"], representative["name"]
+
+
+def geometry_bbox(geometry: dict[str, Any]) -> tuple[float, float, float, float]:
+    points = list(iter_geometry_points(geometry))
+    lons = [point[0] for point in points]
+    lats = [point[1] for point in points]
+    return min(lons), min(lats), max(lons), max(lats)
+
+
+def iter_geometry_points(geometry: dict[str, Any]) -> Iterable[tuple[float, float]]:
+    for polygon in geometry_polygons(geometry):
+        for ring in polygon:
+            for coordinate in ring:
+                if len(coordinate) >= 2:
+                    yield float(coordinate[0]), float(coordinate[1])
+
+
+def bbox_contains_point(bbox: tuple[float, float, float, float], lon: float, lat: float) -> bool:
+    min_lon, min_lat, max_lon, max_lat = bbox
+    return min_lon <= lon <= max_lon and min_lat <= lat <= max_lat
+
+
+def point_in_geometry(lon: float, lat: float, geometry: dict[str, Any]) -> bool:
+    for polygon in geometry_polygons(geometry):
+        if point_in_polygon(lon, lat, polygon):
+            return True
+    return False
+
+
+def point_in_polygon(lon: float, lat: float, polygon: list[list[list[float]]]) -> bool:
+    if not polygon:
+        return False
+    if not point_in_ring(lon, lat, polygon[0]):
+        return False
+    for hole in polygon[1:]:
+        if point_in_ring(lon, lat, hole):
+            return False
+    return True
+
+
+def point_in_ring(lon: float, lat: float, ring: list[list[float]]) -> bool:
+    inside = False
+    count = len(ring)
+    if count < 3:
+        return False
+    previous_lon, previous_lat = ring[-1][:2]
+    for coordinate in ring:
+        current_lon, current_lat = coordinate[:2]
+        if point_on_segment(lon, lat, previous_lon, previous_lat, current_lon, current_lat):
+            return True
+        crosses = (current_lat > lat) != (previous_lat > lat)
+        if crosses:
+            intersection_lon = (previous_lon - current_lon) * (lat - current_lat) / (previous_lat - current_lat) + current_lon
+            if lon < intersection_lon:
+                inside = not inside
+        previous_lon, previous_lat = current_lon, current_lat
+    return inside
+
+
+def point_on_segment(
+    lon: float,
+    lat: float,
+    lon_a: float,
+    lat_a: float,
+    lon_b: float,
+    lat_b: float,
+    epsilon: float = 1e-10,
+) -> bool:
+    cross = (lat - lat_a) * (lon_b - lon_a) - (lon - lon_a) * (lat_b - lat_a)
+    if abs(cross) > epsilon:
+        return False
+    return min(lon_a, lon_b) - epsilon <= lon <= max(lon_a, lon_b) + epsilon and min(lat_a, lat_b) - epsilon <= lat <= max(lat_a, lat_b) + epsilon
+
+
+def distance_to_geometry_km(lon: float, lat: float, geometry: dict[str, Any]) -> float:
+    if point_in_geometry(lon, lat, geometry):
+        return 0.0
+    distances = []
+    for polygon in geometry_polygons(geometry):
+        for ring in polygon:
+            distances.append(distance_to_ring_km(lon, lat, ring))
+    return min(distances) if distances else float("inf")
+
+
+def distance_to_ring_km(lon: float, lat: float, ring: list[list[float]]) -> float:
+    if len(ring) < 2:
+        return float("inf")
+    distances = []
+    previous_lon, previous_lat = ring[-1][:2]
+    for coordinate in ring:
+        current_lon, current_lat = coordinate[:2]
+        distances.append(point_to_segment_distance_km(lon, lat, previous_lon, previous_lat, current_lon, current_lat))
+        previous_lon, previous_lat = current_lon, current_lat
+    return min(distances)
+
+
+def point_to_segment_distance_km(
+    lon: float,
+    lat: float,
+    lon_a: float,
+    lat_a: float,
+    lon_b: float,
+    lat_b: float,
+) -> float:
+    ref_lat = radians((lat + lat_a + lat_b) / 3)
+    km_per_degree_lat = 111.32
+    km_per_degree_lon = 111.32 * cos(ref_lat)
+    px = lon * km_per_degree_lon
+    py = lat * km_per_degree_lat
+    ax = lon_a * km_per_degree_lon
+    ay = lat_a * km_per_degree_lat
+    bx = lon_b * km_per_degree_lon
+    by = lat_b * km_per_degree_lat
+    dx = bx - ax
+    dy = by - ay
+    if dx == 0 and dy == 0:
+        return sqrt((px - ax) ** 2 + (py - ay) ** 2)
+    t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)
+    t = max(0.0, min(1.0, t))
+    closest_x = ax + t * dx
+    closest_y = ay + t * dy
+    return sqrt((px - closest_x) ** 2 + (py - closest_y) ** 2)
+
+
+def geometry_polygons(geometry: dict[str, Any]) -> list[list[list[list[float]]]]:
+    geometry_type = geometry.get("type")
+    coordinates = geometry.get("coordinates") or []
+    if geometry_type == "Polygon":
+        return [coordinates]
+    if geometry_type == "MultiPolygon":
+        return coordinates
+    return []
+
+
+def count_by_code(items: list[dict[str, Any]], reason_code: str) -> int:
+    return sum(1 for item in items if item.get("reasonCode") == reason_code)
+
+
+def cleaning_metrics(report: dict[str, Any]) -> dict[str, Any]:
+    summary = report.get("summary") or {}
+    input_count = summary.get("inputCount") or 0
+    kept_count = summary.get("keptCount") or 0
+    excluded_count = summary.get("excludedCount") or 0
+    warnings = report.get("warnings") or []
+    excluded = report.get("excluded") or []
+    return {
+        "inputCount": input_count,
+        "keptCount": kept_count,
+        "excludedCount": excluded_count,
+        "keptRate": ratio(kept_count, input_count),
+        "excludedRate": ratio(excluded_count, input_count),
+        "boundaryAmbiguousCount": summary.get("boundaryAmbiguousCount") or 0,
+        "duplicateBitEqualCount": summary.get("duplicateBitEqualCount") or 0,
+        "duplicateConflictCount": summary.get("duplicateConflictCount") or 0,
+        "mixedMunicipalityWindParkCount": summary.get("mixedMunicipalityWindParkCount") or 0,
+        "boundaryToleranceKm": summary.get("boundaryToleranceKm"),
+        "exclusionReasonCounts": reason_counts(excluded),
+        "warningReasonCounts": reason_counts(warnings),
+        "sources": report.get("sources") or {},
+    }
+
+
+def ratio(value: int | float, total: int | float) -> float:
+    if not total:
+        return 0.0
+    return round(value / total, 6)
+
+
+def reason_counts(items: list[dict[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = defaultdict(int)
+    for item in items:
+        reason = item.get("reasonCode") or "unknown"
+        counts[reason] += 1
+    return dict(sorted(counts.items()))
+
+
+def canonical_json(value: dict[str, Any]) -> str:
+    return json.dumps(value, sort_keys=True, ensure_ascii=True, separators=(",", ":"))
+
+
+def read_optional_cleaning_report(path: Path | None) -> dict[str, Any] | None:
+    if path is None:
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def cleaning_excluded_count(report: dict[str, Any] | None) -> int:
+    if not report:
+        return 0
+    summary = report.get("summary") or {}
+    count = summary.get("excludedCount")
+    return count if isinstance(count, int) else 0
 
 
 def validate_snapshot(snapshot: dict[str, Any]) -> list[str]:
