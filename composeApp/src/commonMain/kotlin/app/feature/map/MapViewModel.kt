@@ -124,6 +124,8 @@ class MapViewModel(private val repository: WindParkRepository) : ViewModel() {
         suggestedValue: String?,
         latitude: Double,
         longitude: Double,
+        windParkId: String?,
+        municipalityId: String?,
         onSuccess: () -> Unit
     ) {
         viewModelScope.launch {
@@ -133,8 +135,8 @@ class MapViewModel(private val repository: WindParkRepository) : ViewModel() {
                 description = description,
                 status = "ready_for_review",
                 windTurbineId = null,
-                windParkId = null,
-                municipalityId = null,
+                windParkId = windParkId,
+                municipalityId = municipalityId,
                 latitude = latitude,
                 longitude = longitude,
                 suggestedValue = suggestedValue,

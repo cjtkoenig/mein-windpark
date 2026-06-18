@@ -253,9 +253,13 @@ fun MapScreen(
 
     // Report Dialog
     if (showReportDialog) {
+        val reportPark = uiState.selectedPark
+        val reportLatitude = reportPark?.latitude ?: uiState.mapCenterLat
+        val reportLongitude = reportPark?.longitude ?: uiState.mapCenterLon
+
         ReportWindTurbineDialog(
-            currentLatitude = uiState.mapCenterLat,
-            currentLongitude = uiState.mapCenterLon,
+            currentLatitude = reportLatitude,
+            currentLongitude = reportLongitude,
             onDismiss = { showReportDialog = false },
             onSubmit = { category, confidence, description, suggestedValue ->
                 viewModel.submitDataHint(
@@ -263,8 +267,10 @@ fun MapScreen(
                     confidence = confidence,
                     description = description,
                     suggestedValue = suggestedValue,
-                    latitude = uiState.mapCenterLat,
-                    longitude = uiState.mapCenterLon,
+                    latitude = reportLatitude,
+                    longitude = reportLongitude,
+                    windParkId = reportPark?.id,
+                    municipalityId = reportPark?.municipalityId,
                     onSuccess = {
                         showReportDialog = false
                         scope.launch {
