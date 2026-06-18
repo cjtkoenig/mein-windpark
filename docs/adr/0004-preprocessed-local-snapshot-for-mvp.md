@@ -1,0 +1,3 @@
+# Preprocessed local snapshot for MVP data
+
+WindKlar will use a preprocessed local MaStR/Open-MaStR JSON snapshot for the MVP instead of fetching turbine master data from a live API inside the app. The snapshot contains both individual wind installations and precomputed wind park aggregates, so the app imports display-ready groups into SQLDelight instead of performing Germany-wide grouping at runtime. This keeps the dataset source-backed while reducing demo risk from network failures, rate limits, slow imports, and runtime mapping complexity; later releases can add refresh or delta-import behavior.
