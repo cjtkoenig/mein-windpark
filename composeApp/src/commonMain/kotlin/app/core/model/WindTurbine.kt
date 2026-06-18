@@ -1,18 +1,22 @@
-package app.data.local.entity
+package app.core.model
 
-data class WindParkEntity(
+data class WindTurbine(
     val id: String,
+    val windParkId: String,
     val name: String,
     val municipalityId: String,
     val municipalityName: String,
     val latitude: Double,
     val longitude: Double,
-    val turbineCount: Int?,
     val installedCapacityKw: Long?,
-    val groupingMethod: String,
+    val status: String?,
+    val turbineType: String?,
+    val manufacturer: String?,
+    val model: String?,
+    val hubHeightM: Double?,
+    val rotorDiameterM: Double?,
     val sourceName: String,
     val sourceUrl: String,
     val sourceUpdatedAt: String,
     val dataQuality: String,
 )
-

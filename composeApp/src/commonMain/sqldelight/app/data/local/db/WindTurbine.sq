@@ -25,6 +25,23 @@ FROM wind_turbine
 WHERE wind_park_id = ?
 ORDER BY name;
 
+selectAllWindTurbines:
+SELECT *
+FROM wind_turbine;
+
+selectParkStatuses:
+SELECT 
+    wind_park_id,
+    CASE 
+        WHEN SUM(CASE WHEN status LIKE '%bau%' OR status LIKE '%errichtung%' THEN 1 ELSE 0 END) > 0 THEN 'Im Bau'
+        WHEN SUM(CASE WHEN status LIKE '%betrieb%' OR status LIKE '%aktiv%' THEN 1 ELSE 0 END) > 0 THEN 'Aktiv'
+        ELSE 'Geplant'
+    END AS park_status
+FROM wind_turbine
+GROUP BY wind_park_id;
+
+
+
 upsertWindTurbine:
 INSERT OR REPLACE INTO wind_turbine(
     id,

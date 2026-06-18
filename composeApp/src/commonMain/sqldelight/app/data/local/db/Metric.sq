@@ -20,6 +20,10 @@ WHERE subject_type = ?
   AND subject_id = ?
 ORDER BY metric_type;
 
+selectAllMetrics:
+SELECT *
+FROM metric;
+
 upsertMetric:
 INSERT OR REPLACE INTO metric(
     id,
@@ -36,3 +40,4 @@ INSERT OR REPLACE INTO metric(
     calculation_note
 )
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
