@@ -147,31 +147,29 @@ fun ReportWindTurbineDialog(
                 // Confidence
                 Column {
                     Text(
-                        text = "Zuversichtlichkeit *",
+                        text = "Hinweissicherheit *",
                         color = DarkGreen,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         confidences.forEach { (key, value) ->
                             val isSelected = selectedConfidence == key
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(CircleShape)
-                                    .background(
-                                        color = if (isSelected) PrimaryGreen else PaleGreen,
-                                    )
-                                    .clickable { selectedConfidence = key }
-                                    .padding(vertical = 8.dp),
-                                contentAlignment = Alignment.Center
+                            Surface(
+                                onClick = { selectedConfidence = key },
+                                shape = CircleShape,
+                                color = if (isSelected) PrimaryGreen else PaleGreen,
                             ) {
                                 Text(
                                     text = value,
                                     color = if (isSelected) Color.White else PrimaryGreen,
                                     fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp)
                                 )
                             }
                         }

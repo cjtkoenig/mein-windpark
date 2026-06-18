@@ -57,7 +57,6 @@ private val ContactCardEndGreen = Color(0xFFC8E6C9)
 fun FaqScreen(
     modifier: Modifier = Modifier,
     uiState: FaqUiState = FaqUiState(),
-    onContactClick: () -> Unit = {},
 ) {
     var expandedQuestionId by rememberSaveable { mutableStateOf(uiState.initialExpandedQuestionId) }
 
@@ -89,8 +88,7 @@ fun FaqScreen(
                 )
             }
 
-            FaqContactCard(
-                onContactClick = onContactClick,
+            FaqLimitsCard(
                 modifier = Modifier.padding(top = 12.dp),
             )
 
@@ -216,8 +214,7 @@ private fun FaqIconBubble(
 }
 
 @Composable
-private fun FaqContactCard(
-    onContactClick: () -> Unit,
+private fun FaqLimitsCard(
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -238,7 +235,7 @@ private fun FaqContactCard(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Weitere Fragen?",
+                text = "Grenzen der App",
                 color = DarkGreen,
                 fontSize = 18.sp,
                 lineHeight = 27.sp,
@@ -247,30 +244,13 @@ private fun FaqContactCard(
             )
 
             Text(
-                text = "Kontaktieren Sie uns für weitere Informationen über Windenergie in Deutschland",
+                text = "WindKlar erklärt öffentliche Stammdaten und geschätzte Wirkungswerte. Aktuelle Betriebsursachen, bestätigte Auszahlungen oder offizielle Korrekturen kann der MVP nicht nachweisen.",
                 modifier = Modifier.padding(top = 8.dp),
                 color = MutedGreen,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 textAlign = TextAlign.Center,
             )
-
-            Surface(
-                onClick = onContactClick,
-                modifier = Modifier.padding(top = 16.dp),
-                shape = CircleShape,
-                color = PrimaryGreen,
-            ) {
-                Text(
-                    text = "Kontakt aufnehmen",
-                    modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp),
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                )
-            }
         }
     }
 }

@@ -75,11 +75,11 @@ fun ProfileScreen(
         ) {
             AboutCard(uiState = uiState)
 
+            DataSourceCard(uiState = uiState)
+
             InfoSettingsCard(
                 onPrivacyClick = { showPrivacyDialog = true }
             )
-
-            DataSourceCard(uiState = uiState)
 
             Spacer(modifier = Modifier.height(16.dp))
         }
