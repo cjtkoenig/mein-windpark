@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Bolt
@@ -61,7 +60,6 @@ private val HeartRed = Color(0xFFE53935)
 fun FavoritesScreen(
 
     viewModel: FavoritesViewModel,
-    onBackClick: () -> Unit,
     onParkSelected: (parkId: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -77,7 +75,7 @@ fun FavoritesScreen(
             .background(ScreenBackground)
             .verticalScroll(rememberScrollState()),
     ) {
-        FavoritesHeader(onBackClick = onBackClick)
+        FavoritesHeader()
 
         Column(
             modifier = Modifier
@@ -145,9 +143,7 @@ fun FavoritesScreen(
 
 
 @Composable
-private fun FavoritesHeader(
-    onBackClick: () -> Unit,
-) {
+private fun FavoritesHeader() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -162,21 +158,6 @@ private fun FavoritesHeader(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .background(Color.White.copy(alpha = 0.2f), CircleShape)
-                .clickable(onClick = onBackClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Zurück",
-                tint = Color.White,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-
         Text(
             text = "Favoriten",
             color = Color.White,

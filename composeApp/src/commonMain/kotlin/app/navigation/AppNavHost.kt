@@ -192,25 +192,20 @@ fun AppNavHost(database: AppDatabase) {
 
                 Route.Stats -> StatsScreen(
                     viewModel = statsViewModel,
-                    onBackClick = { currentRoute = Route.Map },
                 )
 
                 Route.Favorites -> FavoritesScreen(
                     viewModel = favoritesViewModel,
-                    onBackClick = { currentRoute = Route.Map },
                     onParkSelected = { parkId ->
                         detailBackRoute = Route.Favorites
                         currentRoute = Route.Detail(parkId)
                     },
                 )
 
-                Route.Faq -> FaqScreen(
-                    onBackClick = { currentRoute = Route.Map },
-                )
+                Route.Faq -> FaqScreen()
                 
                 Route.Profile -> ProfileScreen(
                     viewModel = profileViewModel,
-                    onBackClick = { currentRoute = Route.Map },
                 )
                 
                 is Route.Detail -> {

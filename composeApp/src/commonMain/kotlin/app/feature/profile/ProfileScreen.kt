@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material.icons.outlined.Security
@@ -55,7 +54,6 @@ private val PaleGreen = Color(0xFFE8F5E9)
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel,
-    onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState = viewModel.uiState
@@ -67,7 +65,7 @@ fun ProfileScreen(
             .background(ScreenBackground)
             .verticalScroll(rememberScrollState()),
     ) {
-        ProfileHeader(onBackClick = onBackClick)
+        ProfileHeader()
 
         Column(
             modifier = Modifier
@@ -111,9 +109,7 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileHeader(
-    onBackClick: () -> Unit,
-) {
+private fun ProfileHeader() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -130,21 +126,6 @@ private fun ProfileHeader(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(Color.White.copy(alpha = 0.2f), CircleShape)
-                    .clickable(onClick = onBackClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Zurück",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-
             Text(
                 text = "Info & Einstellungen",
                 color = Color.White,

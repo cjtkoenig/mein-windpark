@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.Air
 import androidx.compose.material.icons.outlined.Business
 import androidx.compose.material.icons.outlined.Eco
@@ -56,7 +55,6 @@ private val ContactCardEndGreen = Color(0xFFC8E6C9)
 
 @Composable
 fun FaqScreen(
-    onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     uiState: FaqUiState = FaqUiState(),
     onContactClick: () -> Unit = {},
@@ -69,7 +67,7 @@ fun FaqScreen(
             .background(ScreenBackground)
             .verticalScroll(rememberScrollState()),
     ) {
-        FaqHeader(onBackClick = onBackClick)
+        FaqHeader()
 
         Column(
             modifier = Modifier
@@ -102,9 +100,7 @@ fun FaqScreen(
 }
 
 @Composable
-private fun FaqHeader(
-    onBackClick: () -> Unit,
-) {
+private fun FaqHeader() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -119,21 +115,6 @@ private fun FaqHeader(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .background(Color.White.copy(alpha = 0.2f), CircleShape)
-                .clickable(onClick = onBackClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Zurück",
-                tint = Color.White,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-
         Text(
             text = "Häufige Fragen",
             color = Color.White,

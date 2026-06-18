@@ -2,9 +2,7 @@ package app.feature.stats
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -18,11 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.Air
 import androidx.compose.material.icons.outlined.Bolt
@@ -56,7 +52,6 @@ private val ChartGridGreen = Color(0xFFD8ECD9)
 @Composable
 fun StatsScreen(
     viewModel: StatsViewModel,
-    onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState = viewModel.uiState
@@ -69,7 +64,6 @@ fun StatsScreen(
     ) {
         StatsHeader(
             metrics = uiState.metrics,
-            onBackClick = onBackClick,
         )
 
         Column(
@@ -156,7 +150,6 @@ fun StatsScreen(
 @Composable
 private fun StatsHeader(
     metrics: List<StatsMetric>,
-    onBackClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -174,21 +167,6 @@ private fun StatsHeader(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(Color.White.copy(alpha = 0.2f), CircleShape)
-                    .clickable(onClick = onBackClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Zurück",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-
             Text(
                 text = "Statistiken",
                 color = Color.White,
