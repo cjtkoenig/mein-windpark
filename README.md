@@ -1,193 +1,140 @@
 # windklar
 
-`windklar` is a Kotlin Multiplatform app for Android and iOS that makes wind energy more transparent for users in Germany.
+`windklar` is a Kotlin Multiplatform app for Android and iOS that makes local wind energy easier to understand for people in Germany.
 
-The app helps users discover nearby wind parks, search for specific parks, revisit recent parks, understand local production context for a wind park and its `Gemeinde`, and read practical answers to common questions and skeptical critiques about wind energy.
+WindKlar helps users discover wind parks, inspect source-backed wind installation data, understand production and municipality context, revisit parks, and create local data-quality hints when public data appears incomplete or incorrect.
 
-## Product Documentation
+The app is built for a university seminar with the Umweltbundesamt as seminar customer. The MVP should be coherent, demonstrable, factual and clear about uncertainty.
 
-- [WindKlar PRD](docs/product/WindKlar_PRD.md)
-- [Domain Context](CONTEXT.md)
-- [Architecture Decisions](docs/adr)
+## Documentation
+- [WindKlar PRD](docs/product/WindKlar_PRD.md): product scope, MVP decisions, roadmap and definition of done.
+- [Domain Context](CONTEXT.md): project language and glossary.
+- [Architecture Decisions](docs/adr): recorded product and technical decisions.
+- [Agent Instructions](AGENTS.md): concise implementation rules for coding agents.
 
-## Product Scope
+## Product Snapshot
+- `Windanlage` is the atomic MaStR/Open-MaStR-backed source-data and coordinate unit.
+- `Windpark` is the primary citizen-facing unit for map, search, favorites, detail and municipality context.
+- MVP runtime data is local-first via SQLDelight.
+- Baseline data should come from a Germany-wide preprocessed JSON snapshot, not live API calls.
+- Production, CO2 savings, household equivalents and municipal participation need source, timestamp, data-quality and calculation metadata.
+- Search is part of the map flow, not bottom navigation.
+- Favorites and recently viewed wind parks are local state.
+- `Profile` is `Info & Einstellungen`, not an account area.
+- `ReportWindTurbine` is a local `Datenhinweis` flow, not an official correction channel.
 
-The current MVP direction follows the Figma screens and route model below.
+## Main Flows
+- `Start` -> `Map`.
+- Browse wind parks or clusters on the map.
+- Search by park, place, municipality or available identifiers inside the map flow.
+- Open a park preview and continue to `Detail(parkId)`.
+- View impact metrics and data-quality labels.
+- Save and revisit wind parks.
+- Read FAQ content about wind energy, sources, assumptions and limits.
+- Use the app without granting location permission.
 
-### Startseite (`Start`)
-
-- Full-screen hero entry with CTA.
-- No bottom navigation on this screen.
-
-### Karte (`Map`)
-
-- Display wind parks on a map.
-- Include search directly in the map flow (not as a bottom-nav tab).
-- Support filter chips, map actions, preview card/sheet behavior, and park detail entry.
-- Allow favoriting parks.
-
-### Favoriten (`Favorites`)
-
-- Show saved parks with key park metadata.
-- Open park detail from favorites.
-
-### FAQ (`Faq`)
-
-- Explain core wind-energy topics in practical language.
-- Support collapsed and expanded accordion states.
-
-### Stats (`Stats`)
-
-- Show municipality and production context with chart-based UI.
-- Implement charts as Compose/Canvas UI, not static exported images.
-
-### Profil (`Profile`)
-
-- Show profile/settings/about/logout structure.
-- Use mocked profile/settings data for now.
-- There are no real user accounts or authentication in the current MVP.
-- Treat logout as a placeholder action until account/auth behavior is introduced.
-- Persist profile settings through a preferences/settings store later if needed.
-
-### Windanlage melden (`ReportWindTurbine`, optional in MVP)
-
-- Report form flow (`Karte Plus`) with image upload, location, type, description, and submit action.
-
-### Park Detail / Production (cross-flow)
-
-- Show production-related data for a selected wind park.
-- Connect the park view with relevant municipality (`Gemeinde`) context.
-- Be reachable from map search/results, map preview, and favorites.
-
-## Navigation Model
-
-Bottom navigation is owned by `AppNavHost` and should not be duplicated in feature screens.
-
-Current route model:
-
+## Navigation
+Current routes:
 - `Start`
 - `Map`
 - `Stats`
 - `Favorites`
 - `Faq`
 - `Profile`
-- `ReportWindTurbine` (only if report flow is in MVP)
+- `Detail(parkId)`
 
-Search is part of the map flow (dedicated route launched from map search or modal/overlay on top of `Map`), not a bottom-nav item.
+Bottom navigation is owned by `AppNavHost` and contains:
+- `Map`
+- `Stats`
+- `Favorites`
+- `Faq`
+- `Profile` / `Info & Einstellungen`
 
-## Data Strategy
+Top-level screens should not include their own back button to `Map`. Back affordances belong to subflows such as detail, search overlay/sheet, data hint form and turbine subdetail.
 
-The app is local-first for now. Data is stored on the device with SQLite.
-
-- Shared SQLDelight schema files live in `composeApp/src/commonMain/sqldelight`.
-- UI code must not call SQLite or SQL directly.
-- Data access should follow this boundary:
+## Data
+Runtime access should follow:
 
 ```text
 UI -> ViewModel/UseCase -> Repository -> Local DB/DAO
 ```
 
-Current schema mapping targets:
+UI code must not call SQLite, SQLDelight query APIs or SQL directly.
 
-- favorites -> `composeApp/src/commonMain/sqldelight/app/data/local/db/Favorite.sq`
-- search history -> `composeApp/src/commonMain/sqldelight/app/data/local/db/SearchHistory.sq`
-- parks -> `composeApp/src/commonMain/sqldelight/app/data/local/db/WindPark.sq`
-- production/stats -> `composeApp/src/commonMain/sqldelight/app/data/local/db/Production.sq`
+Target local model:
+- `wind_turbine`
+- `wind_park`
+- `metric`
+- `favorite_wind_park`
+- `recent_wind_park`
+- `data_hint`
+- optional `snapshot_metadata`
 
-There is no backend dependency, cross-device sync, analytics, user account, or authentication requirement in the current baseline.
+Current SQLDelight files live in `composeApp/src/commonMain/sqldelight/app/data/local/db`:
+- `WindPark.sq`
+- `Favorite.sq`
+- `SearchHistory.sq`
+- `Production.sq`
+
+`SearchHistory.sq` should evolve toward `recent_wind_park`; `Production.sq` can be replaced by or mapped into the generic `metric` model.
+
+Data-quality labels: `official`, `measured`, `derived`, `estimated`, `simulated`, `missing`.
 
 ## Project Structure
-
-This is a Kotlin Multiplatform project targeting Android and iOS.
-
-- `composeApp`: shared Kotlin and Compose Multiplatform code.
+- `composeApp`: shared Kotlin and Compose Multiplatform app code.
 - `iosApp`: native iOS launcher.
+- `composeApp/src/commonMain/kotlin/app/navigation`: routes and app nav host.
+- `composeApp/src/commonMain/kotlin/app/feature/*`: feature UI, state and viewmodels.
+- `composeApp/src/commonMain/kotlin/app/core`: shared UI, models, theme and utilities.
+- `composeApp/src/commonMain/kotlin/app/data`: repositories, DAO contracts, entities and seed import contracts.
 
-Shared app code lives under `composeApp/src/commonMain/kotlin/app`:
+Platform-specific code should stay thin. Prefer shared code in `commonMain` unless a platform API requires otherwise.
 
-- `navigation/`: routes and app navigation host.
-- `feature/map/`: map screen, state, and view model.
-- `feature/search/`: search logic/state used from the map flow.
-- `feature/detail/`: wind park detail and production context flow.
-- `feature/faq/`: FAQ screen, state, and content.
-- `feature/favorites/`, `feature/stats/`, `feature/profile/`, `feature/report/`: remaining MVP feature packages.
-- `core/`: shared UI primitives, models, and utilities.
-- `data/`: repository interfaces, local entities/DAO contracts, and seed import contracts.
-
-Platform-specific code should stay thin:
-
-- `commonMain`: shared UI screens, state, repository interfaces, and cross-platform logic.
-- `androidMain`: Android-only integrations, such as permissions or Android-specific map SDK bindings.
-- `iosMain`: iOS-only integrations.
-
-## Development Conventions
-
-- Use `FeatureScreen`, `FeatureViewModel`, and `FeatureUiState` naming.
+## Development Notes
+- Use `FeatureScreen`, `FeatureViewModel` and `FeatureUiState` naming.
 - Keep one package per feature.
-- Prefer shared code in `commonMain` unless a platform API requires otherwise.
-- Keep navigation behavior explicit, including back behavior.
 - Add or adjust repository contracts when data behavior changes.
-- Do not add or update tests in this seminar project.
-- Replace temporary placeholders progressively with production UI and state.
-- Do not import Figma-generated React/Tailwind code. Use Figma as layout reference and implement directly in Compose.
-
-Shared reusable UI components to prefer in `commonMain`:
-
-- `WindKlarTopBar`
-- `WindKlarBottomNav`
-- `GradientHeaderScaffold`
-- `PrimaryButton`
-- `SecondaryButton`
-- `MetricChip`
-- `InfoCard`
-- `FaqAccordionItem`
-- `ParkListItem`
-- `MapPreviewCard`
+- Preserve source, timestamp, data-quality and missing-state behavior when displaying metrics.
+- Build charts as Compose UI/Canvas, not static images.
+- Treat Figma as a functional/visual reference, not a pixel-perfect contract.
+- Do not import Figma-generated React/Tailwind code.
+- Do not add automated tests for the seminar MVP unless the project direction changes.
 
 ## Current Baseline
-
-- Navigation shell and feature placeholders exist.
-- Data layer interfaces exist.
-- SQLite implementation is still scaffold-level.
-- SQL schema files are placeholders and need real table and query definitions.
-- Profile UI currently uses mocked state; profile settings persistence and authentication are not implemented yet.
-
-## UI Implementation Order (Current Roadmap)
-
-1. Startseite (`Start`)
-2. Karte (`Map`) with integrated Search and bottom-nav shell
-3. Windanlage melden (`Karte Plus` / `ReportWindTurbine`)
-4. Favoriten (`Favorites`)
-5. FAQ (`Faq`) with collapsed/expanded states
-6. Stats (`Stats`)
-7. Profil (`Profile`)
+- App root: `app.App`, wrapping `AppNavHost` in `WindklarTheme`.
+- Implemented visual slices: `StartScreen`, `MapScreen`, `FavoritesScreen`, `FaqScreen`, `StatsScreen`, `ProfileScreen`.
+- Scaffold slices: `SearchScreen`, `ParkDetailScreen`, map/search/detail viewmodels, database driver factory and seed importer.
+- Missing slice: `ReportWindTurbine` route/package/form.
+- UI is mostly mock `UiState`; repositories/DAO contracts are not yet wired through generated SQLDelight APIs.
+- AGP 9.x/KMP compatibility warning is accepted for the seminar MVP unless the build breaks.
 
 ## Build And Run
-
-### Android
-
-Run the Android app from the IDE run configuration, or build it from the terminal:
-
-```shell
-./gradlew :composeApp:assembleDebug
-```
-
-On Windows:
+Android:
 
 ```shell
 .\gradlew.bat :composeApp:assembleDebug
 ```
 
-### iOS
+On Unix-like shells:
 
-Open `iosApp` in Xcode and run the iOS app from there. The shared UI and app logic are provided by the `composeApp` module.
+```shell
+./gradlew :composeApp:assembleDebug
+```
 
-## Definition Of Done
+iOS: open `iosApp` in Xcode and run from there.
 
-A vertical feature slice is considered done when:
+## Manual QA
+Automated tests are not part of the stated seminar MVP delivery goal. Focus on acceptance criteria, manual QA, build verification and presentation-ready flows.
 
-- The UI flow works through the Android and iOS entry points.
-- State and actions are wired through ViewModel and repository boundaries.
-- Required local persistence is implemented, not only declared through interfaces.
-- Navigation behavior is explicit.
-- Non-obvious behavior is documented in focused code comments.
+Recommended demo path:
+- Start to Map.
+- Search overlay.
+- Park preview to Detail.
+- Favorite add/remove.
+- Recently viewed wind parks.
+- FAQ.
+- Stats.
+- Info & Einstellungen.
+- Denied/no-location path.
+
+Android manual QA is required before the demo. An iOS simulator/device smoke test is desirable where available, but not a demo blocker if the shared KMP entry point remains intact.
