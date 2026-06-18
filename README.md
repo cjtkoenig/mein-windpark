@@ -4,6 +4,12 @@
 
 The app helps users discover nearby wind parks, search for specific parks, revisit recent parks, understand local production context for a wind park and its `Gemeinde`, and read practical answers to common questions and skeptical critiques about wind energy.
 
+## Product Documentation
+
+- [WindKlar PRD](docs/product/WindKlar_PRD.md)
+- [Domain Context](CONTEXT.md)
+- [Architecture Decisions](docs/adr)
+
 ## Product Scope
 
 The current MVP direction follows the Figma screens and route model below.
