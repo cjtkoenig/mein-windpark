@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,8 +15,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -58,6 +61,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.core.model.WindPark
@@ -69,6 +73,7 @@ import windklar.composeapp.generated.resources.start_background
 import org.jetbrains.compose.resources.painterResource
 import kotlin.math.cos
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 @Composable
@@ -240,6 +245,7 @@ fun MapScreen(
                 productionVal = prodStr,
                 co2Val = co2Str,
                 onDetailsClick = { onParkSelected(park.id) },
+                onDismiss = viewModel::dismissPreview,
             )
         }
         
@@ -333,10 +339,10 @@ private fun StatusChip(
     onClick: () -> Unit
 ) {
     Surface(
+        onClick = onClick,
         shape = CircleShape,
         color = if (selected) Color(0xFF2D5A2D) else Color.White,
         shadowElevation = 4.dp,
-        modifier = Modifier.clickable(onClick = onClick)
     ) {
         Text(
             text = text,
@@ -358,9 +364,8 @@ private fun MapActionButton(
     onClick: () -> Unit
 ) {
     Surface(
-        modifier = Modifier
-            .size(56.dp)
-            .clickable(onClick = onClick),
+        onClick = onClick,
+        modifier = Modifier.size(56.dp),
         shape = CircleShape,
         color = containerColor,
         shadowElevation = 10.dp,
@@ -384,9 +389,30 @@ private fun ParkPreviewSheet(
     productionVal: String,
     co2Val: String,
     onDetailsClick: () -> Unit,
+    onDismiss: () -> Unit,
 ) {
+    var dragOffsetY by remember { mutableStateOf(0f) }
+    val dismissThresholdPx = 96.dp
+
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .offset { IntOffset(x = 0, y = dragOffsetY.roundToInt()) }
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragEnd = {
+                        if (dragOffsetY > dismissThresholdPx.toPx()) {
+                            onDismiss()
+                        }
+                        dragOffsetY = 0f
+                    },
+                    onDragCancel = { dragOffsetY = 0f },
+                    onVerticalDrag = { change, dragAmount ->
+                        change.consume()
+                        dragOffsetY = (dragOffsetY + dragAmount).coerceAtLeast(0f)
+                    },
+                )
+            },
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
         color = Color.White,
         shadowElevation = 24.dp,
@@ -397,6 +423,15 @@ private fun ParkPreviewSheet(
                 .padding(horizontal = 20.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .width(44.dp)
+                    .height(5.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFD8E7D8)),
+            )
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()

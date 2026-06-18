@@ -155,7 +155,10 @@ class MapViewModel(private val repository: WindParkRepository) : ViewModel() {
 
 
     fun dismissPreview() {
-        uiState = uiState.copy(selectedPark = null)
+        uiState = uiState.copy(
+            selectedPark = null,
+            selectedParkMetrics = emptyList()
+        )
     }
 
     fun centerOnLocation(lat: Double, lon: Double) {

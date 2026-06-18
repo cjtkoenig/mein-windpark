@@ -169,7 +169,12 @@ fun AppNavHost(database: AppDatabase) {
                             label = route.title,
                             icon = route.navIcon(selected = isSelected),
                             selected = isSelected,
-                            onClick = { currentRoute = route },
+                            onClick = {
+                                if (isSelected && route is Route.Map) {
+                                    mapViewModel.dismissPreview()
+                                }
+                                currentRoute = route
+                            },
                         )
                     },
                 )
