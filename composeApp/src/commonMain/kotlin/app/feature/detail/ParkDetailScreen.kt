@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
@@ -112,6 +113,7 @@ fun ParkDetailScreen(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
+                        .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.2f), CircleShape)
                         .clickable(onClick = onBack),
                     contentAlignment = Alignment.Center,
@@ -127,6 +129,7 @@ fun ParkDetailScreen(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
+                        .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.2f), CircleShape)
                         .clickable(onClick = viewModel::toggleFavorite),
                     contentAlignment = Alignment.Center,

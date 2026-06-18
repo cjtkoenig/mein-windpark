@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -109,9 +110,9 @@ fun ReportWindTurbineDialog(
                         categories.forEach { (key, value) ->
                             val isSelected = selectedCategory == key
                             Surface(
+                                onClick = { selectedCategory = key },
                                 shape = CircleShape,
                                 color = if (isSelected) PrimaryGreen else PaleGreen,
-                                modifier = Modifier.clickable { selectedCategory = key }
                             ) {
                                 Text(
                                     text = value,
@@ -158,9 +159,9 @@ fun ReportWindTurbineDialog(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
+                                    .clip(CircleShape)
                                     .background(
                                         color = if (isSelected) PrimaryGreen else PaleGreen,
-                                        shape = CircleShape
                                     )
                                     .clickable { selectedConfidence = key }
                                     .padding(vertical = 8.dp),

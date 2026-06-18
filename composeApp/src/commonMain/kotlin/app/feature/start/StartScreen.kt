@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Air
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,7 +30,6 @@ import androidx.compose.ui.unit.sp
 import app.core.ui.components.PrimaryButton
 import windklar.composeapp.generated.resources.Res
 import windklar.composeapp.generated.resources.start_background
-import windklar.composeapp.generated.resources.start_wind_icon
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
@@ -78,10 +80,11 @@ fun StartScreen(
                         .background(Color.White.copy(alpha = 0.22f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Image(
-                        painter = painterResource(Res.drawable.start_wind_icon),
+                    Icon(
+                        imageVector = Icons.Outlined.Air,
                         contentDescription = null,
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size(44.dp),
+                        tint = Color.White,
                     )
                 }
 

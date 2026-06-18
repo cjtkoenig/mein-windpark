@@ -2,7 +2,6 @@ package app.feature.faq
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +35,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -131,14 +131,17 @@ private fun FaqAccordionItem(
     expanded: Boolean,
     onClick: () -> Unit,
 ) {
+    val itemShape = RoundedCornerShape(16.dp)
+
     Surface(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .animateContentSize()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
+            .clip(itemShape)
+            .animateContentSize(),
+        shape = itemShape,
         color = Color.White,
-        shadowElevation = 10.dp,
+        shadowElevation = 6.dp,
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
@@ -253,9 +256,8 @@ private fun FaqContactCard(
             )
 
             Surface(
-                modifier = Modifier
-                    .padding(top = 16.dp)
-                    .clickable(onClick = onContactClick),
+                onClick = onContactClick,
+                modifier = Modifier.padding(top = 16.dp),
                 shape = CircleShape,
                 color = PrimaryGreen,
             ) {
