@@ -19,8 +19,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Air
 import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Warning
@@ -73,13 +73,13 @@ fun ProfileScreen(
                 .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
+            AboutCard(uiState = uiState)
+
             InfoSettingsCard(
                 onPrivacyClick = { showPrivacyDialog = true }
             )
 
             DataSourceCard(uiState = uiState)
-
-            AboutCard(uiState = uiState)
 
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -88,10 +88,10 @@ fun ProfileScreen(
     if (showPrivacyDialog) {
         AlertDialog(
             onDismissRequest = { showPrivacyDialog = false },
-            title = { Text("Datenschutz", color = DarkGreen, fontWeight = FontWeight.Bold) },
+            title = { Text("Lokale Speicherung & Datenschutz", color = DarkGreen, fontWeight = FontWeight.Bold) },
             text = {
                 Text(
-                    "WindKlar speichert keine personenbezogenen Daten. Ihr Standort wird nur temporär zur Zentrierung der Karte auf Ihrem Gerät verwendet und niemals übertragen oder serverseitig gespeichert. Favoriten und Verlauf werden ausschließlich lokal auf Ihrem Gerät gesichert.",
+                    "WindKlar speichert keine personenbezogenen Konten. Ihr Standort wird nur temporär zur Zentrierung der Karte verwendet und im MVP nicht dauerhaft gespeichert. Favoriten, Verlauf und Datenhinweise bleiben lokal auf Ihrem Gerät.",
                     color = DarkGreen,
                     fontSize = 14.sp,
                     lineHeight = 20.sp
@@ -148,7 +148,7 @@ private fun ProfileHeader() {
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.PersonOutline,
+                    imageVector = Icons.Outlined.Air,
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(40.dp),
@@ -170,7 +170,7 @@ private fun InfoSettingsCard(
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
-                text = "App-Einstellungen",
+                text = "App & Datenschutz",
                 modifier = Modifier.padding(16.dp),
                 color = DarkGreen,
                 fontSize = 18.sp,
@@ -184,14 +184,13 @@ private fun InfoSettingsCard(
                 icon = Icons.Outlined.Language,
                 label = "Sprache",
                 trailingText = "Deutsch",
-                onClick = {}
             )
 
             SettingsRowDivider()
 
             SettingsActionRow(
                 icon = Icons.Outlined.Security,
-                label = "Datenschutzerklärung",
+                label = "Lokale Speicherung & Datenschutz",
                 onClick = onPrivacyClick
             )
         }
@@ -284,19 +283,22 @@ private fun DataSourceCard(
 private fun SettingsActionRow(
     icon: ImageVector,
     label: String,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)? = null,
     trailingText: String? = null,
 ) {
+    val rowModifier = Modifier
+        .fillMaxWidth()
+        .defaultMinSize(minHeight = 64.dp)
+        .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+        .padding(horizontal = 16.dp, vertical = 12.dp)
+
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = 64.dp)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+        modifier = rowModifier,
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Row(
+            modifier = Modifier.weight(1f),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -316,6 +318,7 @@ private fun SettingsActionRow(
 
             Text(
                 text = label,
+                modifier = Modifier.weight(1f),
                 color = DarkGreen,
                 fontSize = 15.sp,
                 lineHeight = 22.sp,
@@ -326,6 +329,7 @@ private fun SettingsActionRow(
         if (trailingText != null) {
             Text(
                 text = trailingText,
+                modifier = Modifier.padding(start = 12.dp),
                 color = MutedGreen,
                 fontSize = 14.sp,
                 lineHeight = 20.sp,

@@ -30,13 +30,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.QueryStats
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Map
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.QueryStats
 import androidx.compose.ui.graphics.vector.ImageVector
 import app.core.ui.components.WindKlarBottomNav
@@ -240,7 +240,7 @@ private fun Route.navIcon(selected: Boolean): ImageVector = when (this) {
     Route.Stats -> if (selected) Icons.Filled.QueryStats else Icons.Outlined.QueryStats
     Route.Favorites -> if (selected) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder
     Route.Faq -> if (selected) Icons.AutoMirrored.Filled.Help else Icons.AutoMirrored.Outlined.HelpOutline
-    Route.Profile -> if (selected) Icons.Filled.Settings else Icons.Outlined.Settings
+    Route.Profile -> if (selected) Icons.Filled.Info else Icons.Outlined.Info
     Route.Start -> Icons.Outlined.Map
     is Route.Detail -> Icons.Outlined.Map
 }
