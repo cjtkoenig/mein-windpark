@@ -13,7 +13,12 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.floor
 
-class MapViewModel(private val repository: WindParkRepository) : ViewModel() {
+import app.core.location.LocationProvider
+
+class MapViewModel(
+    private val repository: WindParkRepository,
+    private val locationProvider: LocationProvider
+) : ViewModel() {
     var uiState by mutableStateOf(MapUiState(isLoading = true))
         private set
 
@@ -160,6 +165,38 @@ class MapViewModel(private val repository: WindParkRepository) : ViewModel() {
         }
     }
 
+    fun startPinPlacement() {
+        uiState = uiState.copy(
+            isPinPlacementMode = true,
+            placementMarkerLat = uiState.mapCenterLat,
+            placementMarkerLon = uiState.mapCenterLon,
+            selectedPark = null,
+            selectedParkMetrics = emptyList()
+        )
+        applyFilters()
+    }
+
+    fun updatePlacementPinLocation(lat: Double, lon: Double) {
+        uiState = uiState.copy(
+            placementMarkerLat = lat,
+            placementMarkerLon = lon
+        )
+        applyFilters()
+    }
+
+    fun cancelPinPlacement() {
+        uiState = uiState.copy(isPinPlacementMode = false)
+        applyFilters()
+    }
+
+    fun confirmPinPlacement(onConfirm: (Double, Double) -> Unit) {
+        val lat = uiState.placementMarkerLat
+        val lon = uiState.placementMarkerLon
+        uiState = uiState.copy(isPinPlacementMode = false)
+        applyFilters()
+        onConfirm(lat, lon)
+    }
+
 
 
     fun expandPreview() {
@@ -189,6 +226,28 @@ class MapViewModel(private val repository: WindParkRepository) : ViewModel() {
             zoomLevel = 10.0f
         )
         applyFilters()
+    }
+
+    fun centerOnUserLocation(onPermissionRequired: () -> Unit, onError: (String) -> Unit) {
+        if (!locationProvider.hasPermission()) {
+            onPermissionRequired()
+            return
+        }
+        viewModelScope.launch {
+            try {
+                uiState = uiState.copy(isLoading = true)
+                val location = locationProvider.getCurrentLocation()
+                uiState = uiState.copy(isLoading = false)
+                if (location != null) {
+                    centerOnLocation(location.first, location.second)
+                } else {
+                    onError("Standort konnte nicht ermittelt werden.")
+                }
+            } catch (e: Throwable) {
+                uiState = uiState.copy(isLoading = false)
+                onError("Fehler bei der Ortung: ${e.message ?: e.toString()}")
+            }
+        }
     }
 
     fun onZoomChanged(zoom: Float) {
@@ -228,13 +287,89 @@ class MapViewModel(private val repository: WindParkRepository) : ViewModel() {
         )
     }
 
+    private var allTurbines: List<app.core.model.WindTurbine>? = null
+
+    private fun loadTurbinesAndApplyFilters(currentStatus: String, filteredParks: List<WindPark>) {
+        if (allTurbines != null) {
+            val filteredTurbines = filterTurbines(allTurbines!!, currentStatus)
+            uiState = uiState.copy(
+                filteredParks = filteredParks,
+                mapMarkers = turbinesToMarkers(filteredTurbines)
+            )
+            return
+        }
+        viewModelScope.launch {
+            try {
+                val turbines = repository.getAllWindTurbines()
+                allTurbines = turbines
+                val filteredTurbines = filterTurbines(turbines, currentStatus)
+                uiState = uiState.copy(
+                    filteredParks = filteredParks,
+                    mapMarkers = turbinesToMarkers(filteredTurbines)
+                )
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                uiState = uiState.copy(
+                    filteredParks = filteredParks,
+                    mapMarkers = emptyList()
+                )
+            }
+        }
+    }
+
+    private fun filterTurbines(turbines: List<app.core.model.WindTurbine>, statusFilter: String): List<app.core.model.WindTurbine> {
+        if (statusFilter == "Alle") return turbines
+        return turbines.filter { determineTurbineStatus(it.status) == statusFilter }
+    }
+
+    private fun determineTurbineStatus(status: String?): String {
+        if (status == null) return "Aktiv"
+        val lower = status.lowercase()
+        if (lower.contains("bau") || lower.contains("errichtung")) return "Im Bau"
+        if (lower.contains("betrieb") || lower.contains("aktiv")) return "Aktiv"
+        if (lower.contains("stillgelegt")) return "Stillgelegt"
+        return "Geplant"
+    }
+
+    private fun turbinesToMarkers(turbines: List<app.core.model.WindTurbine>): List<MapMarkerUiModel> {
+        return turbines.map { turbine ->
+            MapMarkerUiModel(
+                id = turbine.id,
+                latitude = turbine.latitude,
+                longitude = turbine.longitude,
+                kind = MapMarkerKind.Turbine,
+                count = 1,
+                parkId = turbine.windParkId
+            )
+        }
+    }
+
     private fun applyFilters() {
+        if (uiState.isPinPlacementMode) {
+            uiState = uiState.copy(
+                mapMarkers = listOf(
+                    MapMarkerUiModel(
+                        id = "placement_pin",
+                        latitude = uiState.placementMarkerLat,
+                        longitude = uiState.placementMarkerLon,
+                        kind = MapMarkerKind.PlacementPin,
+                        count = 1
+                    )
+                )
+            )
+            return
+        }
+
         val currentStatus = uiState.selectedStatus
         val filteredParks = parksForStatus(currentStatus)
-        uiState = uiState.copy(
-            filteredParks = filteredParks,
-            mapMarkers = markersForZoom(filteredParks, uiState.zoomLevel)
-        )
+        if (uiState.zoomLevel > 14.0f) {
+            loadTurbinesAndApplyFilters(currentStatus, filteredParks)
+        } else {
+            uiState = uiState.copy(
+                filteredParks = filteredParks,
+                mapMarkers = markersForZoom(filteredParks, uiState.zoomLevel)
+            )
+        }
     }
 
     private fun parksForStatus(status: String): List<WindPark> =

@@ -58,8 +58,10 @@ import app.feature.start.StartScreen
 import app.feature.stats.StatsScreen
 import app.feature.stats.StatsViewModel
 
+import app.core.location.LocationProvider
+
 @Composable
-fun AppNavHost(database: AppDatabase) {
+fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
     var isSeeded by remember { mutableStateOf(false) }
     var seedError by remember { mutableStateOf<String?>(null) }
     var retryCount by remember { mutableStateOf(0) }
@@ -154,7 +156,7 @@ fun AppNavHost(database: AppDatabase) {
     var currentRoute: Route by remember { mutableStateOf(Route.Start) }
     var detailBackRoute: Route by remember { mutableStateOf(Route.Map) }
 
-    val mapViewModel = remember(repository) { MapViewModel(repository) }
+    val mapViewModel = remember(repository, locationProvider) { MapViewModel(repository, locationProvider) }
     val favoritesViewModel = remember(repository) { FavoritesViewModel(repository) }
     val statsViewModel = remember(repository) { StatsViewModel(repository) }
     val profileViewModel = remember(repository) { ProfileViewModel(repository) }

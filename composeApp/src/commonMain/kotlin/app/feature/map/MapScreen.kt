@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.graphicsLayer
 import app.core.model.WindPark
 import app.core.ui.components.PlatformMapView
+import app.core.ui.components.rememberLocationPermissionLauncher
 import app.feature.report.ReportWindTurbineDialog
 import kotlinx.coroutines.launch
 import windklar.composeapp.generated.resources.Res
@@ -98,6 +99,23 @@ fun MapScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     
     var showReportDialog by remember { mutableStateOf(false) }
+    var reportedLatitude by remember { mutableStateOf(0.0) }
+    var reportedLongitude by remember { mutableStateOf(0.0) }
+
+    val permissionLauncher = rememberLocationPermissionLauncher { granted ->
+        if (granted) {
+            viewModel.centerOnUserLocation(
+                onPermissionRequired = {},
+                onError = { message ->
+                    scope.launch { snackbarHostState.showSnackbar(message) }
+                }
+            )
+        } else {
+            scope.launch {
+                snackbarHostState.showSnackbar("Standortberechtigung wurde abgelehnt.")
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -121,78 +139,81 @@ fun MapScreen(
                 onMapMoved = viewModel::onMapMoved,
                 onParkClicked = viewModel::onParkClickedById,
                 onClusterClicked = viewModel::onClusterClicked,
+                onPlacementPinDragged = viewModel::updatePlacementPinLocation,
                 modifier = Modifier.fillMaxSize()
             )
         }
 
         // Overlay Components (Search Bar, Status Chips)
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            SearchBar(
-                query = uiState.searchQuery,
-                onQueryChange = viewModel::onQueryChange,
-            )
-            
-            // Search results dropdown overlay
-            if (uiState.showSearchOverlay && uiState.searchResults.isNotEmpty()) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 240.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color.White,
-                    shadowElevation = 8.dp
-                ) {
-                    LazyColumn(modifier = Modifier.padding(8.dp)) {
-                        items(uiState.searchResults) { park ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { viewModel.onSearchResultSelected(park) }
-                                    .padding(vertical = 12.dp, horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.LocationOn,
-                                    contentDescription = null,
-                                    tint = Color(0xFF2D5A2D),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Column {
-                                    Text(
-                                        text = park.name,
-                                        color = Color(0xFF1A3A1A),
-                                        fontWeight = FontWeight.Medium,
-                                        fontSize = 14.sp
+        if (!uiState.isPinPlacementMode) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                SearchBar(
+                    query = uiState.searchQuery,
+                    onQueryChange = viewModel::onQueryChange,
+                )
+                
+                // Search results dropdown overlay
+                if (uiState.showSearchOverlay && uiState.searchResults.isNotEmpty()) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 240.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = Color.White,
+                        shadowElevation = 8.dp
+                    ) {
+                        LazyColumn(modifier = Modifier.padding(8.dp)) {
+                            items(uiState.searchResults) { park ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { viewModel.onSearchResultSelected(park) }
+                                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.LocationOn,
+                                        contentDescription = null,
+                                        tint = Color(0xFF2D5A2D),
+                                        modifier = Modifier.size(18.dp)
                                     )
-                                    Text(
-                                        text = park.municipalityName,
-                                        color = Color(0xFF5A7A5A),
-                                        fontSize = 12.sp
-                                    )
+                                    Column {
+                                        Text(
+                                            text = park.name,
+                                            color = Color(0xFF1A3A1A),
+                                            fontWeight = FontWeight.Medium,
+                                            fontSize = 14.sp
+                                        )
+                                        Text(
+                                            text = park.municipalityName,
+                                            color = Color(0xFF5A7A5A),
+                                            fontSize = 12.sp
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            // Status Filter Chips
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                listOf("Alle", "Aktiv", "Geplant", "Im Bau", "Stillgelegt").forEach { status ->
-                    StatusChip(
-                        text = status,
-                        selected = uiState.selectedStatus == status,
-                        onClick = { viewModel.setStatusFilter(status) }
-                    )
+                // Status Filter Chips
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    listOf("Alle", "Aktiv", "Geplant", "Im Bau", "Stillgelegt").forEach { status ->
+                        StatusChip(
+                            text = status,
+                            selected = uiState.selectedStatus == status,
+                            onClick = { viewModel.setStatusFilter(status) }
+                        )
+                    }
                 }
             }
         }
@@ -201,31 +222,39 @@ fun MapScreen(
         Column(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .padding(end = 16.dp, bottom = 200.dp),
+                .padding(end = 16.dp, bottom = if (uiState.isPinPlacementMode) 96.dp else 200.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Report wind turbine
-            MapActionButton(
-                icon = Icons.Outlined.Edit,
-                contentDescription = "Windanlage melden",
-                containerColor = Color(0xFF2D5A2D),
-                contentColor = Color.White,
-                onClick = { showReportDialog = true }
-            )
-            
-            // Center location (Mocked to Leipzig/Leipzig Region)
-            MapActionButton(
-                icon = Icons.Outlined.NearMe,
-                contentDescription = "Standort zentrieren",
-                containerColor = Color.White,
-                contentColor = Color(0xFF2D5A2D),
-                onClick = {
-                    viewModel.centerOnLocation(51.3397, 12.3731) // Center Leipzig
-                    scope.launch {
-                        snackbarHostState.showSnackbar("Karte zentriert auf Leipzig (Mock-Standort)")
+            if (!uiState.isPinPlacementMode) {
+                // Report wind turbine
+                MapActionButton(
+                    icon = Icons.Outlined.Edit,
+                    contentDescription = "Windanlage melden",
+                    containerColor = Color(0xFF2D5A2D),
+                    contentColor = Color.White,
+                    onClick = { viewModel.startPinPlacement() }
+                )
+                
+                // Center location (Real GPS or Fallback)
+                MapActionButton(
+                    icon = Icons.Outlined.NearMe,
+                    contentDescription = "Standort zentrieren",
+                    containerColor = Color.White,
+                    contentColor = Color(0xFF2D5A2D),
+                    onClick = {
+                        viewModel.centerOnUserLocation(
+                            onPermissionRequired = {
+                                permissionLauncher()
+                            },
+                            onError = { message ->
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(message)
+                                }
+                            }
+                        )
                     }
-                }
-            )
+                )
+            }
 
             // Zoom in
             MapActionButton(
@@ -247,24 +276,92 @@ fun MapScreen(
         }
 
         // Selected Park Preview Card
-        uiState.selectedPark?.let { park ->
-            val annualMetric = uiState.selectedParkMetrics.firstOrNull { it.metricType == "annual_production" }
-            val co2Metric = uiState.selectedParkMetrics.firstOrNull { it.metricType == "co2_savings" }
-            
-            val prodStr = annualMetric?.value?.let { "${(it / 1_000_000.0).roundTo(1)} GWh" } ?: "k.A."
-            val co2Str = co2Metric?.value?.let { "${formatNumber((it / 1000.0).toInt())} t" } ?: "k.A."
+        if (!uiState.isPinPlacementMode) {
+            uiState.selectedPark?.let { park ->
+                val annualMetric = uiState.selectedParkMetrics.firstOrNull { it.metricType == "annual_production" }
+                val co2Metric = uiState.selectedParkMetrics.firstOrNull { it.metricType == "co2_savings" }
+                
+                val prodStr = annualMetric?.value?.let { "${(it / 1_000_000.0).roundTo(1)} GWh" } ?: "k.A."
+                val co2Str = co2Metric?.value?.let { "${formatNumber((it / 1000.0).toInt())} t" } ?: "k.A."
 
-            ParkPreviewSheet(
-                modifier = Modifier.align(Alignment.BottomCenter),
-                parkName = park.name,
-                municipalityName = park.municipalityName,
-                productionVal = prodStr,
-                co2Val = co2Str,
-                sheetState = uiState.previewSheetState,
-                onDetailsClick = { onParkSelected(park.id) },
-                onExpand = viewModel::expandPreview,
-                onMinimize = viewModel::minimizePreview,
-            )
+                ParkPreviewSheet(
+                    modifier = Modifier.align(Alignment.BottomCenter),
+                    parkName = park.name,
+                    municipalityName = park.municipalityName,
+                    productionVal = prodStr,
+                    co2Val = co2Str,
+                    sheetState = uiState.previewSheetState,
+                    onDetailsClick = { onParkSelected(park.id) },
+                    onExpand = viewModel::expandPreview,
+                    onMinimize = viewModel::minimizePreview,
+                )
+            }
+        }
+
+        // Pin Placement Mode Bottom Card
+        if (uiState.isPinPlacementMode) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = Color.White,
+                shadowElevation = 16.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Standort festlegen",
+                        color = Color(0xFF1A3A1A),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Verschieben Sie den roten Pin auf der Karte zum genauen Standort der Windanlage.",
+                        color = Color(0xFF5A7A5A),
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Button(
+                            onClick = { viewModel.cancelPinPlacement() },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFE8F5E9),
+                                contentColor = Color(0xFF2D5A2D)
+                             )
+                        ) {
+                            Text("Abbrechen", fontWeight = FontWeight.Medium)
+                        }
+                        Button(
+                            onClick = {
+                                viewModel.confirmPinPlacement { lat, lon ->
+                                    reportedLatitude = lat
+                                    reportedLongitude = lon
+                                    showReportDialog = true
+                                }
+                            },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF2D5A2D),
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text("Auswählen", fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
+            }
         }
         
         SnackbarHost(
@@ -278,8 +375,8 @@ fun MapScreen(
     // Report Dialog
     if (showReportDialog) {
         val reportPark = uiState.selectedPark
-        val reportLatitude = reportPark?.latitude ?: uiState.mapCenterLat
-        val reportLongitude = reportPark?.longitude ?: uiState.mapCenterLon
+        val reportLatitude = reportedLatitude
+        val reportLongitude = reportedLongitude
 
         ReportWindTurbineDialog(
             currentLatitude = reportLatitude,

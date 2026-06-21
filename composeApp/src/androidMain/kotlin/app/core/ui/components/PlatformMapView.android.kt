@@ -34,6 +34,7 @@ actual fun PlatformMapView(
     onMapMoved: (lat: Double, lon: Double, zoom: Float) -> Unit,
     onParkClicked: (String) -> Unit,
     onClusterClicked: (lat: Double, lon: Double) -> Unit,
+    onPlacementPinDragged: ((lat: Double, lon: Double) -> Unit)?,
     modifier: Modifier
 ) {
     var isPageLoaded by remember { mutableStateOf(false) }
@@ -46,6 +47,7 @@ actual fun PlatformMapView(
     val currentOnMapMoved = rememberUpdatedState(onMapMoved)
     val currentOnParkClicked = rememberUpdatedState(onParkClicked)
     val currentOnClusterClicked = rememberUpdatedState(onClusterClicked)
+    val currentOnPlacementPinDragged = rememberUpdatedState(onPlacementPinDragged)
 
     LaunchedEffect(Unit) {
         try {
@@ -191,6 +193,32 @@ actual fun PlatformMapView(
                                 }
                             });
                             leafletMarkers.push(clusterMarker);
+                        } else if (item.kind === 'Turbine') {
+                            var isSelected = item.parkId === selectedId;
+                            var turbineIcon = L.divIcon({
+                                className: '',
+                                html: '<div style="width: 14px; height: 14px; background: ' + (isSelected ? '#D32F2F' : '#009688') + '; border: 1.5px solid #FFFFFF; border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><div style="width: 4px; height: 4px; background: white; border-radius: 50%;"></div></div>',
+                                iconSize: [14, 14],
+                                iconAnchor: [7, 7]
+                            });
+                            var turbineMarker = L.marker([item.latitude, item.longitude], { icon: turbineIcon });
+                            turbineMarker.on('click', function() {
+                                if (window.AndroidBridge && window.AndroidBridge.onParkClicked) {
+                                    window.AndroidBridge.onParkClicked(item.parkId || item.id);
+                                }
+                            });
+                            leafletMarkers.push(turbineMarker);
+                        } else if (item.kind === 'PlacementPin') {
+                            var placementMarker = L.marker([item.latitude, item.longitude], {
+                                draggable: true
+                            });
+                            placementMarker.on('dragend', function(e) {
+                                var latlng = placementMarker.getLatLng();
+                                if (window.AndroidBridge && window.AndroidBridge.onPlacementPinDragged) {
+                                    window.AndroidBridge.onPlacementPinDragged(latlng.lat, latlng.lng);
+                                }
+                            });
+                            leafletMarkers.push(placementMarker);
                         } else {
                             var isSelected = item.parkId === selectedId;
                             var parkMarker = L.circleMarker([item.latitude, item.longitude], {
@@ -325,6 +353,7 @@ actual fun PlatformMapView(
                         onMapMovedCallback = { lat, lon, zoom -> currentOnMapMoved.value(lat, lon, zoom) },
                         onParkClickedCallback = { id -> currentOnParkClicked.value(id) },
                         onClusterClickedCallback = { lat, lon -> currentOnClusterClicked.value(lat, lon) },
+                        onPlacementPinDraggedCallback = { lat, lon -> currentOnPlacementPinDragged.value?.invoke(lat, lon) },
                         onMapReadyCallback = { isPageLoaded = true },
                         mainHandler = mainHandler
                     )
@@ -355,6 +384,7 @@ class AndroidMapBridge(
     private val onMapMovedCallback: (lat: Double, lon: Double, zoom: Float) -> Unit,
     private val onParkClickedCallback: (String) -> Unit,
     private val onClusterClickedCallback: (lat: Double, lon: Double) -> Unit,
+    private val onPlacementPinDraggedCallback: (lat: Double, lon: Double) -> Unit,
     private val onMapReadyCallback: () -> Unit,
     private val mainHandler: android.os.Handler
 ) {
@@ -377,6 +407,11 @@ class AndroidMapBridge(
     @JavascriptInterface
     fun onClusterClicked(lat: Double, lon: Double) {
         mainHandler.post { onClusterClickedCallback(lat, lon) }
+    }
+
+    @JavascriptInterface
+    fun onPlacementPinDragged(lat: Double, lon: Double) {
+        mainHandler.post { onPlacementPinDraggedCallback(lat, lon) }
     }
 
     @JavascriptInterface

@@ -43,10 +43,15 @@ actual fun PlatformMapView(
     onMapMoved: (lat: Double, lon: Double, zoom: Float) -> Unit,
     onParkClicked: (String) -> Unit,
     onClusterClicked: (lat: Double, lon: Double) -> Unit,
+    onPlacementPinDragged: ((lat: Double, lon: Double) -> Unit)?,
     modifier: Modifier
 ) {
     var isPageLoaded by remember { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WKWebView?>(null) }
+    val currentOnMapMoved = rememberUpdatedState(onMapMoved)
+    val currentOnParkClicked = rememberUpdatedState(onParkClicked)
+    val currentOnClusterClicked = rememberUpdatedState(onClusterClicked)
+    val currentOnPlacementPinDragged = rememberUpdatedState(onPlacementPinDragged)
 
     var leafletCss by remember { mutableStateOf<String?>(null) }
     var leafletJs by remember { mutableStateOf<String?>(null) }
@@ -191,6 +196,34 @@ actual fun PlatformMapView(
                                 }
                             });
                             leafletMarkers.push(clusterMarker);
+                        } else if (item.kind === 'Turbine') {
+                            var isSelected = item.parkId === selectedId;
+                            var turbineIcon = L.divIcon({
+                                className: '',
+                                html: '<div style="width: 14px; height: 14px; background: ' + (isSelected ? '#D32F2F' : '#009688') + '; border: 1.5px solid #FFFFFF; border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><div style="width: 4px; height: 4px; background: white; border-radius: 50%;"></div></div>',
+                                iconSize: [14, 14],
+                                iconAnchor: [7, 7]
+                            });
+                            var turbineMarker = L.marker([item.latitude, item.longitude], { icon: turbineIcon });
+                            turbineMarker.on('click', function() {
+                                var data = { type: 'click', parkId: item.parkId || item.id };
+                                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.iosBridge) {
+                                    window.webkit.messageHandlers.iosBridge.postMessage(JSON.stringify(data));
+                                }
+                            });
+                            leafletMarkers.push(turbineMarker);
+                        } else if (item.kind === 'PlacementPin') {
+                            var placementMarker = L.marker([item.latitude, item.longitude], {
+                                draggable: true
+                            });
+                            placementMarker.on('dragend', function(e) {
+                                var latlng = placementMarker.getLatLng();
+                                var data = { type: 'dragend', lat: latlng.lat, lon: latlng.lng };
+                                if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.iosBridge) {
+                                    window.webkit.messageHandlers.iosBridge.postMessage(JSON.stringify(data));
+                                }
+                            });
+                            leafletMarkers.push(placementMarker);
                         } else {
                             var isSelected = item.parkId === selectedId;
                             var parkMarker = L.circleMarker([item.latitude, item.longitude], {
@@ -279,6 +312,10 @@ actual fun PlatformMapView(
                             val lat = obj["lat"]?.toString()?.toDoubleOrNull() ?: return
                             val lon = obj["lon"]?.toString()?.toDoubleOrNull() ?: return
                             onClusterClicked(lat, lon)
+                        } else if (type == "dragend") {
+                            val lat = obj["lat"]?.toString()?.toDoubleOrNull() ?: return
+                            val lon = obj["lon"]?.toString()?.toDoubleOrNull() ?: return
+                            currentOnPlacementPinDragged.value?.invoke(lat, lon)
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()

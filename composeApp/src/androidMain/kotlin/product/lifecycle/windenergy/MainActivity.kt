@@ -16,8 +16,10 @@ class MainActivity : ComponentActivity() {
         val driver = AndroidSqliteDriver(AppDatabase.Schema, applicationContext, "windklar.db")
         val database = AppDatabase(driver)
 
+        val locationProvider = app.core.location.AndroidLocationProvider(applicationContext)
+
         setContent {
-            App(database)
+            App(database, locationProvider)
         }
     }
 }
