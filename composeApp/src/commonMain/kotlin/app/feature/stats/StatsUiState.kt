@@ -6,12 +6,40 @@ data class StatsUiState(
     val impactCards: List<StatsImpactCard> = emptyList(),
     val topDistricts: List<DistrictStat> = emptyList(),
     val districtComparison: DistrictComparison? = null,
+    val comparisonType: ComparisonType = ComparisonType.PARKS,
+    val allParks: List<ComparisonOption> = emptyList(),
+    val allDistricts: List<ComparisonOption> = emptyList(),
+    val selectedParkA: ComparisonOption? = null,
+    val selectedParkB: ComparisonOption? = null,
+    val selectedDistrictA: ComparisonOption? = null,
+    val selectedDistrictB: ComparisonOption? = null,
+    val comparisonRows: List<ComparisonRow> = emptyList(),
     val co2Summary: String = "",
     val co2Comparisons: List<Co2Comparison> = emptyList(),
     val capacityClasses: List<CapacityClassStat> = emptyList(),
     val qualityNotes: List<StatsQualityNote> = emptyList(),
     val attribution: String = "",
     val isLoading: Boolean = true,
+)
+
+enum class ComparisonType {
+    PARKS,
+    DISTRICTS,
+}
+
+data class ComparisonOption(
+    val id: String,
+    val label: String,
+    val description: String,
+)
+
+data class ComparisonRow(
+    val label: String,
+    val valueA: String,
+    val valueB: String,
+    val ratioA: Float,
+    val ratioB: Float,
+    val isHigherA: Boolean,
 )
 
 data class StatsOverviewCard(
@@ -32,10 +60,12 @@ data class DistrictStat(
     val districtId: String,
     val label: String,
     val contextLabel: String,
+    val stateName: String,
     val windParkCount: Int,
     val turbineCount: Int,
     val installedCapacityMw: Double,
     val shareOfNationalCapacity: Float,
+    val shareOfStateCapacity: Float,
 )
 
 data class DistrictComparison(
@@ -60,6 +90,7 @@ data class CapacityClassStat(
     val label: String,
     val count: Int,
     val share: Float,
+    val percentOfTotal: Float,
 )
 
 data class StatsQualityNote(

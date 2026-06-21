@@ -1,7 +1,11 @@
 package app.feature.stats
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +21,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,16 +30,28 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Air
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Eco
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.MonetizationOn
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,13 +62,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import app.core.ui.components.formatDataQuality
 import app.core.ui.components.qualityColors
+import kotlinx.coroutines.launch
 
 private val ScreenBackground = Color(0xFFF7FAF4)
 private val PrimaryGreen = Color(0xFF24512D)
@@ -79,6 +100,8 @@ fun StatsScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState = viewModel.uiState
+    val scrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(viewModel) {
         viewModel.refresh()
@@ -88,7 +111,7 @@ fun StatsScreen(
         modifier = modifier
             .fillMaxSize()
             .background(ScreenBackground)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(scrollState),
     ) {
         StatsHeader(
             subtitle = uiState.subtitle,
@@ -122,8 +145,17 @@ fun StatsScreen(
                     subtitle = "Top 5 nach installierter Leistung",
                 )
                 Spacer(modifier = Modifier.height(18.dp))
-                DistrictBarChart(values = uiState.topDistricts)
-                SourceFootnote(text = "Die Kreisebene wird im MVP aus den ersten fünf Stellen der AGS-Gemeindekennung abgeleitet; echte Kreisnamen sind noch nicht Teil des Snapshots.")
+                DistrictBarChart(
+                    values = uiState.topDistricts,
+                    onShowInComparison = { districtId ->
+                        viewModel.setComparisonType(ComparisonType.DISTRICTS)
+                        viewModel.selectDistrictA(districtId)
+                        coroutineScope.launch {
+                            scrollState.animateScrollTo(scrollState.maxValue)
+                        }
+                    },
+                )
+                SourceFootnote(text = "Die Kreisebene wird im MVP aus den ersten fünf Stellen der AGS-Gemeindekennung abgeleitet; fehlende Kreisnamen werden aus Snapshot-Kontext und Bundesland angenähert.")
             }
 
             uiState.districtComparison?.let { comparison ->
@@ -149,6 +181,15 @@ fun StatsScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 CapacityClassChart(values = uiState.capacityClasses)
             }
+
+            InteractiveComparisonCard(
+                uiState = uiState,
+                onComparisonTypeChange = viewModel::setComparisonType,
+                onSelectParkA = viewModel::selectParkA,
+                onSelectParkB = viewModel::selectParkB,
+                onSelectDistrictA = viewModel::selectDistrictA,
+                onSelectDistrictB = viewModel::selectDistrictB,
+            )
 
             StatsSectionCard {
                 SectionHeader(
@@ -538,67 +579,149 @@ private fun SectionHeader(
 }
 
 @Composable
-private fun DistrictBarChart(values: List<DistrictStat>) {
+private fun DistrictBarChart(
+    values: List<DistrictStat>,
+    onShowInComparison: (String) -> Unit,
+) {
     if (values.isEmpty()) {
         EmptyText(text = "Noch keine Kreiswerte verfügbar.")
         return
     }
 
     val maxValue = values.maxOf { it.installedCapacityMw }.toFloat().coerceAtLeast(1f)
+    var expandedDistrictId by remember(values) { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         values.forEachIndexed { index, district ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable {
+                        expandedDistrictId = if (expandedDistrictId == district.districtId) {
+                            null
+                        } else {
+                            district.districtId
+                        }
+                    }
+                    .animateContentSize()
+                    .padding(vertical = 2.dp),
             ) {
-                Text(
-                    text = "${index + 1}",
-                    color = PrimaryGreen,
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.width(18.dp),
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text(
+                        text = "${index + 1}",
+                        color = PrimaryGreen,
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.width(18.dp),
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top,
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = district.label,
+                                    color = DarkText,
+                                    fontSize = 13.sp,
+                                    lineHeight = 18.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Text(
+                                    text = "Schwerpunkt: ${district.contextLabel}",
+                                    color = MutedText,
+                                    fontSize = 11.sp,
+                                    lineHeight = 14.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
                             Text(
-                                text = district.label,
-                                color = DarkText,
-                                fontSize = 13.sp,
-                                lineHeight = 18.sp,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Text(
-                                text = "Schwerpunkt: ${district.contextLabel}",
+                                text = "${district.installedCapacityMw.roundLabel()} MW",
                                 color = MutedText,
-                                fontSize = 11.sp,
-                                lineHeight = 14.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                                fontSize = 12.sp,
+                                lineHeight = 18.sp,
+                                modifier = Modifier.padding(start = 8.dp),
                             )
                         }
-                        Text(
-                            text = "${district.installedCapacityMw.roundLabel()} MW",
-                            color = MutedText,
-                            fontSize = 12.sp,
-                            lineHeight = 18.sp,
-                            modifier = Modifier.padding(start = 8.dp),
-                        )
+                        Spacer(modifier = Modifier.height(5.dp))
+                        ProgressTrack(progress = (district.installedCapacityMw.toFloat() / maxValue).coerceIn(0f, 1f))
                     }
-                    Spacer(modifier = Modifier.height(5.dp))
-                    ProgressTrack(progress = (district.installedCapacityMw.toFloat() / maxValue).coerceIn(0f, 1f))
+                }
+
+                AnimatedVisibility(visible = expandedDistrictId == district.districtId) {
+                    DistrictDetailExpansion(
+                        district = district,
+                        onShowInComparison = onShowInComparison,
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun DistrictDetailExpansion(
+    district: DistrictStat,
+    onShowInComparison: (String) -> Unit,
+) {
+    Column(
+        modifier = Modifier.padding(start = 28.dp, top = 10.dp, bottom = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        HorizontalDivider(color = TrackGreen)
+        DistrictDetailLine(label = "Genaue Leistung", value = "${district.installedCapacityMw.roundOneDecimal()} MW")
+        DistrictDetailLine(label = "Windparks", value = district.windParkCount.toString())
+        DistrictDetailLine(label = "Anlagen", value = district.turbineCount.toString())
+        DistrictDetailLine(label = "Bundesland-Anteil", value = district.shareOfStateCapacity.percentLabel())
+        Button(
+            onClick = { onShowInComparison(district.districtId) },
+            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, contentColor = Color.White),
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            Text(
+                text = "Im Vergleichsrechner anzeigen",
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DistrictDetailLine(
+    label: String,
+    value: String,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top,
+    ) {
+        Text(
+            text = label,
+            color = MutedText,
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+        )
+        Text(
+            text = value,
+            color = DarkText,
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.End,
+            modifier = Modifier.padding(start = 12.dp),
+        )
     }
 }
 
@@ -705,30 +828,85 @@ private fun CapacityClassChart(values: List<CapacityClassStat>) {
         return
     }
 
+    var selectedIndex by remember(values) { mutableStateOf<Int?>(null) }
     Column {
-        Canvas(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(96.dp),
+                .height(124.dp),
         ) {
-            val slotWidth = size.width / values.size.coerceAtLeast(1)
-            val barWidth = slotWidth * 0.58f
-            values.forEachIndexed { index, value ->
-                val height = value.share.coerceIn(0f, 1f) * size.height
-                val left = index * slotWidth + (slotWidth - barWidth) / 2f
-                drawRoundRect(
-                    color = if (index == values.lastIndex) AccentGreen else PrimaryGreen.copy(alpha = 0.72f),
-                    topLeft = Offset(left, size.height - height),
-                    size = Size(barWidth, height),
-                    cornerRadius = CornerRadius(7.dp.toPx(), 7.dp.toPx()),
-                )
-                drawRoundRect(
-                    color = TrackGreen,
-                    topLeft = Offset(left, 0f),
-                    size = Size(barWidth, size.height),
-                    cornerRadius = CornerRadius(7.dp.toPx(), 7.dp.toPx()),
-                    style = Stroke(width = 1.dp.toPx()),
-                )
+            Canvas(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(96.dp)
+                    .pointerInput(values) {
+                        detectTapGestures { offset ->
+                            val slotWidth = size.width / values.size.coerceAtLeast(1)
+                            val tappedIndex = (offset.x / slotWidth).toInt()
+                            selectedIndex = if (tappedIndex in values.indices) {
+                                tappedIndex.takeUnless { it == selectedIndex }
+                            } else {
+                                null
+                            }
+                        }
+                    },
+            ) {
+                val slotWidth = size.width / values.size.coerceAtLeast(1)
+                val barWidth = slotWidth * 0.58f
+                values.forEachIndexed { index, value ->
+                    val height = value.share.coerceIn(0f, 1f) * size.height
+                    val left = index * slotWidth + (slotWidth - barWidth) / 2f
+                    val isSelected = selectedIndex == null || selectedIndex == index
+                    drawRoundRect(
+                        color = if (index == values.lastIndex) {
+                            AccentGreen.copy(alpha = if (isSelected) 1f else 0.34f)
+                        } else {
+                            PrimaryGreen.copy(alpha = if (isSelected) 0.86f else 0.30f)
+                        },
+                        topLeft = Offset(left, size.height - height),
+                        size = Size(barWidth, height),
+                        cornerRadius = CornerRadius(7.dp.toPx(), 7.dp.toPx()),
+                    )
+                    drawRoundRect(
+                        color = TrackGreen,
+                        topLeft = Offset(left, 0f),
+                        size = Size(barWidth, size.height),
+                        cornerRadius = CornerRadius(7.dp.toPx(), 7.dp.toPx()),
+                        style = Stroke(width = 1.dp.toPx()),
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth(),
+            ) {
+                values.forEachIndexed { index, value ->
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.TopCenter,
+                    ) {
+                        if (selectedIndex == index) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = DarkText,
+                                shadowElevation = 3.dp,
+                            ) {
+                                Text(
+                                    text = "${value.count} Parks (${value.percentOfTotal.percentLabel()})",
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    lineHeight = 14.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
         Spacer(modifier = Modifier.height(10.dp))
@@ -759,6 +937,420 @@ private fun CapacityClassChart(values: List<CapacityClassStat>) {
             }
         }
     }
+}
+
+@Composable
+private fun InteractiveComparisonCard(
+    uiState: StatsUiState,
+    onComparisonTypeChange: (ComparisonType) -> Unit,
+    onSelectParkA: (String?) -> Unit,
+    onSelectParkB: (String?) -> Unit,
+    onSelectDistrictA: (String?) -> Unit,
+    onSelectDistrictB: (String?) -> Unit,
+) {
+    var dialogTarget by remember { mutableStateOf<ComparisonDialogTarget?>(null) }
+
+    StatsSectionCard {
+        SectionHeader(
+            title = "Direktvergleich",
+            subtitle = "Zwei Windparks oder Landkreise gegenüberstellen",
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        ComparisonTypeSwitch(
+            selectedType = uiState.comparisonType,
+            onSelected = onComparisonTypeChange,
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+
+        val optionA = if (uiState.comparisonType == ComparisonType.PARKS) {
+            uiState.selectedParkA
+        } else {
+            uiState.selectedDistrictA
+        }
+        val optionB = if (uiState.comparisonType == ComparisonType.PARKS) {
+            uiState.selectedParkB
+        } else {
+            uiState.selectedDistrictB
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            ComparisonSlotButton(
+                slotLabel = "A",
+                option = optionA,
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    dialogTarget = if (uiState.comparisonType == ComparisonType.PARKS) {
+                        ComparisonDialogTarget.ParkA
+                    } else {
+                        ComparisonDialogTarget.DistrictA
+                    }
+                },
+            )
+            ComparisonSlotButton(
+                slotLabel = "B",
+                option = optionB,
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    dialogTarget = if (uiState.comparisonType == ComparisonType.PARKS) {
+                        ComparisonDialogTarget.ParkB
+                    } else {
+                        ComparisonDialogTarget.DistrictB
+                    }
+                },
+            )
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+        if (uiState.comparisonRows.isEmpty()) {
+            EmptyText(text = "Noch keine Vergleichswerte verfügbar.")
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                uiState.comparisonRows.forEach { row ->
+                    ComparisonMetricRow(row = row)
+                }
+            }
+        }
+    }
+
+    dialogTarget?.let { target ->
+        val options = when (target) {
+            ComparisonDialogTarget.ParkA,
+            ComparisonDialogTarget.ParkB -> uiState.allParks
+            ComparisonDialogTarget.DistrictA,
+            ComparisonDialogTarget.DistrictB -> uiState.allDistricts
+        }
+        SearchSelectDialog(
+            title = when (target) {
+                ComparisonDialogTarget.ParkA,
+                ComparisonDialogTarget.ParkB -> "Windpark auswählen"
+                ComparisonDialogTarget.DistrictA,
+                ComparisonDialogTarget.DistrictB -> "Landkreis auswählen"
+            },
+            options = options,
+            onDismiss = { dialogTarget = null },
+            onSelected = { option ->
+                when (target) {
+                    ComparisonDialogTarget.ParkA -> onSelectParkA(option.id)
+                    ComparisonDialogTarget.ParkB -> onSelectParkB(option.id)
+                    ComparisonDialogTarget.DistrictA -> onSelectDistrictA(option.id)
+                    ComparisonDialogTarget.DistrictB -> onSelectDistrictB(option.id)
+                }
+                dialogTarget = null
+            },
+        )
+    }
+}
+
+@Composable
+private fun ComparisonTypeSwitch(
+    selectedType: ComparisonType,
+    onSelected: (ComparisonType) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(ScreenBackground)
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        ComparisonTypeSegment(
+            label = "Windparks",
+            selected = selectedType == ComparisonType.PARKS,
+            modifier = Modifier.weight(1f),
+            onClick = { onSelected(ComparisonType.PARKS) },
+        )
+        ComparisonTypeSegment(
+            label = "Landkreise",
+            selected = selectedType == ComparisonType.DISTRICTS,
+            modifier = Modifier.weight(1f),
+            onClick = { onSelected(ComparisonType.DISTRICTS) },
+        )
+    }
+}
+
+@Composable
+private fun ComparisonTypeSegment(
+    label: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = modifier
+            .height(38.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(8.dp),
+        color = if (selected) PrimaryGreen else Color.Transparent,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = label,
+                color = if (selected) Color.White else MutedText,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ComparisonSlotButton(
+    slotLabel: String,
+    option: ComparisonOption?,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = modifier
+            .heightIn(min = 88.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(10.dp),
+        color = ScreenBackground,
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Slot $slotLabel",
+                    color = PrimaryGreen,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Icon(
+                    imageVector = Icons.Outlined.Edit,
+                    contentDescription = null,
+                    tint = PrimaryGreen,
+                    modifier = Modifier.size(16.dp),
+                )
+            }
+            Text(
+                text = option?.label ?: "Auswählen",
+                color = DarkText,
+                fontSize = 13.sp,
+                lineHeight = 17.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = option?.description ?: "Noch kein Eintrag",
+                color = MutedText,
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ComparisonMetricRow(row: ComparisonRow) {
+    val leftColor = if (row.isHigherA) PrimaryGreen else MutedText.copy(alpha = 0.45f)
+    val rightColor = if (!row.isHigherA) PrimaryGreen else MutedText.copy(alpha = 0.45f)
+
+    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = row.valueA,
+                color = DarkText,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = row.label,
+                color = MutedText,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.weight(1.25f),
+            )
+            Text(
+                text = row.valueB,
+                color = DarkText,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(topStart = 999.dp, bottomStart = 999.dp))
+                    .background(TrackGreen),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(row.ratioA.coerceIn(0f, 1f))
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(topStart = 999.dp, bottomStart = 999.dp))
+                        .background(leftColor),
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .fillMaxHeight()
+                    .background(Color.White),
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(topEnd = 999.dp, bottomEnd = 999.dp))
+                    .background(TrackGreen),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(row.ratioB.coerceIn(0f, 1f))
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(topEnd = 999.dp, bottomEnd = 999.dp))
+                        .background(rightColor),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchSelectDialog(
+    title: String,
+    options: List<ComparisonOption>,
+    onDismiss: () -> Unit,
+    onSelected: (ComparisonOption) -> Unit,
+) {
+    var query by remember { mutableStateOf("") }
+    val filteredOptions = remember(query, options) {
+        val normalizedQuery = query.trim()
+        if (normalizedQuery.isBlank()) {
+            options
+        } else {
+            options.filter { option ->
+                option.label.contains(normalizedQuery, ignoreCase = true) ||
+                    option.description.contains(normalizedQuery, ignoreCase = true)
+            }
+        }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 560.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = Color.White,
+            shadowElevation = 8.dp,
+        ) {
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = title,
+                        color = DarkText,
+                        fontSize = 18.sp,
+                        lineHeight = 24.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    TextButton(onClick = onDismiss) {
+                        Text(text = "Schließen")
+                    }
+                }
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = null,
+                            tint = MutedText,
+                        )
+                    },
+                    label = { Text("Suchen") },
+                )
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 380.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    items(filteredOptions, key = { it.id }) { option ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { onSelected(option) }
+                                .padding(horizontal = 10.dp, vertical = 9.dp),
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            Text(
+                                text = option.label,
+                                color = DarkText,
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = option.description,
+                                color = MutedText,
+                                fontSize = 11.sp,
+                                lineHeight = 14.sp,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private enum class ComparisonDialogTarget {
+    ParkA,
+    ParkB,
+    DistrictA,
+    DistrictB,
 }
 
 @Composable
@@ -867,4 +1459,18 @@ private fun Double.roundLabel(): String {
         .chunked(3)
         .joinToString(".")
         .reversed()
+}
+
+private fun Double.roundOneDecimal(): String {
+    val rounded = kotlin.math.round(this * 10.0) / 10.0
+    return rounded.toString()
+        .let { if (it.endsWith(".0")) it.dropLast(2) else it }
+        .replace(".", ",")
+}
+
+private fun Float.percentLabel(): String {
+    val rounded = kotlin.math.round(this * 1_000.0) / 10.0
+    return rounded.toString()
+        .let { if (it.endsWith(".0")) it.dropLast(2) else it }
+        .replace(".", ",") + " %"
 }
