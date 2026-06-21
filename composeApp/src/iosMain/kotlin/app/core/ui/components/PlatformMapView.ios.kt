@@ -213,8 +213,15 @@ actual fun PlatformMapView(
                             });
                             leafletMarkers.push(turbineMarker);
                         } else if (item.kind === 'PlacementPin') {
+                            var placementIcon = L.divIcon({
+                                className: '',
+                                html: '<div style="width: 34px; height: 42px; display: flex; align-items: flex-start; justify-content: center; filter: drop-shadow(0 3px 5px rgba(0,0,0,0.35));"><svg width="34" height="42" viewBox="0 0 34 42" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M17 40C17 40 31 24.9 31 14.8C31 6.6 24.7 1 17 1C9.3 1 3 6.6 3 14.8C3 24.9 17 40 17 40Z" fill="#D32F2F" stroke="#FFFFFF" stroke-width="2"/><circle cx="17" cy="15" r="5.8" fill="#FFFFFF"/></svg></div>',
+                                iconSize: [34, 42],
+                                iconAnchor: [17, 40]
+                            });
                             var placementMarker = L.marker([item.latitude, item.longitude], {
-                                draggable: true
+                                draggable: true,
+                                icon: placementIcon
                             });
                             placementMarker.on('dragend', function(e) {
                                 var latlng = placementMarker.getLatLng();
