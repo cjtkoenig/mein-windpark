@@ -10,6 +10,7 @@ import app.core.model.MapMarkerUiModel
 import app.core.model.WindPark
 import app.data.repository.WindParkRepository
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.floor
 
 class MapViewModel(private val repository: WindParkRepository) : ViewModel() {
@@ -208,9 +209,9 @@ class MapViewModel(private val repository: WindParkRepository) : ViewModel() {
     }
 
     fun onMapMoved(lat: Double, lon: Double, zoom: Float) {
-        if (Math.abs(uiState.mapCenterLat - lat) > 0.0001 || 
-            Math.abs(uiState.mapCenterLon - lon) > 0.0001 || 
-            Math.abs(uiState.zoomLevel - zoom) > 0.1) {
+        if (abs(uiState.mapCenterLat - lat) > 0.0001 || 
+            abs(uiState.mapCenterLon - lon) > 0.0001 || 
+            abs(uiState.zoomLevel - zoom) > 0.1) {
             uiState = uiState.copy(
                 mapCenterLat = lat,
                 mapCenterLon = lon,

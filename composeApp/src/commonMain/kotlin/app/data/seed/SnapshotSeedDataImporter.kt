@@ -18,7 +18,7 @@ class SnapshotSeedDataImporter(
         explicitNulls = false
     },
 ) : SeedDataImporter {
-    override suspend fun importIfNeeded(): Unit = withContext(Dispatchers.IO) {
+    override suspend fun importIfNeeded(): Unit = withContext(Dispatchers.Default) {
         println("SnapshotSeedDataImporter: Starting importIfNeeded...")
         try {
             // Fast-path checksum detection using the 1 KB metadata file to avoid loading 64 MB of JSON on every launch

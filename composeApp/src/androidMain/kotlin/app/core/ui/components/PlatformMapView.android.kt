@@ -129,8 +129,9 @@ actual fun PlatformMapView(
                         preferCanvas: true
                     }).setView([$centerLatDefault, $centerLonDefault], $zoomDefault);
 
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                        referrerPolicy: 'origin'
                     }).addTo(map);
 
                     markersGroup = L.layerGroup().addTo(map);
@@ -297,6 +298,7 @@ actual fun PlatformMapView(
                     
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
+                    settings.userAgentString = "${settings.userAgentString} WindKlar/1.0 product.lifecycle.windenergy"
                     
                     webViewClient = object : WebViewClient() {
                         override fun onPageFinished(view: WebView?, url: String?) {

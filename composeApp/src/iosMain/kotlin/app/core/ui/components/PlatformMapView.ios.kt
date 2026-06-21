@@ -20,7 +20,6 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import platform.CoreGraphics.CGRectZero
-import platform.Foundation.NSURL
 import platform.WebKit.WKScriptMessage
 import platform.WebKit.WKScriptMessageHandlerProtocol
 import platform.WebKit.WKUserContentController
@@ -30,6 +29,8 @@ import platform.WebKit.WKNavigationDelegateProtocol
 import platform.WebKit.WKNavigation
 import platform.darwin.NSObject
 import windklar.composeapp.generated.resources.Res
+
+private const val WindklarMapUserAgent = "WindKlar/1.0 (product.lifecycle.windenergy; iOS)"
 
 @OptIn(ExperimentalForeignApi::class)
 @Composable
@@ -129,8 +130,9 @@ actual fun PlatformMapView(
                         preferCanvas: true
                     }).setView([$centerLatDefault, $centerLonDefault], $zoomDefault);
 
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                        referrerPolicy: 'origin'
                     }).addTo(map);
 
                     markersGroup = L.layerGroup().addTo(map);
@@ -284,12 +286,13 @@ actual fun PlatformMapView(
                 }
             }
             userContentController.addScriptMessageHandler(handler, "iosBridge")
+            applicationNameForUserAgent = WindklarMapUserAgent
         }
     }
 
     val navigationDelegate = remember {
         object : NSObject(), WKNavigationDelegateProtocol {
-            override fun webView(webView: WKWebView, didFinishNavigation: WKNavigation) {
+            override fun webView(webView: WKWebView, didFinishNavigation: WKNavigation?) {
                 // Fallback in case window.onload doesn't trigger or gets blocked
                 platform.darwin.dispatch_after(
                     platform.darwin.dispatch_time(platform.darwin.DISPATCH_TIME_NOW, 500_000_000 /* 500ms in ns */),
@@ -323,9 +326,10 @@ actual fun PlatformMapView(
         UIKitView(
             factory = {
                 WKWebView(frame = CGRectZero.readValue(), configuration = configuration).apply {
+                    customUserAgent = WindklarMapUserAgent
                     this.navigationDelegate = navigationDelegate
                     webViewRef = this
-                    loadHTMLString(htmlContent, baseURL = NSURL.URLWithString("https://openstreetmap.org"))
+                    loadHTMLString(htmlContent, baseURL = null)
                 }
             },
             update = {
