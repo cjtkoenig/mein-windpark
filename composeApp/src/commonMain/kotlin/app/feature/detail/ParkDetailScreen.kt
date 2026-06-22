@@ -308,13 +308,11 @@ private fun CitizenImpactDashboard(metrics: List<Metric>) {
     val prodVal = prodMetric?.value?.let { "${(it / 1_000_000.0).roundTo(1)} GWh/Jahr" } ?: "Keine Daten"
     val co2Val = co2Metric?.value?.let { "${formatNumber((it / 1000.0).toInt())} t/Jahr" } ?: "Keine Daten"
     val houseVal = houseMetric?.value?.let { "${formatNumber(it.toInt())} Haushalte" } ?: "Keine Daten"
-    val muniVal = muniMetric?.value?.let { "ca. ${formatNumber(it.toInt())} EUR/Jahr" } ?: "Keine Daten"
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = Color.White,
-        shadowElevation = 8.dp
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White,
+                shadowElevation = 8.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -351,14 +349,16 @@ private fun CitizenImpactDashboard(metrics: List<Metric>) {
                 quality = houseMetric?.dataQuality ?: "missing"
             )
 
-            ImpactRow(
-                icon = Icons.Outlined.MonetizationOn,
-                label = "Kommunale Beteiligung (§6 EEG)",
-                value = muniVal,
-                note = muniMetric?.calculationNote
-                    ?: "Geschätzte mögliche kommunale Beteiligung nach §6 EEG. Grundlage: 0,2 ct/kWh und geschätzte Jahresproduktion. Keine bestätigte Auszahlung.",
-                quality = muniMetric?.dataQuality ?: "missing"
-            )
+            muniMetric?.let { metric ->
+                ImpactRow(
+                    icon = Icons.Outlined.MonetizationOn,
+                    label = "Kommunale Beteiligung an Land (§6 EEG)",
+                    value = metric.value?.let { "ca. ${formatNumber(it.toInt())} EUR/Jahr" } ?: "Keine Daten",
+                    note = metric.calculationNote
+                        ?: "Schätzung nach § 6 EEG für Windenergie an Land. Grundlage: 0,2 ct/kWh und geschätzte Jahresproduktion. Keine bestätigte Auszahlung.",
+                    quality = metric.dataQuality
+                )
+            }
         }
     }
 }

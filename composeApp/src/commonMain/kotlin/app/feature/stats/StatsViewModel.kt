@@ -10,6 +10,7 @@ import app.core.model.SnapshotAssumption
 import app.core.model.WindPark
 import app.core.model.RankingItem
 import app.core.model.RankingDetailLine
+import app.core.model.isOffshore
 import app.data.repository.WindParkRepository
 import kotlinx.coroutines.launch
 import kotlin.math.round
@@ -125,9 +126,12 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
 
     private fun loadStats() {
         viewModelScope.launch {
+            val includeOffshore = repository.isOffshoreEnabled()
             val parks = repository.getWindParks()
+                .filter { includeOffshore || !it.isOffshore() }
             val turbines = repository.getAllWindTurbines()
-            val nationalMetrics = repository.getMetricsForNational()
+                .filter { includeOffshore || !it.isOffshore() }
+            val nationalMetrics = repository.getMetricsForNational(includeOffshore)
             val recentParks = repository.getRecentWindParks(limit = 1)
             val assumptions = repository.getSnapshotAssumptions()
             val attribution = repository.getSnapshotAttribution()
@@ -144,16 +148,16 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
             val totalHouseholds = nationalMetrics.firstValue("household_equivalent") ?: 0.0
             val totalMunicipalBenefit = nationalMetrics.firstValue("municipal_participation") ?: 0.0
 
-            val cities = buildCityStats(parks, totalCapacityMw)
+            val cities = buildCityStats(parks, totalCapacityMw, assumptions)
             loadedCities = cities
 
-            val districts = buildDistrictStats(parks, totalCapacityMw)
+            val districts = buildDistrictStats(parks, totalCapacityMw, assumptions)
             loadedDistricts = districts
 
-            val states = buildStateStats(parks, totalCapacityMw)
+            val states = buildStateStats(parks, totalCapacityMw, assumptions)
             loadedStates = states
 
-            val recentPark = recentParks.firstOrNull()
+            val recentPark = recentParks.firstOrNull()?.takeIf { includeOffshore || !it.isOffshore() }
             val selectedDistrict = selectDistrictComparison(
                 districts = districts,
                 recentPark = recentPark,
@@ -222,7 +226,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                     StatsImpactCard(
                         title = "Kommunaler Nutzen",
                         value = formatCurrency(totalMunicipalBenefit),
-                        description = "mögliche Beteiligung nach § 6 EEG",
+                        description = "mögliche Beteiligung für Windenergie an Land nach § 6 EEG",
                         quality = "estimated",
                         icon = StatsIcon.Money,
                     ),
@@ -281,7 +285,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                     StatsQualityNote(
                         label = "Wirkungswerte",
                         quality = "estimated",
-                        description = "Produktion, CO2 und kommunaler Nutzen beruhen auf dokumentierten MVP-Annahmen.",
+                        description = "Produktion, CO2 und kommunaler Nutzen für Windenergie an Land beruhen auf dokumentierten MVP-Annahmen.",
                     ),
                 ),
                 attribution = attribution,
@@ -322,6 +326,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
     private fun buildCityStats(
         parks: List<WindPark>,
         totalCapacityMw: Double,
+        assumptions: List<SnapshotAssumption>,
     ): List<CityStat> {
         val parkGroups = parks
             .groupBy { it.municipalityId }
@@ -330,12 +335,22 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
             .mapValues { (_, stateParks) ->
                 stateParks.sumOf { it.installedCapacityKw ?: 0L } / 1_000.0
             }
+        val fullLoadHours = assumptionValue("full_load_hours", assumptions, DEFAULT_FULL_LOAD_HOURS)
+        val municipalBenefitFactor = assumptionValue(
+            "municipal_benefit_eur_per_kwh",
+            assumptions,
+            DEFAULT_MUNICIPAL_BENEFIT_EUR_PER_KWH,
+        )
 
         return parkGroups.map { (cityId, cityParks) ->
             val capacityMw = cityParks.sumOf { it.installedCapacityKw ?: 0L } / 1_000.0
             val turbines = cityParks.sumOf { it.turbineCount }
             val firstPark = cityParks.first()
             val stateCapacity = stateCapacityMw[firstPark.stateId] ?: 0.0
+            val onshoreParks = cityParks.filterNot { it.isOffshore() }
+            val municipalBenefitEur = onshoreParks
+                .takeIf { it.isNotEmpty() }
+                ?.sumOf { (it.installedCapacityKw ?: 0L).toDouble() * fullLoadHours * municipalBenefitFactor }
             CityStat(
                 cityId = cityId,
                 label = firstPark.municipalityName,
@@ -354,6 +369,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                 } else {
                     0f
                 },
+                municipalBenefitEur = municipalBenefitEur,
             )
         }.sortedByDescending { it.installedCapacityMw }
     }
@@ -361,6 +377,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
     private fun buildDistrictStats(
         parks: List<WindPark>,
         totalCapacityMw: Double,
+        assumptions: List<SnapshotAssumption>,
     ): List<DistrictStat> {
         val parkGroups = parks
             .groupBy { it.districtId }
@@ -369,6 +386,12 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
             .mapValues { (_, stateParks) ->
                 stateParks.sumOf { it.installedCapacityKw ?: 0L } / 1_000.0
             }
+        val fullLoadHours = assumptionValue("full_load_hours", assumptions, DEFAULT_FULL_LOAD_HOURS)
+        val municipalBenefitFactor = assumptionValue(
+            "municipal_benefit_eur_per_kwh",
+            assumptions,
+            DEFAULT_MUNICIPAL_BENEFIT_EUR_PER_KWH,
+        )
 
         return parkGroups.map { (districtId, districtParks) ->
             val capacityMw = districtParks.sumOf { it.installedCapacityKw ?: 0L } / 1_000.0
@@ -382,6 +405,10 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                 ?.key
                 ?: firstPark.municipalityName
             val stateCapacity = stateCapacityMw[firstPark.stateId] ?: 0.0
+            val onshoreParks = districtParks.filterNot { it.isOffshore() }
+            val municipalBenefitEur = onshoreParks
+                .takeIf { it.isNotEmpty() }
+                ?.sumOf { (it.installedCapacityKw ?: 0L).toDouble() * fullLoadHours * municipalBenefitFactor }
             DistrictStat(
                 districtId = districtId,
                 label = firstPark.districtName,
@@ -400,6 +427,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                 } else {
                     0f
                 },
+                municipalBenefitEur = municipalBenefitEur,
             )
         }.sortedByDescending { it.installedCapacityMw }
     }
@@ -407,14 +435,25 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
     private fun buildStateStats(
         parks: List<WindPark>,
         totalCapacityMw: Double,
+        assumptions: List<SnapshotAssumption>,
     ): List<StateStat> {
         val parkGroups = parks
             .groupBy { it.stateId }
+        val fullLoadHours = assumptionValue("full_load_hours", assumptions, DEFAULT_FULL_LOAD_HOURS)
+        val municipalBenefitFactor = assumptionValue(
+            "municipal_benefit_eur_per_kwh",
+            assumptions,
+            DEFAULT_MUNICIPAL_BENEFIT_EUR_PER_KWH,
+        )
 
         return parkGroups.map { (stateId, stateParks) ->
             val capacityMw = stateParks.sumOf { it.installedCapacityKw ?: 0L } / 1_000.0
             val turbines = stateParks.sumOf { it.turbineCount }
             val firstPark = stateParks.first()
+            val onshoreParks = stateParks.filterNot { it.isOffshore() }
+            val municipalBenefitEur = onshoreParks
+                .takeIf { it.isNotEmpty() }
+                ?.sumOf { (it.installedCapacityKw ?: 0L).toDouble() * fullLoadHours * municipalBenefitFactor }
             StateStat(
                 stateId = stateId,
                 label = firstPark.stateName,
@@ -426,6 +465,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                 } else {
                     0f
                 },
+                municipalBenefitEur = municipalBenefitEur,
             )
         }.sortedByDescending { it.installedCapacityMw }
     }
@@ -521,26 +561,26 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
     private fun buildComparisonRows(
         metricsA: ComparisonMetrics,
         metricsB: ComparisonMetrics,
-    ): List<ComparisonRow> = listOf(
-        comparisonRow("Anzahl Anlagen", metricsA.turbines.toDouble(), metricsB.turbines.toDouble()) {
+    ): List<ComparisonRow> = buildList {
+        add(comparisonRow("Anzahl Anlagen", metricsA.turbines.toDouble(), metricsB.turbines.toDouble()) {
             formatInteger(it.roundToInt())
-        },
-        comparisonRow("Leistung", metricsA.capacityMw, metricsB.capacityMw) {
+        }!!)
+        add(comparisonRow("Leistung", metricsA.capacityMw, metricsB.capacityMw) {
             "${it.roundTo(1).formatGerman()} MW"
-        },
-        comparisonRow("Jahresproduktion", metricsA.annualProductionKwh, metricsB.annualProductionKwh) {
+        }!!)
+        add(comparisonRow("Jahresproduktion", metricsA.annualProductionKwh, metricsB.annualProductionKwh) {
             "${(it / 1_000_000.0).roundTo(1).formatGerman()} GWh"
-        },
-        comparisonRow("CO2-Einsparung", metricsA.co2Kg, metricsB.co2Kg) {
+        }!!)
+        add(comparisonRow("CO2-Einsparung", metricsA.co2Kg, metricsB.co2Kg) {
             "${(it / 1_000.0).roundTo(0).formatGerman()} t"
-        },
-        comparisonRow("Haushaltsäquivalente", metricsA.households, metricsB.households) {
+        }!!)
+        add(comparisonRow("Haushaltsäquivalente", metricsA.households, metricsB.households) {
             formatCompact(it)
-        },
-        comparisonRow("Kommunale Beteiligung", metricsA.municipalBenefit, metricsB.municipalBenefit) {
+        }!!)
+        comparisonRow("Kommunale Beteiligung an Land", metricsA.municipalBenefit, metricsB.municipalBenefit) {
             formatCurrency(it)
-        },
-    )
+        }?.let { add(it) }
+    }
 
     private suspend fun metricsForPark(parkId: String): List<Metric> {
         parkMetricCache[parkId]?.let { return it }
@@ -567,12 +607,16 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                 assumptions,
                 DEFAULT_HOUSEHOLD_CONSUMPTION_KWH,
             )
-        val municipalBenefit = metrics.firstValue("municipal_participation")
-            ?: annualProduction * assumptionValue(
-                "municipal_benefit_eur_per_kwh",
-                assumptions,
-                DEFAULT_MUNICIPAL_BENEFIT_EUR_PER_KWH,
-            )
+        val municipalBenefit = if (isOffshore()) {
+            null
+        } else {
+            metrics.firstValue("municipal_participation")
+                ?: annualProduction * assumptionValue(
+                    "municipal_benefit_eur_per_kwh",
+                    assumptions,
+                    DEFAULT_MUNICIPAL_BENEFIT_EUR_PER_KWH,
+                )
+        }
         return ComparisonMetrics(
             turbines = turbineCount,
             capacityMw = capacityKw / 1_000.0,
@@ -600,11 +644,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                 assumptions,
                 DEFAULT_HOUSEHOLD_CONSUMPTION_KWH,
             ),
-            municipalBenefit = annualProduction * assumptionValue(
-                "municipal_benefit_eur_per_kwh",
-                assumptions,
-                DEFAULT_MUNICIPAL_BENEFIT_EUR_PER_KWH,
-            ),
+            municipalBenefit = municipalBenefitEur,
         )
     }
 
@@ -625,11 +665,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                 assumptions,
                 DEFAULT_HOUSEHOLD_CONSUMPTION_KWH,
             ),
-            municipalBenefit = annualProduction * assumptionValue(
-                "municipal_benefit_eur_per_kwh",
-                assumptions,
-                DEFAULT_MUNICIPAL_BENEFIT_EUR_PER_KWH,
-            ),
+            municipalBenefit = municipalBenefitEur,
         )
     }
 
@@ -650,28 +686,31 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                 assumptions,
                 DEFAULT_HOUSEHOLD_CONSUMPTION_KWH,
             ),
-            municipalBenefit = annualProduction * assumptionValue(
-                "municipal_benefit_eur_per_kwh",
-                assumptions,
-                DEFAULT_MUNICIPAL_BENEFIT_EUR_PER_KWH,
-            ),
+            municipalBenefit = municipalBenefitEur,
         )
     }
 
     private fun comparisonRow(
         label: String,
-        rawA: Double,
-        rawB: Double,
+        rawA: Double?,
+        rawB: Double?,
         formatter: (Double) -> String,
-    ): ComparisonRow {
-        val max = maxOf(rawA, rawB).takeIf { it > 0.0 } ?: 1.0
+    ): ComparisonRow? {
+        if (rawA == null && rawB == null) return null
+        val comparableA = rawA ?: 0.0
+        val comparableB = rawB ?: 0.0
+        val max = maxOf(comparableA, comparableB).takeIf { it > 0.0 } ?: 1.0
         return ComparisonRow(
             label = label,
-            valueA = formatter(rawA),
-            valueB = formatter(rawB),
-            ratioA = (rawA / max).toFloat().coerceIn(0f, 1f),
-            ratioB = (rawB / max).toFloat().coerceIn(0f, 1f),
-            isHigherA = rawA >= rawB,
+            valueA = rawA?.let(formatter) ?: "Nicht anwendbar",
+            valueB = rawB?.let(formatter) ?: "Nicht anwendbar",
+            ratioA = (comparableA / max).toFloat().coerceIn(0f, 1f),
+            ratioB = (comparableB / max).toFloat().coerceIn(0f, 1f),
+            isHigherA = when {
+                rawA != null && rawB != null -> rawA >= rawB
+                rawA != null -> true
+                else -> false
+            },
         )
     }
 
@@ -919,5 +958,5 @@ private data class ComparisonMetrics(
     val annualProductionKwh: Double,
     val co2Kg: Double,
     val households: Double,
-    val municipalBenefit: Double,
+    val municipalBenefit: Double?,
 )

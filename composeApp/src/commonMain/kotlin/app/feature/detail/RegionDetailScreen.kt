@@ -357,7 +357,7 @@ private fun RegionCitizenImpactDashboard(
     productionGwh: Double,
     co2SavingsTons: Double,
     householdsSupplied: Int,
-    municipalBenefitEur: Double,
+    municipalBenefitEur: Double?,
     regionTypeLabel: String
 ) {
     Surface(
@@ -401,24 +401,26 @@ private fun RegionCitizenImpactDashboard(
                 quality = "estimated"
             )
 
-            val muniLabel = if (regionTypeLabel.lowercase() == "gemeinde") {
-                "Kommunale Beteiligung (§6 EEG)"
-            } else {
-                "Mögliche kommunale Beteiligung (§6 EEG)"
-            }
-            val muniNote = if (regionTypeLabel.lowercase() == "gemeinde") {
-                "Geschätzte mögliche kommunale Beteiligung nach §6 EEG (0,2 ct/kWh) für das Budget dieser Gemeinde. Keine Gewähr für tatsächliche Verträge."
-            } else {
-                "Aggregierte mögliche kommunale Beteiligung nach §6 EEG (0,2 ct/kWh) für die in dieser Region liegenden Gemeinden."
-            }
+            municipalBenefitEur?.let { benefit ->
+                val muniLabel = if (regionTypeLabel.lowercase() == "gemeinde") {
+                    "Kommunale Beteiligung an Land (§6 EEG)"
+                } else {
+                    "Mögliche kommunale Beteiligung an Land (§6 EEG)"
+                }
+                val muniNote = if (regionTypeLabel.lowercase() == "gemeinde") {
+                    "Geschätzte mögliche kommunale Beteiligung für Windenergie an Land nach §6 EEG (0,2 ct/kWh) für das Budget dieser Gemeinde. Keine Gewähr für tatsächliche Verträge."
+                } else {
+                    "Aggregierte mögliche kommunale Beteiligung für Windenergie an Land nach §6 EEG (0,2 ct/kWh) für die in dieser Region liegenden Gemeinden."
+                }
 
-            RegionImpactRow(
-                icon = Icons.Outlined.MonetizationOn,
-                label = muniLabel,
-                value = "ca. ${formatNumber(municipalBenefitEur.toInt())} EUR/Jahr",
-                note = muniNote,
-                quality = "estimated"
-            )
+                RegionImpactRow(
+                    icon = Icons.Outlined.MonetizationOn,
+                    label = muniLabel,
+                    value = "ca. ${formatNumber(benefit.toInt())} EUR/Jahr",
+                    note = muniNote,
+                    quality = "estimated"
+                )
+            }
         }
     }
 }

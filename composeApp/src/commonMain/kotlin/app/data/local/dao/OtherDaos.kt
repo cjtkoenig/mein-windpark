@@ -251,3 +251,20 @@ class SqlDelightSnapshotMetadataDao(private val database: AppDatabase) : Snapsho
         return database.snapshotMetadataQueries.selectLatestSnapshot().executeAsOneOrNull()
     }
 }
+
+// --- Settings DAO ---
+
+interface SettingsDao {
+    suspend fun getValue(key: String): String?
+    suspend fun upsertValue(key: String, value: String)
+}
+
+class SqlDelightSettingsDao(private val database: AppDatabase) : SettingsDao {
+    override suspend fun getValue(key: String): String? {
+        return database.settingQueries.getSetting(key).executeAsOneOrNull()
+    }
+
+    override suspend fun upsertValue(key: String, value: String) {
+        database.settingQueries.upsertSetting(key, value)
+    }
+}

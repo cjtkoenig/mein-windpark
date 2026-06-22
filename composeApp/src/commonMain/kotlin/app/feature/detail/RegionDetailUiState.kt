@@ -31,7 +31,7 @@ data class RegionDetailUiState(
     val annualProductionGwh: Double = 0.0,
     val co2SavingsTons: Double = 0.0,
     val householdsSupplied: Int = 0,
-    val municipalBenefitEur: Double = 0.0,
+    val municipalBenefitEur: Double? = null,
 
     val assumptions: List<SnapshotAssumption> = emptyList(),
     val windParks: List<WindPark> = emptyList(),

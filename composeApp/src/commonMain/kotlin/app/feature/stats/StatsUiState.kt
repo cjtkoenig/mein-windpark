@@ -86,6 +86,7 @@ data class CityStat(
     val installedCapacityMw: Double,
     val shareOfNationalCapacity: Float,
     val shareOfStateCapacity: Float,
+    val municipalBenefitEur: Double? = null,
 )
 
 data class DistrictStat(
@@ -98,6 +99,7 @@ data class DistrictStat(
     val installedCapacityMw: Double,
     val shareOfNationalCapacity: Float,
     val shareOfStateCapacity: Float,
+    val municipalBenefitEur: Double? = null,
 )
 
 data class StateStat(
@@ -107,6 +109,7 @@ data class StateStat(
     val turbineCount: Int,
     val installedCapacityMw: Double,
     val shareOfNationalCapacity: Float,
+    val municipalBenefitEur: Double? = null,
 )
 
 data class DistrictComparison(

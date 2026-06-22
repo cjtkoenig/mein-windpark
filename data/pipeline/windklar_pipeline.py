@@ -72,13 +72,13 @@ DEFAULT_ASSUMPTIONS = {
         "calculationNote": "MVP-Schätzung für Haushaltsäquivalente.",
     },
     "municipal_benefit_eur_per_kwh": {
-        "label": "Geschätzte kommunale Beteiligung nach § 6 EEG",
+        "label": "Geschätzte kommunale Beteiligung für Windenergie an Land nach § 6 EEG",
         "value": 0.002,
         "unit": "EUR/kWh",
         "sourceName": "WindKlar MVP-Annahme",
         "sourceUrl": SOURCE_URL,
         "sourceDate": "2026-06-18",
-        "calculationNote": "Schätzung von 0,2 ct/kWh; keine bestätigte Auszahlung.",
+        "calculationNote": "Schätzung für Windenergie an Land nach § 6 EEG mit 0,2 ct/kWh; keine bestätigte Auszahlung.",
     },
 }
 
@@ -827,9 +827,18 @@ def build_metrics(parks: list[dict[str, Any]], turbines: list[dict[str, Any]]) -
                 metric(park["id"], "annual_production", annual_kwh, "kWh/a", note_annual),
                 metric(park["id"], "co2_savings", annual_kwh * emission_factor, "kg CO2/a", "Geschätzte Produktion multipliziert mit dem angenommenen CO₂-Vermeidungsfaktor."),
                 metric(park["id"], "household_equivalent", annual_kwh / household_consumption, "households", "Geschätzte Produktion geteilt durch den angenommenen jährlichen Haushaltsstrombedarf."),
-                metric(park["id"], "municipal_participation", annual_kwh * municipal_rate, "EUR/a", "Schätzung nach § 6 EEG mit 0,2 ct/kWh; keine bestätigte Auszahlung."),
             ]
         )
+        if not any((t.get("municipalityId") or "") in ("offshore_north_sea", "offshore_baltic_sea") for t in park_turbines):
+            metrics.append(
+                metric(
+                    park["id"],
+                    "municipal_participation",
+                    annual_kwh * municipal_rate,
+                    "EUR/a",
+                    "Schätzung nach § 6 EEG für Windenergie an Land mit 0,2 ct/kWh; keine bestätigte Auszahlung.",
+                )
+            )
     return metrics
 
 

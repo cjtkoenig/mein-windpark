@@ -9,6 +9,7 @@ import app.core.model.SnapshotAssumption
 import app.core.model.WindPark
 import app.core.model.RankingItem
 import app.core.model.RankingDetailLine
+import app.core.model.isOffshore
 import app.data.repository.WindParkRepository
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -121,7 +122,13 @@ class RegionDetailViewModel(
             val annualProductionGwh = annualProductionKwh / 1_000_000.0
             val co2SavingsTons = (annualProductionKwh * emissionFactor) / 1000.0
             val householdsSupplied = (annualProductionKwh / householdCons).toInt()
-            val municipalBenefitEur = annualProductionKwh * municipalBenefitFactor
+            val onshoreParks = regionParks.filterNot { it.isOffshore() }
+            val onshoreCapacityKw = onshoreParks.sumOf { it.installedCapacityKw ?: 0L }
+            val municipalBenefitEur = onshoreCapacityKw
+                .takeIf { it > 0L }
+                ?.toDouble()
+                ?.times(fullLoadHours)
+                ?.times(municipalBenefitFactor)
 
             // Sub-region rankings logic
             val subRegionRankings = when (regionType.lowercase()) {

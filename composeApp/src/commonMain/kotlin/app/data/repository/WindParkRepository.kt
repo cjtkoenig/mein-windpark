@@ -19,7 +19,9 @@ interface WindParkRepository {
     suspend fun clearRecentWindParks()
     
     suspend fun getMetricsForPark(parkId: String): List<Metric>
-    suspend fun getMetricsForNational(): List<Metric>
+    suspend fun getMetricsForNational(includeOffshore: Boolean): List<Metric>
+    suspend fun isOffshoreEnabled(): Boolean
+    suspend fun setOffshoreEnabled(enabled: Boolean)
     suspend fun getWindTurbinesForPark(parkId: String): List<WindTurbine>
     suspend fun getAllWindTurbines(): List<WindTurbine>
     suspend fun getWindParkStatuses(): Map<String, String>

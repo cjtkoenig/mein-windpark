@@ -4,6 +4,7 @@ import app.core.model.WindPark
 import app.core.model.Metric
 import app.core.model.SnapshotAssumption
 import app.core.model.WindTurbine
+import app.core.model.isOffshoreMunicipalityId
 import app.data.local.dao.*
 import app.data.local.entity.WindParkEntity
 import app.data.local.db.AppDatabase
@@ -22,6 +23,10 @@ class SqlDelightWindParkRepository(
         explicitNulls = false
     },
 ) : WindParkRepository {
+    private companion object {
+        const val OFFSHORE_ENABLED_KEY = "offshore_enabled"
+    }
+
     private val windParkDao: WindParkDao = SqlDelightWindParkDao(database)
     private val windTurbineDao: WindTurbineDao = SqlDelightWindTurbineDao(database)
     private val metricDao: MetricDao = SqlDelightMetricDao(database)
@@ -29,6 +34,7 @@ class SqlDelightWindParkRepository(
     private val recentWindParkDao: RecentWindParkDao = SqlDelightRecentWindParkDao(database)
     private val dataHintDao: DataHintDao = SqlDelightDataHintDao(database)
     private val snapshotMetadataDao: SnapshotMetadataDao = SqlDelightSnapshotMetadataDao(database)
+    private val settingsDao: SettingsDao = SqlDelightSettingsDao(database)
 
     override suspend fun getWindParks(): List<WindPark> = withContext(Dispatchers.Default) {
         val favorites = favoriteDao.getFavoriteIds().toSet()
@@ -86,9 +92,22 @@ class SqlDelightWindParkRepository(
         metricDao.getForSubject("wind_park", parkId)
     }
 
-    override suspend fun getMetricsForNational(): List<Metric> = withContext(Dispatchers.Default) {
+    override suspend fun getMetricsForNational(includeOffshore: Boolean): List<Metric> = withContext(Dispatchers.Default) {
         val allMetrics = metricDao.getAll()
-        val groups = allMetrics.groupBy { it.metricType }
+        val offshoreParkIds = windParkDao.getAll()
+            .filter { it.municipalityId.isOffshoreMunicipalityId() }
+            .map { it.id }
+            .toSet()
+        val filteredMetrics = allMetrics.filterNot { metric ->
+            metric.metricType == "municipal_participation" && metric.subjectId in offshoreParkIds
+        }.let { metrics ->
+            if (includeOffshore) {
+                metrics
+            } else {
+                metrics.filterNot { it.subjectId in offshoreParkIds }
+            }
+        }
+        val groups = filteredMetrics.groupBy { it.metricType }
         groups.map { (type, list) ->
             val sum = list.sumOf { it.value ?: 0.0 }
             Metric(
@@ -106,6 +125,18 @@ class SqlDelightWindParkRepository(
                 calculationNote = "Sum of all precomputed wind park estimates."
             )
         }
+    }
+
+    override suspend fun isOffshoreEnabled(): Boolean = withContext(Dispatchers.Default) {
+        settingsDao.getValue(OFFSHORE_ENABLED_KEY)
+            ?.trim()
+            ?.lowercase()
+            ?.let { it == "true" }
+            ?: true
+    }
+
+    override suspend fun setOffshoreEnabled(enabled: Boolean): Unit = withContext(Dispatchers.Default) {
+        settingsDao.upsertValue(OFFSHORE_ENABLED_KEY, enabled.toString())
     }
 
     override suspend fun getWindTurbinesForPark(parkId: String): List<WindTurbine> = withContext(Dispatchers.Default) {

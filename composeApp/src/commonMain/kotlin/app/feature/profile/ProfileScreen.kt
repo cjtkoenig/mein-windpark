@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -78,6 +79,8 @@ fun ProfileScreen(
             DataSourceCard(uiState = uiState)
 
             InfoSettingsCard(
+                isOffshoreEnabled = uiState.isOffshoreEnabled,
+                onOffshoreEnabledChange = viewModel::setOffshoreEnabled,
                 onPrivacyClick = { showPrivacyDialog = true }
             )
 
@@ -160,6 +163,8 @@ private fun ProfileHeader() {
 
 @Composable
 private fun InfoSettingsCard(
+    isOffshoreEnabled: Boolean,
+    onOffshoreEnabledChange: (Boolean) -> Unit,
     onPrivacyClick: () -> Unit,
 ) {
     Surface(
@@ -184,6 +189,16 @@ private fun InfoSettingsCard(
                 icon = Icons.Outlined.Language,
                 label = "Sprache",
                 trailingText = "Deutsch",
+            )
+
+            SettingsRowDivider()
+
+            SettingsSwitchRow(
+                icon = Icons.Outlined.Air,
+                label = "Offshore-Windparks",
+                supportingText = "In Statistiken, Rankings und Vergleichen berücksichtigen",
+                checked = isOffshoreEnabled,
+                onCheckedChange = onOffshoreEnabledChange,
             )
 
             SettingsRowDivider()
@@ -336,6 +351,62 @@ private fun SettingsActionRow(
                 fontWeight = FontWeight.Medium,
             )
         }
+    }
+}
+
+@Composable
+private fun SettingsSwitchRow(
+    icon: ImageVector,
+    label: String,
+    supportingText: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 72.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .background(PaleGreen, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = PrimaryGreen,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = label,
+                color = DarkGreen,
+                fontSize = 15.sp,
+                lineHeight = 22.sp,
+                fontWeight = FontWeight.Normal,
+            )
+            Text(
+                text = supportingText,
+                color = MutedGreen,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+            )
+        }
+
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+        )
     }
 }
 
