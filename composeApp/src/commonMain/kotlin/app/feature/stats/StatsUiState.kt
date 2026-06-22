@@ -4,15 +4,22 @@ data class StatsUiState(
     val subtitle: String = "Snapshot wird geladen",
     val overviewCards: List<StatsOverviewCard> = emptyList(),
     val impactCards: List<StatsImpactCard> = emptyList(),
-    val topDistricts: List<DistrictStat> = emptyList(),
+    val rankingType: RankingType = RankingType.DISTRICTS,
+    val rankingItems: List<RankingItem> = emptyList(),
     val districtComparison: DistrictComparison? = null,
     val comparisonType: ComparisonType = ComparisonType.PARKS,
     val allParks: List<ComparisonOption> = emptyList(),
+    val allCities: List<ComparisonOption> = emptyList(),
     val allDistricts: List<ComparisonOption> = emptyList(),
+    val allStates: List<ComparisonOption> = emptyList(),
     val selectedParkA: ComparisonOption? = null,
     val selectedParkB: ComparisonOption? = null,
+    val selectedCityA: ComparisonOption? = null,
+    val selectedCityB: ComparisonOption? = null,
     val selectedDistrictA: ComparisonOption? = null,
     val selectedDistrictB: ComparisonOption? = null,
+    val selectedStateA: ComparisonOption? = null,
+    val selectedStateB: ComparisonOption? = null,
     val comparisonRows: List<ComparisonRow> = emptyList(),
     val co2Summary: String = "",
     val co2Comparisons: List<Co2Comparison> = emptyList(),
@@ -24,8 +31,32 @@ data class StatsUiState(
 
 enum class ComparisonType {
     PARKS,
+    CITIES,
     DISTRICTS,
+    STATES,
 }
+
+enum class RankingType {
+    PARKS,
+    CITIES,
+    DISTRICTS,
+    STATES,
+}
+
+data class RankingItem(
+    val id: String,
+    val rank: Int,
+    val name: String,
+    val subtitle: String,
+    val valueLabel: String,
+    val progress: Float,
+    val details: List<RankingDetailLine>,
+)
+
+data class RankingDetailLine(
+    val label: String,
+    val value: String,
+)
 
 data class ComparisonOption(
     val id: String,
@@ -56,6 +87,18 @@ data class StatsImpactCard(
     val icon: StatsIcon,
 )
 
+data class CityStat(
+    val cityId: String,
+    val label: String,
+    val districtName: String,
+    val stateName: String,
+    val windParkCount: Int,
+    val turbineCount: Int,
+    val installedCapacityMw: Double,
+    val shareOfNationalCapacity: Float,
+    val shareOfStateCapacity: Float,
+)
+
 data class DistrictStat(
     val districtId: String,
     val label: String,
@@ -66,6 +109,15 @@ data class DistrictStat(
     val installedCapacityMw: Double,
     val shareOfNationalCapacity: Float,
     val shareOfStateCapacity: Float,
+)
+
+data class StateStat(
+    val stateId: String,
+    val label: String,
+    val windParkCount: Int,
+    val turbineCount: Int,
+    val installedCapacityMw: Double,
+    val shareOfNationalCapacity: Float,
 )
 
 data class DistrictComparison(

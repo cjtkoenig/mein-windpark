@@ -4,6 +4,10 @@ CREATE TABLE wind_turbine (
     name TEXT NOT NULL,
     municipality_id TEXT NOT NULL,
     municipality_name TEXT NOT NULL,
+    district_id TEXT NOT NULL,
+    district_name TEXT NOT NULL,
+    state_id TEXT NOT NULL,
+    state_name TEXT NOT NULL,
     latitude REAL NOT NULL,
     longitude REAL NOT NULL,
     installed_capacity_kw INTEGER,
@@ -50,6 +54,10 @@ INSERT OR REPLACE INTO wind_turbine(
     name,
     municipality_id,
     municipality_name,
+    district_id,
+    district_name,
+    state_id,
+    state_name,
     latitude,
     longitude,
     installed_capacity_kw,
@@ -64,4 +72,4 @@ INSERT OR REPLACE INTO wind_turbine(
     source_updated_at,
     data_quality
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);

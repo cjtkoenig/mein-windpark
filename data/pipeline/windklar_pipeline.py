@@ -647,6 +647,85 @@ def build_snapshot(
     snapshot_id: str | None = None,
     quality_report: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    # Load AGS district and state mapping
+    ags_path = Path("data/raw/ags_landkreise.json")
+    ags_map = {}
+    if ags_path.exists():
+        try:
+            raw_ags = json.loads(ags_path.read_text(encoding="utf-8"))
+            # Pad keys to 5 digits
+            ags_map = {k.zfill(5): v for k, v in raw_ags.items()}
+        except Exception as e:
+            print(f"Warning: Failed to parse {ags_path}: {e}", file=sys.stderr)
+    else:
+        print(f"Warning: {ags_path} not found. Using empty mapping.", file=sys.stderr)
+
+    STATE_NAMES = {
+        "01": "Schleswig-Holstein",
+        "02": "Hamburg",
+        "03": "Niedersachsen",
+        "04": "Bremen",
+        "05": "Nordrhein-Westfalen",
+        "06": "Hessen",
+        "07": "Rheinland-Pfalz",
+        "08": "Baden-Württemberg",
+        "09": "Bayern",
+        "10": "Saarland",
+        "11": "Berlin",
+        "12": "Brandenburg",
+        "13": "Mecklenburg-Vorpommern",
+        "14": "Sachsen",
+        "15": "Sachsen-Anhalt",
+        "16": "Thüringen"
+    }
+
+    def enrich_entity(item: dict[str, Any]) -> dict[str, Any]:
+        enriched = dict(item)
+        m_id = str(enriched.get("municipalityId", ""))
+        if m_id == "offshore_north_sea":
+            enriched["districtId"] = "offshore_north_sea"
+            enriched["districtName"] = "Offshore Nordsee"
+            lat = float(enriched.get("latitude", 0.0))
+            lon = float(enriched.get("longitude", 0.0))
+            if lat >= 55.0 or (lon >= 7.6 and lat >= 54.3):
+                enriched["stateId"] = "01"
+                enriched["stateName"] = "Schleswig-Holstein"
+            else:
+                enriched["stateId"] = "03"
+                enriched["stateName"] = "Niedersachsen"
+        elif m_id == "offshore_baltic_sea":
+            enriched["districtId"] = "offshore_baltic_sea"
+            enriched["districtName"] = "Offshore Ostsee"
+            enriched["stateId"] = "13"
+            enriched["stateName"] = "Mecklenburg-Vorpommern"
+        elif m_id.isdigit() and len(m_id) >= 5:
+            dist_id = m_id[:5]
+            state_id = m_id[:2]
+            enriched["districtId"] = dist_id
+            enriched["stateId"] = state_id
+            
+            # Resolve district name
+            dist_entry = ags_map.get(dist_id)
+            if dist_entry:
+                name = dist_entry.get("name", "")
+                if name.startswith("LK "):
+                    enriched["districtName"] = "Landkreis " + name[3:]
+                elif name.startswith("SK "):
+                    enriched["districtName"] = "Stadt " + name[3:]
+                else:
+                    enriched["districtName"] = name
+            else:
+                enriched["districtName"] = f"Landkreis {dist_id}"
+                
+            # Resolve state name
+            enriched["stateName"] = STATE_NAMES.get(state_id, "Deutschland")
+        else:
+            enriched["districtId"] = "unknown"
+            enriched["districtName"] = "Unbekannter Landkreis"
+            enriched["stateId"] = "unknown"
+            enriched["stateName"] = "Unbekannt"
+        return enriched
+
     assumptions = [
         {"id": key, **value}
         for key, value in sorted(DEFAULT_ASSUMPTIONS.items())
@@ -657,6 +736,9 @@ def build_snapshot(
         "Die berechneten Kennzahlen zur Klimawirkung sind Schätzwerte des MVP und keine offiziellen Messdaten.",
     ]
     limitations.extend(quality_report_limitations(quality_report))
+
+    enriched_turbines = [enrich_entity(snapshot_turbine(turbine)) for turbine in turbines]
+    enriched_parks = [enrich_entity(park) for park in parks]
 
     snapshot = {
         "schemaVersion": "1",
@@ -672,8 +754,8 @@ def build_snapshot(
             "limitations": limitations,
         },
         "assumptions": assumptions,
-        "windTurbines": sorted((snapshot_turbine(turbine) for turbine in turbines), key=lambda item: item["id"]),
-        "windParks": sorted(parks, key=lambda item: item["id"]),
+        "windTurbines": sorted(enriched_turbines, key=lambda item: item["id"]),
+        "windParks": sorted(enriched_parks, key=lambda item: item["id"]),
         "metrics": sorted(metrics, key=lambda item: item["id"]),
     }
     snapshot["snapshotMetadata"]["checksumSha256"] = snapshot_checksum(snapshot)

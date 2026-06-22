@@ -107,6 +107,8 @@ fun StatsScreen(
         viewModel.refresh()
     }
 
+    var showFullRankingDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -141,21 +143,46 @@ fun StatsScreen(
 
             StatsSectionCard {
                 SectionHeader(
-                    title = "Kreise und kreisfreie Städte",
-                    subtitle = "Top 5 nach installierter Leistung",
+                    title = "Top-Ranglisten",
+                    subtitle = "Ranglisten nach installierter Leistung",
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+                RankingTypeSwitch(
+                    selectedType = uiState.rankingType,
+                    onSelected = viewModel::setRankingType,
                 )
                 Spacer(modifier = Modifier.height(18.dp))
-                DistrictBarChart(
-                    values = uiState.topDistricts,
-                    onShowInComparison = { districtId ->
-                        viewModel.setComparisonType(ComparisonType.DISTRICTS)
-                        viewModel.selectDistrictA(districtId)
+                RankingList(
+                    values = uiState.rankingItems.take(5),
+                    onActionClick = { itemId ->
+                        viewModel.selectInComparison(uiState.rankingType, itemId)
                         coroutineScope.launch {
                             scrollState.animateScrollTo(scrollState.maxValue)
                         }
                     },
                 )
-                SourceFootnote(text = "Die Kreisebene wird im MVP aus den ersten fünf Stellen der AGS-Gemeindekennung abgeleitet; fehlende Kreisnamen werden aus Snapshot-Kontext und Bundesland angenähert.")
+                Spacer(modifier = Modifier.height(12.dp))
+                Button(
+                    onClick = { showFullRankingDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = SoftGreen, contentColor = PrimaryGreen),
+                    shape = RoundedCornerShape(10.dp),
+                ) {
+                    Text(
+                        text = "Gesamte Rangliste anzeigen (${uiState.rankingItems.size} Einträge)",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                SourceFootnote(
+                    text = when (uiState.rankingType) {
+                        RankingType.PARKS -> "Windparks im Snapshot basierend auf MaStR/Open-MaStR-Stammdaten."
+                        RankingType.CITIES -> "Städte und Gemeinden aggregiert nach dem Gemeindeschlüssel (AGS)."
+                        RankingType.DISTRICTS -> "Die Kreisebene wird aus den ersten fünf Stellen der AGS-Gemeindekennung abgeleitet; fehlende Kreisnamen werden angenähert."
+                        RankingType.STATES -> "Bundesländer aggregiert auf Basis der offiziellen Länderkennungen; Offshore-Windparks werden gemäß ihrer Netzanschlusspunkte den Küstenländern zugeordnet."
+                    }
+                )
             }
 
             uiState.districtComparison?.let { comparison ->
@@ -187,8 +214,12 @@ fun StatsScreen(
                 onComparisonTypeChange = viewModel::setComparisonType,
                 onSelectParkA = viewModel::selectParkA,
                 onSelectParkB = viewModel::selectParkB,
+                onSelectCityA = viewModel::selectCityA,
+                onSelectCityB = viewModel::selectCityB,
                 onSelectDistrictA = viewModel::selectDistrictA,
                 onSelectDistrictB = viewModel::selectDistrictB,
+                onSelectStateA = viewModel::selectStateA,
+                onSelectStateB = viewModel::selectStateB,
             )
 
             StatsSectionCard {
@@ -205,6 +236,26 @@ fun StatsScreen(
 
             Spacer(modifier = Modifier.height(4.dp))
         }
+    }
+
+    if (showFullRankingDialog) {
+        FullRankingDialog(
+            title = when (uiState.rankingType) {
+                RankingType.PARKS -> "Rangliste: Windparks"
+                RankingType.CITIES -> "Rangliste: Städte"
+                RankingType.DISTRICTS -> "Rangliste: Landkreise"
+                RankingType.STATES -> "Rangliste: Bundesländer"
+            },
+            rankingItems = uiState.rankingItems,
+            onDismiss = { showFullRankingDialog = false },
+            onActionClick = { itemId ->
+                viewModel.selectInComparison(uiState.rankingType, itemId)
+                showFullRankingDialog = false
+                coroutineScope.launch {
+                    scrollState.animateScrollTo(scrollState.maxValue)
+                }
+            }
+        )
     }
 }
 
@@ -579,89 +630,204 @@ private fun SectionHeader(
 }
 
 @Composable
-private fun DistrictBarChart(
-    values: List<DistrictStat>,
-    onShowInComparison: (String) -> Unit,
+private fun RankingTypeSwitch(
+    selectedType: RankingType,
+    onSelected: (RankingType) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(ScreenBackground)
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        RankingTypeSegment(
+            label = "Windparks",
+            selected = selectedType == RankingType.PARKS,
+            modifier = Modifier.weight(1f),
+            onClick = { onSelected(RankingType.PARKS) },
+        )
+        RankingTypeSegment(
+            label = "Städte",
+            selected = selectedType == RankingType.CITIES,
+            modifier = Modifier.weight(1f),
+            onClick = { onSelected(RankingType.CITIES) },
+        )
+        RankingTypeSegment(
+            label = "Kreise",
+            selected = selectedType == RankingType.DISTRICTS,
+            modifier = Modifier.weight(1f),
+            onClick = { onSelected(RankingType.DISTRICTS) },
+        )
+        RankingTypeSegment(
+            label = "Länder",
+            selected = selectedType == RankingType.STATES,
+            modifier = Modifier.weight(1f),
+            onClick = { onSelected(RankingType.STATES) },
+        )
+    }
+}
+
+@Composable
+private fun RankingTypeSegment(
+    label: String,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = modifier
+            .height(38.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(8.dp),
+        color = if (selected) PrimaryGreen else Color.Transparent,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = label,
+                color = if (selected) Color.White else MutedText,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RankingList(
+    values: List<RankingItem>,
+    onActionClick: (String) -> Unit,
 ) {
     if (values.isEmpty()) {
-        EmptyText(text = "Noch keine Kreiswerte verfügbar.")
+        EmptyText(text = "Keine Ranglisteneinträge verfügbar.")
         return
     }
 
-    val maxValue = values.maxOf { it.installedCapacityMw }.toFloat().coerceAtLeast(1f)
-    var expandedDistrictId by remember(values) { mutableStateOf<String?>(null) }
+    var expandedItemId by remember(values) { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        values.forEachIndexed { index, district ->
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable {
-                        expandedDistrictId = if (expandedDistrictId == district.districtId) {
-                            null
-                        } else {
-                            district.districtId
-                        }
-                    }
-                    .animateContentSize()
-                    .padding(vertical = 2.dp),
-            ) {
+        values.forEach { item ->
+            RankingItemRow(
+                item = item,
+                isExpanded = expandedItemId == item.id,
+                onToggleExpand = {
+                    expandedItemId = if (expandedItemId == item.id) null else item.id
+                },
+                onActionClick = onActionClick,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RankingItemRow(
+    item: RankingItem,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
+    onActionClick: (String) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onToggleExpand)
+            .animateContentSize()
+            .padding(vertical = 2.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = "${item.rank}",
+                color = PrimaryGreen,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.width(22.dp),
+            )
+            Column(modifier = Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top,
                 ) {
-                    Text(
-                        text = "${index + 1}",
-                        color = PrimaryGreen,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.width(18.dp),
-                    )
                     Column(modifier = Modifier.weight(1f)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.Top,
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = district.label,
-                                    color = DarkText,
-                                    fontSize = 13.sp,
-                                    lineHeight = 18.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Text(
-                                    text = "Schwerpunkt: ${district.contextLabel}",
-                                    color = MutedText,
-                                    fontSize = 11.sp,
-                                    lineHeight = 14.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                            Text(
-                                text = "${district.installedCapacityMw.roundLabel()} MW",
-                                color = MutedText,
-                                fontSize = 12.sp,
-                                lineHeight = 18.sp,
-                                modifier = Modifier.padding(start = 8.dp),
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(5.dp))
-                        ProgressTrack(progress = (district.installedCapacityMw.toFloat() / maxValue).coerceIn(0f, 1f))
+                        Text(
+                            text = item.name.ifBlank { "Unbekannter Name" },
+                            color = DarkText,
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = item.subtitle,
+                            color = MutedText,
+                            fontSize = 11.sp,
+                            lineHeight = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    Text(
+                        text = item.valueLabel,
+                        color = MutedText,
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.height(5.dp))
+                ProgressTrack(progress = item.progress)
+            }
+        }
+
+        AnimatedVisibility(visible = isExpanded) {
+            Column(
+                modifier = Modifier.padding(start = 32.dp, top = 10.dp, bottom = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                HorizontalDivider(color = TrackGreen)
+                item.details.forEach { line ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        Text(
+                            text = line.label,
+                            color = MutedText,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                        )
+                        Text(
+                            text = line.value,
+                            color = DarkText,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.End,
+                            modifier = Modifier.padding(start = 12.dp),
+                        )
                     }
                 }
-
-                AnimatedVisibility(visible = expandedDistrictId == district.districtId) {
-                    DistrictDetailExpansion(
-                        district = district,
-                        onShowInComparison = onShowInComparison,
+                Button(
+                    onClick = { onActionClick(item.id) },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, contentColor = Color.White),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text(
+                        text = "Im Vergleichsrechner anzeigen",
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp,
                     )
                 }
             }
@@ -670,60 +836,90 @@ private fun DistrictBarChart(
 }
 
 @Composable
-private fun DistrictDetailExpansion(
-    district: DistrictStat,
-    onShowInComparison: (String) -> Unit,
+private fun FullRankingDialog(
+    title: String,
+    rankingItems: List<RankingItem>,
+    onDismiss: () -> Unit,
+    onActionClick: (String) -> Unit,
 ) {
-    Column(
-        modifier = Modifier.padding(start = 28.dp, top = 10.dp, bottom = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        HorizontalDivider(color = TrackGreen)
-        DistrictDetailLine(label = "Genaue Leistung", value = "${district.installedCapacityMw.roundOneDecimal()} MW")
-        DistrictDetailLine(label = "Windparks", value = district.windParkCount.toString())
-        DistrictDetailLine(label = "Anlagen", value = district.turbineCount.toString())
-        DistrictDetailLine(label = "Bundesland-Anteil", value = district.shareOfStateCapacity.percentLabel())
-        Button(
-            onClick = { onShowInComparison(district.districtId) },
-            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, contentColor = Color.White),
-            shape = RoundedCornerShape(8.dp),
+    var query by remember { mutableStateOf("") }
+    val filteredItems = remember(query, rankingItems) {
+        val normalizedQuery = query.trim()
+        if (normalizedQuery.isBlank()) {
+            rankingItems
+        } else {
+            rankingItems.filter { item ->
+                item.name.contains(normalizedQuery, ignoreCase = true) ||
+                    item.subtitle.contains(normalizedQuery, ignoreCase = true)
+            }
+        }
+    }
+    var expandedItemId by remember(filteredItems) { mutableStateOf<String?>(null) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 620.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = Color.White,
+            shadowElevation = 8.dp,
         ) {
-            Text(
-                text = "Im Vergleichsrechner anzeigen",
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-            )
+            Column(
+                modifier = Modifier.padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = title,
+                        color = DarkText,
+                        fontSize = 18.sp,
+                        lineHeight = 24.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    TextButton(onClick = onDismiss) {
+                        Text(text = "Schließen")
+                    }
+                }
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Search,
+                            contentDescription = null,
+                            tint = MutedText,
+                        )
+                    },
+                    label = { Text("Suchen") },
+                )
+                LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    items(filteredItems, key = { it.id }) { item ->
+                        RankingItemRow(
+                            item = item,
+                            isExpanded = expandedItemId == item.id,
+                            onToggleExpand = {
+                                expandedItemId = if (expandedItemId == item.id) null else item.id
+                            },
+                            onActionClick = onActionClick,
+                        )
+                        HorizontalDivider(color = TrackGreen.copy(alpha = 0.5f))
+                    }
+                }
+            }
         }
     }
 }
 
-@Composable
-private fun DistrictDetailLine(
-    label: String,
-    value: String,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top,
-    ) {
-        Text(
-            text = label,
-            color = MutedText,
-            fontSize = 12.sp,
-            lineHeight = 16.sp,
-        )
-        Text(
-            text = value,
-            color = DarkText,
-            fontSize = 12.sp,
-            lineHeight = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.End,
-            modifier = Modifier.padding(start = 12.dp),
-        )
-    }
-}
 
 @Composable
 private fun DistrictComparisonBlock(comparison: DistrictComparison) {
@@ -945,15 +1141,19 @@ private fun InteractiveComparisonCard(
     onComparisonTypeChange: (ComparisonType) -> Unit,
     onSelectParkA: (String?) -> Unit,
     onSelectParkB: (String?) -> Unit,
+    onSelectCityA: (String?) -> Unit,
+    onSelectCityB: (String?) -> Unit,
     onSelectDistrictA: (String?) -> Unit,
     onSelectDistrictB: (String?) -> Unit,
+    onSelectStateA: (String?) -> Unit,
+    onSelectStateB: (String?) -> Unit,
 ) {
     var dialogTarget by remember { mutableStateOf<ComparisonDialogTarget?>(null) }
 
     StatsSectionCard {
         SectionHeader(
             title = "Direktvergleich",
-            subtitle = "Zwei Windparks oder Landkreise gegenüberstellen",
+            subtitle = "Zwei Regionen oder Windparks gegenüberstellen",
         )
         Spacer(modifier = Modifier.height(14.dp))
         ComparisonTypeSwitch(
@@ -962,15 +1162,17 @@ private fun InteractiveComparisonCard(
         )
         Spacer(modifier = Modifier.height(14.dp))
 
-        val optionA = if (uiState.comparisonType == ComparisonType.PARKS) {
-            uiState.selectedParkA
-        } else {
-            uiState.selectedDistrictA
+        val optionA = when (uiState.comparisonType) {
+            ComparisonType.PARKS -> uiState.selectedParkA
+            ComparisonType.CITIES -> uiState.selectedCityA
+            ComparisonType.DISTRICTS -> uiState.selectedDistrictA
+            ComparisonType.STATES -> uiState.selectedStateA
         }
-        val optionB = if (uiState.comparisonType == ComparisonType.PARKS) {
-            uiState.selectedParkB
-        } else {
-            uiState.selectedDistrictB
+        val optionB = when (uiState.comparisonType) {
+            ComparisonType.PARKS -> uiState.selectedParkB
+            ComparisonType.CITIES -> uiState.selectedCityB
+            ComparisonType.DISTRICTS -> uiState.selectedDistrictB
+            ComparisonType.STATES -> uiState.selectedStateB
         }
 
         Row(
@@ -982,10 +1184,11 @@ private fun InteractiveComparisonCard(
                 option = optionA,
                 modifier = Modifier.weight(1f),
                 onClick = {
-                    dialogTarget = if (uiState.comparisonType == ComparisonType.PARKS) {
-                        ComparisonDialogTarget.ParkA
-                    } else {
-                        ComparisonDialogTarget.DistrictA
+                    dialogTarget = when (uiState.comparisonType) {
+                        ComparisonType.PARKS -> ComparisonDialogTarget.ParkA
+                        ComparisonType.CITIES -> ComparisonDialogTarget.CityA
+                        ComparisonType.DISTRICTS -> ComparisonDialogTarget.DistrictA
+                        ComparisonType.STATES -> ComparisonDialogTarget.StateA
                     }
                 },
             )
@@ -994,10 +1197,11 @@ private fun InteractiveComparisonCard(
                 option = optionB,
                 modifier = Modifier.weight(1f),
                 onClick = {
-                    dialogTarget = if (uiState.comparisonType == ComparisonType.PARKS) {
-                        ComparisonDialogTarget.ParkB
-                    } else {
-                        ComparisonDialogTarget.DistrictB
+                    dialogTarget = when (uiState.comparisonType) {
+                        ComparisonType.PARKS -> ComparisonDialogTarget.ParkB
+                        ComparisonType.CITIES -> ComparisonDialogTarget.CityB
+                        ComparisonType.DISTRICTS -> ComparisonDialogTarget.DistrictB
+                        ComparisonType.STATES -> ComparisonDialogTarget.StateB
                     }
                 },
             )
@@ -1019,15 +1223,23 @@ private fun InteractiveComparisonCard(
         val options = when (target) {
             ComparisonDialogTarget.ParkA,
             ComparisonDialogTarget.ParkB -> uiState.allParks
+            ComparisonDialogTarget.CityA,
+            ComparisonDialogTarget.CityB -> uiState.allCities
             ComparisonDialogTarget.DistrictA,
             ComparisonDialogTarget.DistrictB -> uiState.allDistricts
+            ComparisonDialogTarget.StateA,
+            ComparisonDialogTarget.StateB -> uiState.allStates
         }
         SearchSelectDialog(
             title = when (target) {
                 ComparisonDialogTarget.ParkA,
                 ComparisonDialogTarget.ParkB -> "Windpark auswählen"
+                ComparisonDialogTarget.CityA,
+                ComparisonDialogTarget.CityB -> "Stadt auswählen"
                 ComparisonDialogTarget.DistrictA,
                 ComparisonDialogTarget.DistrictB -> "Landkreis auswählen"
+                ComparisonDialogTarget.StateA,
+                ComparisonDialogTarget.StateB -> "Bundesland auswählen"
             },
             options = options,
             onDismiss = { dialogTarget = null },
@@ -1035,8 +1247,12 @@ private fun InteractiveComparisonCard(
                 when (target) {
                     ComparisonDialogTarget.ParkA -> onSelectParkA(option.id)
                     ComparisonDialogTarget.ParkB -> onSelectParkB(option.id)
+                    ComparisonDialogTarget.CityA -> onSelectCityA(option.id)
+                    ComparisonDialogTarget.CityB -> onSelectCityB(option.id)
                     ComparisonDialogTarget.DistrictA -> onSelectDistrictA(option.id)
                     ComparisonDialogTarget.DistrictB -> onSelectDistrictB(option.id)
+                    ComparisonDialogTarget.StateA -> onSelectStateA(option.id)
+                    ComparisonDialogTarget.StateB -> onSelectStateB(option.id)
                 }
                 dialogTarget = null
             },
@@ -1064,10 +1280,22 @@ private fun ComparisonTypeSwitch(
             onClick = { onSelected(ComparisonType.PARKS) },
         )
         ComparisonTypeSegment(
+            label = "Städte",
+            selected = selectedType == ComparisonType.CITIES,
+            modifier = Modifier.weight(1f),
+            onClick = { onSelected(ComparisonType.CITIES) },
+        )
+        ComparisonTypeSegment(
             label = "Landkreise",
             selected = selectedType == ComparisonType.DISTRICTS,
             modifier = Modifier.weight(1f),
             onClick = { onSelected(ComparisonType.DISTRICTS) },
+        )
+        ComparisonTypeSegment(
+            label = "Länder",
+            selected = selectedType == ComparisonType.STATES,
+            modifier = Modifier.weight(1f),
+            onClick = { onSelected(ComparisonType.STATES) },
         )
     }
 }
@@ -1349,8 +1577,12 @@ private fun SearchSelectDialog(
 private enum class ComparisonDialogTarget {
     ParkA,
     ParkB,
+    CityA,
+    CityB,
     DistrictA,
     DistrictB,
+    StateA,
+    StateB,
 }
 
 @Composable
