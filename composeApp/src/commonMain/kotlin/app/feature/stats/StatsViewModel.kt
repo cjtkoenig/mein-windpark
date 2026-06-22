@@ -868,7 +868,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                         id = district.districtId,
                         rank = index + 1,
                         name = district.label,
-                        subtitle = "${district.stateName} · Schwerpunkt: ${district.contextLabel}",
+                        subtitle = district.stateName,
                         valueLabel = "${district.installedCapacityMw.roundTo(1).formatGerman()} MW",
                         progress = (district.installedCapacityMw / maxCapacity).toFloat().coerceIn(0f, 1f),
                         details = listOf(
