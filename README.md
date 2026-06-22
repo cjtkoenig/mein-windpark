@@ -143,3 +143,18 @@ Recommended demo path:
 - Denied/no-location path.
 
 Android manual QA is required before the demo. An iOS simulator/device smoke test is desirable where available, but not a demo blocker if the shared KMP entry point remains intact.
+
+## Android Screenshots For AI Review
+Use the screenshot helper to capture full-device PNGs from the Android app. It can build, install, launch and navigate through the MVP top-level screens via `adb`.
+
+```powershell
+.\scripts\capture_android_screenshots.ps1 -Build -Install -CleanAppData
+```
+
+For stitched long screenshots of scrollable screens:
+
+```powershell
+.\scripts\capture_android_screenshots.ps1 -Build -Install -CleanAppData -FullPage -InitialWaitSeconds 25
+```
+
+By default, the run writes ignored analysis artifacts to `screenshots/android-ai/<timestamp>/`, including a small `manifest.txt`. Full-page runs also keep the intermediate scroll parts in `parts/` and scroll until the end is detected, up to `-FullPageScrolls 14` by default. If multiple devices are connected, pass `-Serial <adb-device-id>`.
