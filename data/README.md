@@ -24,18 +24,15 @@ open-mastr directly.
 
 Current repository snapshot:
 
-- Official target export checked: `Gesamtdatenexport_20260617_26.1.zip`
-  from the MaStR datendownload page, last updated `2026-06-17 00:00:00`.
-- Local direct access to `download.marktstammdatenregister.de` reset HTTPS
-  download connections in this environment.
-- The generated app snapshot therefore uses the open-MaStR Zenodo unboxed wind
-  CSV file `bnetza_mastr_wind_raw.csv.zip` from record
-  https://zenodo.org/records/14843222, published `2025-02-10`.
-- Raw downloaded file: `data/raw/bnetza_mastr_wind_raw.csv.zip` (ignored).
+- Official MaStR export used: `Gesamtdatenexport_20260620_26.1.zip`
+  from the MaStR datendownload page.
+- Raw MaStR exports are ignored and are not committed because they are large.
 - Full generated snapshot:
-  `data/snapshots/windklar_snapshot_open_mastr_2025-02-10.json`.
+  `data/snapshots/windklar_snapshot_2026-06-20.json` (ignored).
 - Bundled app snapshot:
   `composeApp/src/commonMain/composeResources/files/snapshots/windklar_snapshot.json`.
+- Bundled app metadata:
+  `composeApp/src/commonMain/composeResources/files/snapshots/windklar_snapshot_metadata.json`.
 
 ## Common commands
 

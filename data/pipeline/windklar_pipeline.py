@@ -23,6 +23,14 @@ ATTRIBUTION = "Quelle: Marktstammdatenregister der Bundesnetzagentur"
 BKG_VG250_SOURCE_NAME = "BKG VG250 Verwaltungsgebiete"
 BKG_VG250_SOURCE_URL = "https://gdz.bkg.bund.de/index.php/default/digitale-geodaten/verwaltungsgebiete.html"
 VALID_QUALITIES = {"official", "measured", "derived", "estimated", "simulated", "missing"}
+CATALOG_MAPPED_FIELDS = {
+    "EinheitBetriebsstatus",
+    "EinheitSystemstatus",
+    "Energietraeger",
+    "Hersteller",
+    "Technologie",
+    "WindAnLandOderAufSee",
+}
 GERMANY_LAT_RANGE = (47.0, 55.2)
 GERMANY_LON_RANGE = (5.5, 15.5)
 BOUNDARY_TOLERANCE_KM = 1.0
@@ -78,16 +86,16 @@ FIELD_ALIASES = {
     "id": ["id", "mastr_id", "einheitmastrnummer", "einheit_mastr_nummer", "mastrnummer"],
     "windParkId": ["windparkid", "wind_park_id", "windpark_id", "lokationmastrnummer"],
     "windParkName": ["windparkname", "wind_park_name", "namewindpark"],
-    "name": ["name", "anlagenname", "einheitname", "einheitenname", "bezeichnung"],
+    "name": ["name", "anlagenname", "einheitname", "einheitenname", "namestromerzeugungseinheit", "bezeichnung"],
     "municipalityId": ["gemeindeid", "municipalityid", "municipality_id", "ags", "gemeindeschluessel"],
     "municipalityName": ["gemeinde", "gemeindename", "municipality", "municipalityname", "ort"],
     "latitude": ["latitude", "lat", "breitengrad"],
     "longitude": ["longitude", "lon", "lng", "laengengrad", "langengrad"],
     "installedCapacityKw": ["installedcapacitykw", "nettonennleistung", "bruttonennleistung", "leistungkw"],
     "status": ["status", "betriebsstatus", "einheitbetriebsstatus"],
-    "turbineType": ["turbinetype", "technologie", "energietraeger", "energietrager"],
+    "turbineType": ["turbinetype", "energietraeger", "energietrager", "technologie"],
     "manufacturer": ["manufacturer", "hersteller"],
-    "model": ["model", "typ", "anlagenmodell"],
+    "model": ["model", "typ", "typenbezeichnung", "anlagenmodell"],
     "hubHeightM": ["hubheightm", "nabenhoehe", "nabenhohe"],
     "rotorDiameterM": ["rotordiameterm", "rotordurchmesser"],
     "commissioningDate": ["commissioningdate", "inbetriebnahmedatum", "inbetriebnahme"],
@@ -864,7 +872,8 @@ def iter_source_rows(input_path: Path) -> Iterable[dict[str, Any]]:
         yield from iter_xml_rows(input_path)
     elif suffix == ".zip":
         with zipfile.ZipFile(input_path) as archive:
-            for name in archive.namelist():
+            catalog_values = load_catalog_values(archive)
+            for name in source_member_names(archive.namelist()):
                 lower_name = name.lower()
                 if lower_name.endswith(".csv"):
                     with archive.open(name) as zipped_file:
@@ -872,20 +881,74 @@ def iter_source_rows(input_path: Path) -> Iterable[dict[str, Any]]:
                         yield from csv.DictReader(text)
                 elif lower_name.endswith(".xml"):
                     with archive.open(name) as zipped_file:
-                        yield from iter_xml_rows(zipped_file)
+                        for row in iter_xml_rows(zipped_file):
+                            yield apply_catalog_values(row, catalog_values)
     else:
         raise ValueError(f"Unsupported input type: {input_path}")
+
+
+def source_member_names(names: list[str]) -> list[str]:
+    supported = [
+        name
+        for name in names
+        if not name.endswith("/") and name.lower().endswith((".csv", ".xml"))
+    ]
+    wind_units = [
+        name
+        for name in supported
+        if name.rsplit("/", 1)[-1].lower() == "einheitenwind.xml"
+    ]
+    if wind_units:
+        return wind_units
+    wind_members = [
+        name
+        for name in supported
+        if "wind" in name.rsplit("/", 1)[-1].lower()
+    ]
+    return wind_members or supported
+
+
+def load_catalog_values(archive: zipfile.ZipFile) -> dict[str, str]:
+    catalog_name = next(
+        (name for name in archive.namelist() if name.rsplit("/", 1)[-1].lower() == "katalogwerte.xml"),
+        None,
+    )
+    if catalog_name is None:
+        return {}
+
+    values: dict[str, str] = {}
+    with archive.open(catalog_name) as handle:
+        for event, elem in ET.iterparse(handle, events=("end",)):
+            if local_name(elem.tag) != "Katalogwert":
+                continue
+            row = {local_name(child.tag): (child.text or "").strip() for child in list(elem)}
+            catalog_id = row.get("Id")
+            value = row.get("Wert")
+            if catalog_id and value:
+                values[catalog_id] = value
+            elem.clear()
+    return values
+
+
+def apply_catalog_values(row: dict[str, Any], catalog_values: dict[str, str]) -> dict[str, Any]:
+    if not catalog_values:
+        return row
+    resolved = dict(row)
+    for key in CATALOG_MAPPED_FIELDS:
+        value = as_text(resolved.get(key))
+        if value and value in catalog_values:
+            resolved[key] = catalog_values[value]
+    return resolved
 
 
 def iter_xml_rows(input_source: Any) -> Iterable[dict[str, Any]]:
     for event, elem in ET.iterparse(input_source, events=("end",)):
         children = list(elem)
         if not children:
-            elem.clear()
             continue
         row = {local_name(child.tag): (child.text or "").strip() for child in children}
         text = " ".join(str(value) for value in row.values()).lower()
-        if "wind" in text:
+        if any(row.values()) and ("wind" in text or "wind" in local_name(elem.tag).lower()):
             yield row
         elem.clear()
 
