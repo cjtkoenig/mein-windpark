@@ -207,7 +207,7 @@ fun MapScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    listOf("Alle", "Aktiv", "Geplant", "Im Bau", "Stillgelegt").forEach { status ->
+                    listOf("Alle", "Aktiv", "Geplant").forEach { status ->
                         StatusChip(
                             text = status,
                             selected = uiState.selectedStatus == status,

@@ -61,20 +61,6 @@ class MapViewModel(
     }
 
 
-    private fun determineParkStatus(statuses: List<String>): String {
-        if (statuses.isEmpty()) return "Aktiv"
-        val lowerStatuses = statuses.map { it.lowercase() }
-        if (lowerStatuses.any { it.contains("bau") || it.contains("errichtung") }) {
-            return "Im Bau"
-        }
-        if (lowerStatuses.any { it.contains("betrieb") || it.contains("aktiv") }) {
-            return "Aktiv"
-        }
-        if (lowerStatuses.any { it.contains("stillgelegt") }) {
-            return "Stillgelegt"
-        }
-        return "Geplant"
-    }
 
     fun setStatusFilter(status: String) {
         uiState = uiState.copy(selectedStatus = status)
@@ -318,7 +304,15 @@ class MapViewModel(
     }
 
     private fun filterTurbines(turbines: List<app.core.model.WindTurbine>, statusFilter: String): List<app.core.model.WindTurbine> {
-        if (statusFilter == "Alle") return turbines
+        if (statusFilter == "Alle") {
+            return turbines.filter { determineTurbineStatus(it.status) != "Stillgelegt" }
+        }
+        if (statusFilter == "Geplant") {
+            return turbines.filter {
+                val s = determineTurbineStatus(it.status)
+                s == "Geplant" || s == "Im Bau"
+            }
+        }
         return turbines.filter { determineTurbineStatus(it.status) == statusFilter }
     }
 
@@ -374,7 +368,12 @@ class MapViewModel(
 
     private fun parksForStatus(status: String): List<WindPark> =
         if (status == "Alle") {
-            uiState.parks
+            uiState.parks.filter { statusForPark(it.id) != "Stillgelegt" }
+        } else if (status == "Geplant") {
+            uiState.parks.filter {
+                val s = statusForPark(it.id)
+                s == "Geplant" || s == "Im Bau"
+            }
         } else {
             uiState.parks.filter { park -> statusForPark(park.id) == status }
         }
