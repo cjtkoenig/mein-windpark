@@ -112,10 +112,13 @@ fun StatsScreen(
 ) {
     val uiState = viewModel.uiState
     val scrollState = rememberScrollState()
-    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(viewModel) {
         viewModel.refresh()
+    }
+
+    LaunchedEffect(uiState.selectedTab) {
+        scrollState.scrollTo(0)
     }
 
     var showFullRankingDialog by remember { mutableStateOf(false) }
@@ -137,119 +140,127 @@ fun StatsScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            ImpactGrid(cards = uiState.impactCards)
-
-            StatsSectionCard {
-                SectionHeader(
-                    title = "CO2-Einsparung einordnen",
-                    subtitle = "Jahreswert mit groben Alltagsvergleichen",
-                )
-                Spacer(modifier = Modifier.height(14.dp))
-                Co2ContextBlock(
-                    summary = uiState.co2Summary,
-                    values = uiState.co2Comparisons,
-                )
-                SourceFootnote(text = "Vergleichswerte sind gerundete Einordnungen auf Basis dokumentierter Annahmen.")
-            }
-
-            StatsSectionCard {
-                SectionHeader(
-                    title = "Top-Ranglisten",
-                    subtitle = "Ranglisten nach installierter Leistung",
-                )
-                Spacer(modifier = Modifier.height(14.dp))
-                RankingTypeSwitch(
-                    selectedType = uiState.rankingType,
-                    onSelected = viewModel::setRankingType,
-                )
-                Spacer(modifier = Modifier.height(18.dp))
-                RankingList(
-                    values = uiState.rankingItems.take(5),
-                    onActionClick = { itemId ->
-                        viewModel.selectInComparison(uiState.rankingType, itemId)
-                        coroutineScope.launch {
-                            scrollState.animateScrollTo(scrollState.maxValue)
-                        }
-                    },
-                    onDetailsClick = { itemId ->
-                        when (uiState.rankingType) {
-                            RankingType.PARKS -> onNavigateToParkDetail(itemId)
-                            RankingType.CITIES -> onNavigateToRegionDetail("city", itemId)
-                            RankingType.DISTRICTS -> onNavigateToRegionDetail("district", itemId)
-                            RankingType.STATES -> onNavigateToRegionDetail("state", itemId)
-                        }
-                    }
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Button(
-                    onClick = { showFullRankingDialog = true },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = SoftGreen, contentColor = PrimaryGreen),
-                    shape = RoundedCornerShape(10.dp),
-                ) {
-                    Text(
-                        text = "Gesamte Rangliste anzeigen (${uiState.rankingItems.size} Einträge)",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                SourceFootnote(
-                    text = when (uiState.rankingType) {
-                        RankingType.PARKS -> "Windparks im Snapshot basierend auf MaStR/Open-MaStR-Stammdaten."
-                        RankingType.CITIES -> "Städte und Gemeinden aggregiert nach dem Gemeindeschlüssel (AGS)."
-                        RankingType.DISTRICTS -> "Die Kreisebene wird aus den ersten fünf Stellen der AGS-Gemeindekennung abgeleitet; fehlende Kreisnamen werden angenähert."
-                        RankingType.STATES -> "Bundesländer aggregiert auf Basis der offiziellen Länderkennungen; Offshore-Windparks werden gemäß ihrer Netzanschlusspunkte den Küstenländern zugeordnet."
-                    }
-                )
-            }
-
-            uiState.districtComparison?.let { comparison ->
-                StatsSectionCard {
-                    SectionHeader(
-                        title = "Kreis des letzten Parks",
-                        subtitle = if (comparison.isFallback) {
-                            "Kein zuletzt geöffneter Park, daher stärkster Kreis im Snapshot"
-                        } else {
-                            "Aus dem zuletzt geöffneten Windpark abgeleitet"
-                        },
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    DistrictComparisonBlock(comparison = comparison)
-                }
-            }
-
-            StatsSectionCard {
-                SectionHeader(
-                    title = "Leistungsklassen",
-                    subtitle = "Windparks nach installierter Gesamtleistung",
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                CapacityClassChart(values = uiState.capacityClasses)
-            }
-
-            InteractiveComparisonCard(
-                uiState = uiState,
-                onComparisonTypeChange = viewModel::setComparisonType,
-                onSelectParkA = viewModel::selectParkA,
-                onSelectParkB = viewModel::selectParkB,
-                onSelectCityA = viewModel::selectCityA,
-                onSelectCityB = viewModel::selectCityB,
-                onSelectDistrictA = viewModel::selectDistrictA,
-                onSelectDistrictB = viewModel::selectDistrictB,
-                onSelectStateA = viewModel::selectStateA,
-                onSelectStateB = viewModel::selectStateB,
+            StatsTabSwitch(
+                selectedTab = uiState.selectedTab,
+                onTabSelected = viewModel::setSelectedTab,
             )
 
-            StatsSectionCard {
-                SectionHeader(
-                    title = "Datenqualität",
-                    subtitle = "Warum manche Werte Schätzungen sind",
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                QualityNotes(notes = uiState.qualityNotes)
-                if (uiState.attribution.isNotBlank()) {
-                    SourceFootnote(text = uiState.attribution)
+            when (uiState.selectedTab) {
+                StatsTab.OVERVIEW -> {
+                    ImpactGrid(cards = uiState.impactCards)
+
+                    StatsSectionCard {
+                        SectionHeader(
+                            title = "CO2-Einsparung einordnen",
+                            subtitle = "Jahreswert mit groben Alltagsvergleichen",
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Co2ContextBlock(
+                            summary = uiState.co2Summary,
+                            values = uiState.co2Comparisons,
+                        )
+                        SourceFootnote(text = "Vergleichswerte sind gerundete Einordnungen auf Basis dokumentierter Annahmen.")
+                    }
+
+                    StatsSectionCard {
+                        SectionHeader(
+                            title = "Leistungsklassen",
+                            subtitle = "Windparks nach installierter Gesamtleistung",
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        CapacityClassChart(values = uiState.capacityClasses)
+                    }
+
+                    uiState.districtComparison?.let { comparison ->
+                        StatsSectionCard {
+                            SectionHeader(
+                                title = "Kreis des letzten Parks",
+                                subtitle = if (comparison.isFallback) {
+                                    "Kein zuletzt geöffneter Park, daher stärkster Kreis im Snapshot"
+                                } else {
+                                    "Aus dem zuletzt geöffneten Windpark abgeleitet"
+                                },
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            DistrictComparisonBlock(comparison = comparison)
+                        }
+                    }
+
+                    StatsSectionCard {
+                        SectionHeader(
+                            title = "Datenqualität",
+                            subtitle = "Warum manche Werte Schätzungen sind",
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        QualityNotes(notes = uiState.qualityNotes)
+                        if (uiState.attribution.isNotBlank()) {
+                            SourceFootnote(text = uiState.attribution)
+                        }
+                    }
+                }
+                StatsTab.RANKINGS -> {
+                    StatsSectionCard {
+                        SectionHeader(
+                            title = "Top-Ranglisten",
+                            subtitle = "Ranglisten nach installierter Leistung",
+                        )
+                        Spacer(modifier = Modifier.height(14.dp))
+                        RankingTypeSwitch(
+                            selectedType = uiState.rankingType,
+                            onSelected = viewModel::setRankingType,
+                        )
+                        Spacer(modifier = Modifier.height(18.dp))
+                        RankingList(
+                            values = uiState.rankingItems.take(5),
+                            onActionClick = { itemId ->
+                                viewModel.selectInComparison(uiState.rankingType, itemId)
+                            },
+                            onDetailsClick = { itemId ->
+                                when (uiState.rankingType) {
+                                    RankingType.PARKS -> onNavigateToParkDetail(itemId)
+                                    RankingType.CITIES -> onNavigateToRegionDetail("city", itemId)
+                                    RankingType.DISTRICTS -> onNavigateToRegionDetail("district", itemId)
+                                    RankingType.STATES -> onNavigateToRegionDetail("state", itemId)
+                                }
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(
+                            onClick = { showFullRankingDialog = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = SoftGreen, contentColor = PrimaryGreen),
+                            shape = RoundedCornerShape(10.dp),
+                        ) {
+                            Text(
+                                text = "Gesamte Rangliste anzeigen (${uiState.rankingItems.size} Einträge)",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        SourceFootnote(
+                            text = when (uiState.rankingType) {
+                                RankingType.PARKS -> "Windparks im Snapshot basierend auf MaStR/Open-MaStR-Stammdaten."
+                                RankingType.CITIES -> "Städte und Gemeinden aggregiert nach dem Gemeindeschlüssel (AGS)."
+                                RankingType.DISTRICTS -> "Die Kreisebene wird aus den ersten fünf Stellen der AGS-Gemeindekennung abgeleitet; fehlende Kreisnamen werden angenähert."
+                                RankingType.STATES -> "Bundesländer aggregiert auf Basis der offiziellen Länderkennungen; Offshore-Windparks werden gemäß ihrer Netzanschlusspunkte den Küstenländern zugeordnet."
+                            }
+                        )
+                    }
+                }
+                StatsTab.COMPARISON -> {
+                    InteractiveComparisonCard(
+                        uiState = uiState,
+                        onComparisonTypeChange = viewModel::setComparisonType,
+                        onSelectParkA = viewModel::selectParkA,
+                        onSelectParkB = viewModel::selectParkB,
+                        onSelectCityA = viewModel::selectCityA,
+                        onSelectCityB = viewModel::selectCityB,
+                        onSelectDistrictA = viewModel::selectDistrictA,
+                        onSelectDistrictB = viewModel::selectDistrictB,
+                        onSelectStateA = viewModel::selectStateA,
+                        onSelectStateB = viewModel::selectStateB,
+                    )
                 }
             }
 
@@ -270,9 +281,6 @@ fun StatsScreen(
             onActionClick = { itemId ->
                 viewModel.selectInComparison(uiState.rankingType, itemId)
                 showFullRankingDialog = false
-                coroutineScope.launch {
-                    scrollState.animateScrollTo(scrollState.maxValue)
-                }
             },
             onDetailsClick = { itemId ->
                 showFullRankingDialog = false
@@ -284,6 +292,55 @@ fun StatsScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun StatsTabSwitch(
+    selectedTab: StatsTab,
+    onTabSelected: (StatsTab) -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = WindklarTheme.colors.cardBackground,
+        shadowElevation = 3.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            listOf(StatsTab.OVERVIEW, StatsTab.RANKINGS, StatsTab.COMPARISON).forEach { tab ->
+                val selected = tab == selectedTab
+                val label = when (tab) {
+                    StatsTab.OVERVIEW -> "Überblick"
+                    StatsTab.RANKINGS -> "Rankings"
+                    StatsTab.COMPARISON -> "Vergleich"
+                }
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { onTabSelected(tab) },
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (selected) PrimaryGreen else Color.Transparent,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = label,
+                            color = if (selected) Color.White else MutedText,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

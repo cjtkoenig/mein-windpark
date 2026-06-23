@@ -48,6 +48,10 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
         updateComparison()
     }
 
+    fun setSelectedTab(tab: StatsTab) {
+        uiState = uiState.copy(selectedTab = tab)
+    }
+
     fun setRankingType(type: RankingType) {
         uiState = uiState.copy(
             rankingType = type,
@@ -60,25 +64,29 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
             RankingType.PARKS -> {
                 uiState = uiState.copy(
                     comparisonType = ComparisonType.PARKS,
-                    selectedParkA = uiState.allParks.firstOrNull { it.id == itemId }
+                    selectedParkA = uiState.allParks.firstOrNull { it.id == itemId },
+                    selectedTab = StatsTab.COMPARISON
                 )
             }
             RankingType.CITIES -> {
                 uiState = uiState.copy(
                     comparisonType = ComparisonType.CITIES,
-                    selectedCityA = uiState.allCities.firstOrNull { it.id == itemId }
+                    selectedCityA = uiState.allCities.firstOrNull { it.id == itemId },
+                    selectedTab = StatsTab.COMPARISON
                 )
             }
             RankingType.DISTRICTS -> {
                 uiState = uiState.copy(
                     comparisonType = ComparisonType.DISTRICTS,
-                    selectedDistrictA = uiState.allDistricts.firstOrNull { it.id == itemId }
+                    selectedDistrictA = uiState.allDistricts.firstOrNull { it.id == itemId },
+                    selectedTab = StatsTab.COMPARISON
                 )
             }
             RankingType.STATES -> {
                 uiState = uiState.copy(
                     comparisonType = ComparisonType.STATES,
-                    selectedStateA = uiState.allStates.firstOrNull { it.id == itemId }
+                    selectedStateA = uiState.allStates.firstOrNull { it.id == itemId },
+                    selectedTab = StatsTab.COMPARISON
                 )
             }
         }

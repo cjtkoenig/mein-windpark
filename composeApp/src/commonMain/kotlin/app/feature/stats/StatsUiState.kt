@@ -30,7 +30,14 @@ data class StatsUiState(
     val qualityNotes: List<StatsQualityNote> = emptyList(),
     val attribution: String = "",
     val isLoading: Boolean = true,
+    val selectedTab: StatsTab = StatsTab.OVERVIEW,
 )
+
+enum class StatsTab {
+    OVERVIEW,
+    RANKINGS,
+    COMPARISON
+}
 
 enum class ComparisonType {
     PARKS,
