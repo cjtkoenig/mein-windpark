@@ -129,8 +129,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
             val includeOffshore = repository.isOffshoreEnabled()
             val parks = repository.getWindParks()
                 .filter { includeOffshore || !it.isOffshore() }
-            val turbines = repository.getAllWindTurbines()
-                .filter { includeOffshore || !it.isOffshore() }
+            val activeTurbineCount = repository.countActiveWindTurbines(includeOffshore)
             val nationalMetrics = repository.getMetricsForNational(includeOffshore)
             val recentParks = repository.getRecentWindParks(limit = 1)
             val assumptions = repository.getSnapshotAssumptions()
@@ -232,7 +231,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                     ),
                     StatsImpactCard(
                         title = "Anlagen",
-                        value = formatInteger(turbines.size),
+                        value = formatInteger(activeTurbineCount),
                         description = "MaStR/Open-MaStR-Stammdaten im Snapshot",
                         quality = "official",
                         icon = StatsIcon.Wind,

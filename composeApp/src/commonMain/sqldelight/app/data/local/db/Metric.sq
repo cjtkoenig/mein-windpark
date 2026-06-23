@@ -24,6 +24,39 @@ selectAllMetrics:
 SELECT *
 FROM metric;
 
+selectNationalMetricAggregates:
+SELECT
+    metric.metric_type AS metric_type,
+    COALESCE(SUM(metric.metric_value), 0.0) AS metric_value,
+    MIN(metric.unit) AS unit,
+    MIN(metric.period) AS period,
+    MIN(metric.source_name) AS source_name,
+    MIN(metric.source_url) AS source_url,
+    MAX(metric.source_updated_at) AS source_updated_at,
+    CASE
+        WHEN COUNT(metric.metric_value) = 0 THEN 'missing'
+        WHEN SUM(CASE WHEN metric.metric_value IS NOT NULL AND metric.data_quality = 'estimated' THEN 1 ELSE 0 END) > 0 THEN 'estimated'
+        WHEN SUM(CASE WHEN metric.metric_value IS NOT NULL AND metric.data_quality = 'simulated' THEN 1 ELSE 0 END) > 0 THEN 'simulated'
+        WHEN SUM(CASE WHEN metric.metric_value IS NOT NULL AND metric.data_quality = 'derived' THEN 1 ELSE 0 END) > 0 THEN 'derived'
+        WHEN SUM(CASE WHEN metric.metric_value IS NOT NULL AND metric.data_quality = 'measured' THEN 1 ELSE 0 END) > 0 THEN 'measured'
+        ELSE 'official'
+    END AS data_quality,
+    MIN(metric.calculation_note) AS calculation_note,
+    COUNT(metric.metric_value) AS present_value_count
+FROM metric
+JOIN wind_park ON wind_park.id = metric.subject_id
+WHERE metric.subject_type = 'wind_park'
+  AND (
+      metric.metric_type != 'municipal_participation'
+      OR wind_park.municipality_id NOT IN (:offshoreNorthSeaMunicipalityId, :offshoreBalticSeaMunicipalityId)
+  )
+  AND (
+      :includeOffshore != 0
+      OR wind_park.municipality_id NOT IN (:offshoreNorthSeaMunicipalityId, :offshoreBalticSeaMunicipalityId)
+  )
+GROUP BY metric.metric_type
+ORDER BY metric.metric_type;
+
 upsertMetric:
 INSERT OR REPLACE INTO metric(
     id,
@@ -40,4 +73,3 @@ INSERT OR REPLACE INTO metric(
     calculation_note
 )
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-

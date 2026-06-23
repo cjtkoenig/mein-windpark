@@ -5,7 +5,6 @@ import app.core.model.Metric
 import app.core.model.SnapshotAssumption
 import app.core.model.WindTurbine
 import app.core.model.DataHint
-import app.core.model.isOffshoreMunicipalityId
 import app.data.local.dao.*
 import app.data.local.entity.WindParkEntity
 import app.data.local.db.AppDatabase
@@ -94,38 +93,7 @@ class SqlDelightWindParkRepository(
     }
 
     override suspend fun getMetricsForNational(includeOffshore: Boolean): List<Metric> = withContext(Dispatchers.Default) {
-        val allMetrics = metricDao.getAll()
-        val offshoreParkIds = windParkDao.getAll()
-            .filter { it.municipalityId.isOffshoreMunicipalityId() }
-            .map { it.id }
-            .toSet()
-        val filteredMetrics = allMetrics.filterNot { metric ->
-            metric.metricType == "municipal_participation" && metric.subjectId in offshoreParkIds
-        }.let { metrics ->
-            if (includeOffshore) {
-                metrics
-            } else {
-                metrics.filterNot { it.subjectId in offshoreParkIds }
-            }
-        }
-        val groups = filteredMetrics.groupBy { it.metricType }
-        groups.map { (type, list) ->
-            val sum = list.sumOf { it.value ?: 0.0 }
-            Metric(
-                id = "national_$type",
-                subjectType = "national",
-                subjectId = "DE",
-                metricType = type,
-                value = sum,
-                unit = list.firstOrNull()?.unit ?: "",
-                period = "year",
-                sourceName = "WindKlar aggregated national data",
-                sourceUrl = "",
-                sourceUpdatedAt = "",
-                dataQuality = "derived",
-                calculationNote = "Sum of all precomputed wind park estimates."
-            )
-        }
+        metricDao.getNationalAggregates(includeOffshore)
     }
 
     override suspend fun isOffshoreEnabled(): Boolean = withContext(Dispatchers.Default) {
@@ -146,6 +114,10 @@ class SqlDelightWindParkRepository(
 
     override suspend fun getAllWindTurbines(): List<WindTurbine> = withContext(Dispatchers.Default) {
         windTurbineDao.getAll()
+    }
+
+    override suspend fun countActiveWindTurbines(includeOffshore: Boolean): Int = withContext(Dispatchers.Default) {
+        windTurbineDao.countActive(includeOffshore)
     }
 
     override suspend fun getWindParkStatuses(): Map<String, String> = withContext(Dispatchers.Default) {

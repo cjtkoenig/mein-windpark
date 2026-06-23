@@ -13,6 +13,7 @@ import app.core.model.DataHint
 interface WindTurbineDao {
     suspend fun getByParkId(parkId: String): List<WindTurbine>
     suspend fun getAll(): List<WindTurbine>
+    suspend fun countActive(includeOffshore: Boolean): Int
     suspend fun getParkStatuses(): Map<String, String>
     suspend fun insertOrReplace(turbine: WindTurbine)
 }
@@ -24,6 +25,14 @@ class SqlDelightWindTurbineDao(private val database: AppDatabase) : WindTurbineD
 
     override suspend fun getAll(): List<WindTurbine> {
         return database.windTurbineQueries.selectAllWindTurbines().executeAsList().map { it.toDomain() }
+    }
+
+    override suspend fun countActive(includeOffshore: Boolean): Int {
+        return database.windTurbineQueries.countActiveWindTurbines(
+            includeOffshore = includeOffshore.toSqlFlag(),
+            offshoreNorthSeaMunicipalityId = OFFSHORE_NORTH_SEA_MUNICIPALITY_ID,
+            offshoreBalticSeaMunicipalityId = OFFSHORE_BALTIC_SEA_MUNICIPALITY_ID,
+        ).executeAsOne().toInt()
     }
 
     override suspend fun getParkStatuses(): Map<String, String> {
@@ -90,6 +99,7 @@ class SqlDelightWindTurbineDao(private val database: AppDatabase) : WindTurbineD
 interface MetricDao {
     suspend fun getForSubject(subjectType: String, subjectId: String): List<Metric>
     suspend fun getAll(): List<Metric>
+    suspend fun getNationalAggregates(includeOffshore: Boolean): List<Metric>
     suspend fun insertOrReplace(metric: Metric)
 }
 
@@ -100,6 +110,31 @@ class SqlDelightMetricDao(private val database: AppDatabase) : MetricDao {
 
     override suspend fun getAll(): List<Metric> {
         return database.metricQueries.selectAllMetrics().executeAsList().map { it.toDomain() }
+    }
+
+    override suspend fun getNationalAggregates(includeOffshore: Boolean): List<Metric> {
+        return database.metricQueries.selectNationalMetricAggregates(
+            includeOffshore = includeOffshore.toSqlFlag(),
+            offshoreNorthSeaMunicipalityId = OFFSHORE_NORTH_SEA_MUNICIPALITY_ID,
+            offshoreBalticSeaMunicipalityId = OFFSHORE_BALTIC_SEA_MUNICIPALITY_ID,
+        ).executeAsList().map { row ->
+            Metric(
+                id = "national_${row.metric_type}",
+                subjectType = "national",
+                subjectId = "DE",
+                metricType = row.metric_type,
+                value = if (row.present_value_count > 0L) row.metric_value else null,
+                unit = row.unit.orEmpty(),
+                period = row.period,
+                sourceName = row.source_name ?: "WindKlar MVP-Berechnung",
+                sourceUrl = row.source_url.orEmpty(),
+                sourceUpdatedAt = row.source_updated_at.orEmpty(),
+                dataQuality = row.data_quality ?: "derived",
+                calculationNote = row.calculation_note?.let {
+                    "Bundesweite Summe aus Windpark-Metriken. $it"
+                } ?: "Bundesweite Summe aus Windpark-Metriken.",
+            )
+        }
     }
 
     override suspend fun insertOrReplace(metric: Metric) {
@@ -291,3 +326,8 @@ class SqlDelightSettingsDao(private val database: AppDatabase) : SettingsDao {
         database.settingQueries.upsertSetting(key, value)
     }
 }
+
+private const val OFFSHORE_NORTH_SEA_MUNICIPALITY_ID = "offshore_north_sea"
+private const val OFFSHORE_BALTIC_SEA_MUNICIPALITY_ID = "offshore_baltic_sea"
+
+private fun Boolean.toSqlFlag(): Long = if (this) 1L else 0L

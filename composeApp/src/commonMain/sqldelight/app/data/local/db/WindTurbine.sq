@@ -33,6 +33,19 @@ selectAllWindTurbines:
 SELECT *
 FROM wind_turbine;
 
+countActiveWindTurbines:
+SELECT COUNT(*)
+FROM wind_turbine
+WHERE (
+    status IS NULL
+    OR LOWER(status) LIKE '%betrieb%'
+    OR LOWER(status) LIKE '%aktiv%'
+)
+AND (
+    :includeOffshore != 0
+    OR municipality_id NOT IN (:offshoreNorthSeaMunicipalityId, :offshoreBalticSeaMunicipalityId)
+);
+
 selectParkStatuses:
 SELECT 
     wind_park_id,
