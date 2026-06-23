@@ -117,13 +117,13 @@ Platform-specific code should stay thin. Prefer shared code in `commonMain` unle
 Android:
 
 ```shell
-.\gradlew.bat :composeApp:assembleDebug
+.\gradlew.bat :androidApp:assembleDebug
 ```
 
 On Unix-like shells:
 
 ```shell
-./gradlew :composeApp:assembleDebug
+./gradlew :androidApp:assembleDebug
 ```
 
 iOS: open `iosApp` in Xcode and run from there.

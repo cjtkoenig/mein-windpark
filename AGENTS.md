@@ -99,7 +99,7 @@ Data-quality labels: `official`, `measured`, `derived`, `estimated`, `simulated`
 - AGP 9.x/KMP compatibility warning is accepted for the seminar MVP unless the build breaks.
 
 ## Build And Verify
-- Android build: `.\gradlew.bat :composeApp:assembleDebug`
+- Android build: `.\gradlew.bat :androidApp:assembleDebug`
 - iOS: open `iosApp` in Xcode and run there.
 - For docs-only changes, run `git diff --check`.
 - For feature changes, verify the relevant manual flow; Android manual QA is required before demo, iOS smoke test is desirable where available.
