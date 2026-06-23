@@ -76,9 +76,13 @@ import app.core.ui.components.qualityColors
 import app.core.ui.components.RankingList
 import app.core.ui.components.RankingItemRow
 import app.core.ui.theme.WindklarTheme
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val ScreenBackground @Composable get() = WindklarTheme.colors.screenBackground
+
+private const val SearchSelectDebounceMillis = 180L
+private const val SearchSelectVisibleOptionLimit = 50
 private val PrimaryGreen @Composable get() = WindklarTheme.colors.primaryGreen
 private val HeaderGreen @Composable get() = WindklarTheme.colors.headerEndGreen
 private val AccentGreen @Composable get() = WindklarTheme.colors.primaryGreen
@@ -1375,17 +1379,27 @@ private fun SearchSelectDialog(
     onSelected: (ComparisonOption) -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
-    val filteredOptions = remember(query, options) {
-        val normalizedQuery = query.trim()
-        if (normalizedQuery.isBlank()) {
-            options
+    var debouncedQuery by remember { mutableStateOf("") }
+
+    LaunchedEffect(query) {
+        delay(SearchSelectDebounceMillis)
+        debouncedQuery = query
+    }
+
+    val filteredOptions = remember(debouncedQuery, options) {
+        val normalizedQuery = debouncedQuery.trim()
+        val matches = if (normalizedQuery.isBlank()) {
+            options.asSequence()
         } else {
-            options.filter { option ->
+            options.asSequence().filter { option ->
                 option.label.contains(normalizedQuery, ignoreCase = true) ||
                     option.description.contains(normalizedQuery, ignoreCase = true)
             }
         }
+        matches.take(SearchSelectVisibleOptionLimit + 1).toList()
     }
+    val visibleOptions = filteredOptions.take(SearchSelectVisibleOptionLimit)
+    val hasMoreOptions = filteredOptions.size > SearchSelectVisibleOptionLimit
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -1434,7 +1448,7 @@ private fun SearchSelectDialog(
                     modifier = Modifier.heightIn(max = 380.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    items(filteredOptions, key = { it.id }) { option ->
+                    items(visibleOptions, key = { it.id }) { option ->
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1459,6 +1473,17 @@ private fun SearchSelectDialog(
                                 lineHeight = 14.sp,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                    if (hasMoreOptions) {
+                        item {
+                            Text(
+                                text = "Mehr Treffer verfügbar. Bitte Suche verfeinern.",
+                                color = MutedText,
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                             )
                         }
                     }
