@@ -13,6 +13,7 @@ import app.data.repository.WindParkRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
@@ -30,6 +31,7 @@ class MapViewModel(
     private var parkStatuses: Map<String, String> = emptyMap()
     private var viewportBounds: MapBounds? = null
     private var filterJob: Job? = null
+    private var searchJob: Job? = null
 
     init {
         loadMapData()
@@ -76,8 +78,10 @@ class MapViewModel(
 
     fun onQueryChange(newQuery: String) {
         uiState = uiState.copy(searchQuery = newQuery)
+        searchJob?.cancel()
         if (newQuery.length >= 2) {
-            viewModelScope.launch {
+            searchJob = viewModelScope.launch {
+                delay(200)
                 val results = repository.searchWindParks(newQuery)
                 uiState = uiState.copy(
                     searchResults = results,
@@ -93,6 +97,7 @@ class MapViewModel(
     }
 
     fun onSearchResultSelected(park: WindPark) {
+        searchJob?.cancel()
         viewportBounds = null
         uiState = uiState.copy(
             mapCenterLat = park.latitude,

@@ -44,10 +44,9 @@ WHERE LOWER(id) LIKE '%' || LOWER(:query) || '%'
          AND (
              LOWER(wind_turbine.id) LIKE '%' || LOWER(:query) || '%'
              OR LOWER(wind_turbine.name) LIKE '%' || LOWER(:query) || '%'
-             OR LOWER(wind_turbine.wind_park_id) LIKE '%' || LOWER(:query) || '%'
-             OR LOWER(wind_turbine.manufacturer) LIKE '%' || LOWER(:query) || '%'
-             OR LOWER(wind_turbine.model) LIKE '%' || LOWER(:query) || '%'
-             OR LOWER(wind_turbine.turbine_type) LIKE '%' || LOWER(:query) || '%'
+             OR LOWER(COALESCE(wind_turbine.manufacturer, '')) LIKE '%' || LOWER(:query) || '%'
+             OR LOWER(COALESCE(wind_turbine.model, '')) LIKE '%' || LOWER(:query) || '%'
+             OR LOWER(COALESCE(wind_turbine.turbine_type, '')) LIKE '%' || LOWER(:query) || '%'
          )
    )
 ORDER BY name;

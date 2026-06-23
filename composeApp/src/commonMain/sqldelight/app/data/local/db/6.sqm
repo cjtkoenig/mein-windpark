@@ -1,0 +1,2 @@
+-- Add index on wind_turbine(wind_park_id) to fix search performance
+CREATE INDEX IF NOT EXISTS idx_wind_turbine_park_id ON wind_turbine(wind_park_id);

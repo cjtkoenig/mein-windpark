@@ -168,7 +168,7 @@ fun MapScreen(
                 )
                 
                 // Search results dropdown overlay
-                if (uiState.showSearchOverlay && uiState.searchResults.isNotEmpty()) {
+                if (uiState.showSearchOverlay) {
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -177,34 +177,50 @@ fun MapScreen(
                         color = WindklarTheme.colors.cardBackground,
                         shadowElevation = 8.dp
                     ) {
-                        LazyColumn(modifier = Modifier.padding(8.dp)) {
-                            items(uiState.searchResults) { park ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { viewModel.onSearchResultSelected(park) }
-                                        .padding(vertical = 12.dp, horizontal = 16.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.LocationOn,
-                                        contentDescription = null,
-                                        tint = Color(0xFF2D5A2D),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Column {
-                                        Text(
-                                            text = park.name,
-                                            color = Color(0xFF1A3A1A),
-                                            fontWeight = FontWeight.Medium,
-                                            fontSize = 14.sp
+                        if (uiState.searchResults.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 24.dp, horizontal = 16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Keine Ergebnisse gefunden",
+                                    color = MutedGreen,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        } else {
+                            LazyColumn(modifier = Modifier.padding(8.dp)) {
+                                items(uiState.searchResults) { park ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { viewModel.onSearchResultSelected(park) }
+                                            .padding(vertical = 12.dp, horizontal = 16.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.LocationOn,
+                                            contentDescription = null,
+                                            tint = Color(0xFF2D5A2D),
+                                            modifier = Modifier.size(18.dp)
                                         )
-                                        Text(
-                                            text = park.municipalityName,
-                                            color = Color(0xFF5A7A5A),
-                                            fontSize = 12.sp
-                                        )
+                                        Column {
+                                            Text(
+                                                text = park.name,
+                                                color = Color(0xFF1A3A1A),
+                                                fontWeight = FontWeight.Medium,
+                                                fontSize = 14.sp
+                                            )
+                                            Text(
+                                                text = park.municipalityName,
+                                                color = Color(0xFF5A7A5A),
+                                                fontSize = 12.sp
+                                            )
+                                        }
                                     }
                                 }
                             }
