@@ -108,6 +108,10 @@ fun MapScreen(
 ) {
     val uiState = viewModel.uiState
     val scope = rememberCoroutineScope()
+    
+    LaunchedEffect(viewModel) {
+        viewModel.refreshOffshoreSetting()
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     
     var showReportDialog by remember { mutableStateOf(false) }

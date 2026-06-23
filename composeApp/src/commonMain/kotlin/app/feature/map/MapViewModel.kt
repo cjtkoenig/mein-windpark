@@ -9,6 +9,8 @@ import app.core.model.MapMarkerKind
 import app.core.model.MapMarkerUiModel
 import app.core.model.WindTurbine
 import app.core.model.WindPark
+import app.core.model.isOffshore
+import app.core.model.isOffshoreMunicipalityId
 import app.core.ui.components.EntityType
 import app.core.ui.components.EntityPreviewData
 import app.core.ui.components.PreviewSheetState
@@ -52,6 +54,7 @@ class MapViewModel(
                 uiState = uiState.copy(isLoading = true)
                 
                 val allParks = repository.getWindParks()
+                val isOffshoreEnabled = repository.isOffshoreEnabled()
                 println("MapViewModel: Loaded ${allParks.size} wind parks from repository.")
                 
                 val statusMap = repository.getWindParkStatuses()
@@ -108,6 +111,7 @@ class MapViewModel(
                 uiState = uiState.copy(
                     isLoading = false,
                     parks = allParks,
+                    isOffshoreEnabled = isOffshoreEnabled,
                 )
                 applyFilters()
                 println("MapViewModel: loadMapData finished successfully.")
@@ -119,6 +123,16 @@ class MapViewModel(
                     parks = emptyList(),
                     filteredParks = emptyList()
                 )
+            }
+        }
+    }
+
+    fun refreshOffshoreSetting() {
+        viewModelScope.launch {
+            val enabled = repository.isOffshoreEnabled()
+            if (uiState.isOffshoreEnabled != enabled) {
+                uiState = uiState.copy(isOffshoreEnabled = enabled)
+                applyFilters()
             }
         }
     }
@@ -137,11 +151,20 @@ class MapViewModel(
             searchJob = viewModelScope.launch {
                 delay(200)
                 val dbParks = repository.searchWindParks(newQuery)
+                val isOffshoreEnabled = uiState.isOffshoreEnabled
                 
-                val matchingStates = statesList.filter { it.name.contains(newQuery, ignoreCase = true) }
-                val matchingDistricts = districtsList.filter { it.name.contains(newQuery, ignoreCase = true) }
-                val matchingMunicipalities = municipalitiesList.filter { it.name.contains(newQuery, ignoreCase = true) }
-                val matchingParks = dbParks.map { MapSearchResult.Park(it) }
+                val matchingStates = statesList
+                    .filter { isOffshoreEnabled || !it.id.isOffshoreMunicipalityId() }
+                    .filter { it.name.contains(newQuery, ignoreCase = true) }
+                val matchingDistricts = districtsList
+                    .filter { isOffshoreEnabled || !it.id.isOffshoreMunicipalityId() }
+                    .filter { it.name.contains(newQuery, ignoreCase = true) }
+                val matchingMunicipalities = municipalitiesList
+                    .filter { isOffshoreEnabled || !it.id.isOffshoreMunicipalityId() }
+                    .filter { it.name.contains(newQuery, ignoreCase = true) }
+                val matchingParks = dbParks
+                    .filter { isOffshoreEnabled || !it.isOffshore() }
+                    .map { MapSearchResult.Park(it) }
 
                 val combinedResults = matchingStates + matchingDistricts + matchingMunicipalities + matchingParks
 
@@ -567,8 +590,14 @@ class MapViewModel(
         filterJob = viewModelScope.launch {
             try {
                 val filteredParks = withContext(Dispatchers.Default) {
+                    val rawParks = parksForStatus(snapshot.parks, currentStatuses, currentStatus)
+                    val afterOffshore = if (snapshot.isOffshoreEnabled) {
+                        rawParks
+                    } else {
+                        rawParks.filterNot { it.isOffshore() }
+                    }
                     filterParksInBounds(
-                        parksForStatus(snapshot.parks, currentStatuses, currentStatus),
+                        afterOffshore,
                         bounds,
                     )
                 }
@@ -581,7 +610,13 @@ class MapViewModel(
                         neLon = turbineBounds.neLon,
                     )
                     withContext(Dispatchers.Default) {
-                        turbinesToMarkers(filterTurbines(turbines, currentStatus))
+                        val filteredTurbines = filterTurbines(turbines, currentStatus)
+                        val afterOffshoreTurbines = if (snapshot.isOffshoreEnabled) {
+                            filteredTurbines
+                        } else {
+                            filteredTurbines.filterNot { it.isOffshore() }
+                        }
+                        turbinesToMarkers(afterOffshoreTurbines)
                     }
                 } else {
                     withContext(Dispatchers.Default) {

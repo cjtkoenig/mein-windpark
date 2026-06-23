@@ -145,7 +145,7 @@ class SqlDelightWindParkRepository(
             ?.trim()
             ?.lowercase()
             ?.let { it == "true" }
-            ?: true
+            ?: false
     }
 
     override suspend fun setOffshoreEnabled(enabled: Boolean): Unit = withContext(Dispatchers.Default) {

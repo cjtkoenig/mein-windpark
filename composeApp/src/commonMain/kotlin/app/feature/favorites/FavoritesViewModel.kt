@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import app.data.repository.WindParkRepository
 import kotlinx.coroutines.launch
 import app.core.model.FavoriteRegion
+import app.core.model.isOffshore
+import app.core.model.isOffshoreMunicipalityId
 
 class FavoritesViewModel(private val repository: WindParkRepository) : ViewModel() {
     var uiState: FavoritesUiState by mutableStateOf(FavoritesUiState())
@@ -19,9 +21,10 @@ class FavoritesViewModel(private val repository: WindParkRepository) : ViewModel
 
     fun loadData() {
         viewModelScope.launch {
-            val favs = repository.getFavoriteWindParks()
-            val recents = repository.getRecentWindParks(5)
-            val favRegions = repository.getFavoriteRegions()
+            val includeOffshore = repository.isOffshoreEnabled()
+            val favs = repository.getFavoriteWindParks().filter { includeOffshore || !it.isOffshore() }
+            val recents = repository.getRecentWindParks(5).filter { includeOffshore || !it.isOffshore() }
+            val favRegions = repository.getFavoriteRegions().filter { includeOffshore || !it.id.isOffshoreMunicipalityId() }
             
             val allParks = repository.getWindParks()
             val allMetrics = repository.getAllMetrics()
