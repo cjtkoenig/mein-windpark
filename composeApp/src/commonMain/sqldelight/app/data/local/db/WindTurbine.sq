@@ -23,6 +23,9 @@ CREATE TABLE wind_turbine (
     data_quality TEXT NOT NULL
 );
 
+CREATE INDEX IF NOT EXISTS idx_wind_turbine_coords
+ON wind_turbine(latitude, longitude);
+
 selectWindTurbinesByParkId:
 SELECT *
 FROM wind_turbine
@@ -32,6 +35,13 @@ ORDER BY name;
 selectAllWindTurbines:
 SELECT *
 FROM wind_turbine;
+
+selectWindTurbinesInBounds:
+SELECT *
+FROM wind_turbine
+WHERE latitude BETWEEN :swLat AND :neLat
+  AND longitude BETWEEN :swLon AND :neLon
+ORDER BY name;
 
 countActiveWindTurbines:
 SELECT COUNT(*)

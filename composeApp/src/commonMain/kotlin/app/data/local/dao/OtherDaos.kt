@@ -13,6 +13,7 @@ import app.core.model.DataHint
 interface WindTurbineDao {
     suspend fun getByParkId(parkId: String): List<WindTurbine>
     suspend fun getAll(): List<WindTurbine>
+    suspend fun getInBounds(swLat: Double, swLon: Double, neLat: Double, neLon: Double): List<WindTurbine>
     suspend fun countActive(includeOffshore: Boolean): Int
     suspend fun getParkStatuses(): Map<String, String>
     suspend fun insertOrReplace(turbine: WindTurbine)
@@ -25,6 +26,18 @@ class SqlDelightWindTurbineDao(private val database: AppDatabase) : WindTurbineD
 
     override suspend fun getAll(): List<WindTurbine> {
         return database.windTurbineQueries.selectAllWindTurbines().executeAsList().map { it.toDomain() }
+    }
+
+    override suspend fun getInBounds(swLat: Double, swLon: Double, neLat: Double, neLon: Double): List<WindTurbine> {
+        return database.windTurbineQueries
+            .selectWindTurbinesInBounds(
+                swLat = swLat,
+                swLon = swLon,
+                neLat = neLat,
+                neLon = neLon,
+            )
+            .executeAsList()
+            .map { it.toDomain() }
     }
 
     override suspend fun countActive(includeOffshore: Boolean): Int {

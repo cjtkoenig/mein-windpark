@@ -42,6 +42,15 @@ actual fun PlatformMapView(
     markers: List<MapMarkerUiModel>,
     selectedParkId: String?,
     onMapMoved: (lat: Double, lon: Double, zoom: Float) -> Unit,
+    onMapMovedWithBounds: ((
+        lat: Double,
+        lon: Double,
+        zoom: Float,
+        swLat: Double,
+        swLon: Double,
+        neLat: Double,
+        neLon: Double,
+    ) -> Unit)?,
     onParkClicked: (String) -> Unit,
     onClusterClicked: (lat: Double, lon: Double) -> Unit,
     onPlacementPinDragged: ((lat: Double, lon: Double) -> Unit)?,
@@ -50,6 +59,7 @@ actual fun PlatformMapView(
     var isPageLoaded by remember { mutableStateOf(false) }
     var webViewRef by remember { mutableStateOf<WKWebView?>(null) }
     val currentOnMapMoved = rememberUpdatedState(onMapMoved)
+    val currentOnMapMovedWithBounds = rememberUpdatedState(onMapMovedWithBounds)
     val currentOnParkClicked = rememberUpdatedState(onParkClicked)
     val currentOnClusterClicked = rememberUpdatedState(onClusterClicked)
     val currentOnPlacementPinDragged = rememberUpdatedState(onPlacementPinDragged)
@@ -146,7 +156,19 @@ actual fun PlatformMapView(
                     function notifyMove() {
                         var center = map.getCenter();
                         var zoom = map.getZoom();
-                        var data = { type: 'move', lat: center.lat, lon: center.lng, zoom: zoom };
+                        var bounds = map.getBounds();
+                        var sw = bounds.getSouthWest();
+                        var ne = bounds.getNorthEast();
+                        var data = {
+                            type: 'move',
+                            lat: center.lat,
+                            lon: center.lng,
+                            zoom: zoom,
+                            swLat: sw.lat,
+                            swLon: sw.lng,
+                            neLat: ne.lat,
+                            neLon: ne.lng
+                        };
                         if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.iosBridge) {
                             window.webkit.messageHandlers.iosBridge.postMessage(JSON.stringify(data));
                         }
@@ -312,7 +334,22 @@ actual fun PlatformMapView(
                             val lat = obj["lat"]?.toString()?.toDoubleOrNull() ?: return
                             val lon = obj["lon"]?.toString()?.toDoubleOrNull() ?: return
                             val zoom = obj["zoom"]?.toString()?.toFloatOrNull() ?: return
-                            onMapMoved(lat, lon, zoom)
+                            val swLat = obj["swLat"]?.toString()?.toDoubleOrNull()
+                            val swLon = obj["swLon"]?.toString()?.toDoubleOrNull()
+                            val neLat = obj["neLat"]?.toString()?.toDoubleOrNull()
+                            val neLon = obj["neLon"]?.toString()?.toDoubleOrNull()
+                            val boundsCallback = currentOnMapMovedWithBounds.value
+                            if (
+                                boundsCallback != null &&
+                                swLat != null &&
+                                swLon != null &&
+                                neLat != null &&
+                                neLon != null
+                            ) {
+                                boundsCallback(lat, lon, zoom, swLat, swLon, neLat, neLon)
+                            } else {
+                                currentOnMapMoved.value(lat, lon, zoom)
+                            }
                         } else if (type == "click") {
                             val parkId = obj["parkId"]?.toString()?.removeSurrounding("\"") ?: return
                             onParkClicked(parkId)

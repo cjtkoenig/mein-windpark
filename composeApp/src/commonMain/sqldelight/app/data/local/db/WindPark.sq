@@ -18,6 +18,9 @@ CREATE TABLE wind_park (
     data_quality TEXT NOT NULL
 );
 
+CREATE INDEX IF NOT EXISTS idx_wind_park_coords
+ON wind_park(latitude, longitude);
+
 selectAllWindParks:
 SELECT *
 FROM wind_park

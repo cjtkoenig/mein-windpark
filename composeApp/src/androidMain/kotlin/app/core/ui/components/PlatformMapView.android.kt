@@ -32,6 +32,15 @@ actual fun PlatformMapView(
     markers: List<MapMarkerUiModel>,
     selectedParkId: String?,
     onMapMoved: (lat: Double, lon: Double, zoom: Float) -> Unit,
+    onMapMovedWithBounds: ((
+        lat: Double,
+        lon: Double,
+        zoom: Float,
+        swLat: Double,
+        swLon: Double,
+        neLat: Double,
+        neLon: Double,
+    ) -> Unit)?,
     onParkClicked: (String) -> Unit,
     onClusterClicked: (lat: Double, lon: Double) -> Unit,
     onPlacementPinDragged: ((lat: Double, lon: Double) -> Unit)?,
@@ -45,6 +54,7 @@ actual fun PlatformMapView(
     var leafletJs by remember { mutableStateOf<String?>(null) }
 
     val currentOnMapMoved = rememberUpdatedState(onMapMoved)
+    val currentOnMapMovedWithBounds = rememberUpdatedState(onMapMovedWithBounds)
     val currentOnParkClicked = rememberUpdatedState(onParkClicked)
     val currentOnClusterClicked = rememberUpdatedState(onClusterClicked)
     val currentOnPlacementPinDragged = rememberUpdatedState(onPlacementPinDragged)
@@ -141,8 +151,11 @@ actual fun PlatformMapView(
                     function notifyMove() {
                         var center = map.getCenter();
                         var zoom = map.getZoom();
+                        var bounds = map.getBounds();
+                        var sw = bounds.getSouthWest();
+                        var ne = bounds.getNorthEast();
                         if (window.AndroidBridge && window.AndroidBridge.onMapMoved) {
-                            window.AndroidBridge.onMapMoved(center.lat, center.lng, zoom);
+                            window.AndroidBridge.onMapMoved(center.lat, center.lng, zoom, sw.lat, sw.lng, ne.lat, ne.lng);
                         }
                     }
 
@@ -357,7 +370,10 @@ actual fun PlatformMapView(
                     val bridge = AndroidMapBridge(
                         parksJsonProvider = { currentParksJson.value },
                         selectedParkIdProvider = { currentSelectedParkId.value },
-                        onMapMovedCallback = { lat, lon, zoom -> currentOnMapMoved.value(lat, lon, zoom) },
+                        onMapMovedWithBoundsCallback = { lat, lon, zoom, swLat, swLon, neLat, neLon ->
+                            currentOnMapMovedWithBounds.value?.invoke(lat, lon, zoom, swLat, swLon, neLat, neLon)
+                                ?: currentOnMapMoved.value(lat, lon, zoom)
+                        },
                         onParkClickedCallback = { id -> currentOnParkClicked.value(id) },
                         onClusterClickedCallback = { lat, lon -> currentOnClusterClicked.value(lat, lon) },
                         onPlacementPinDraggedCallback = { lat, lon -> currentOnPlacementPinDragged.value?.invoke(lat, lon) },
@@ -388,7 +404,15 @@ actual fun PlatformMapView(
 class AndroidMapBridge(
     private val parksJsonProvider: () -> String,
     private val selectedParkIdProvider: () -> String,
-    private val onMapMovedCallback: (lat: Double, lon: Double, zoom: Float) -> Unit,
+    private val onMapMovedWithBoundsCallback: (
+        lat: Double,
+        lon: Double,
+        zoom: Float,
+        swLat: Double,
+        swLon: Double,
+        neLat: Double,
+        neLon: Double,
+    ) -> Unit,
     private val onParkClickedCallback: (String) -> Unit,
     private val onClusterClickedCallback: (lat: Double, lon: Double) -> Unit,
     private val onPlacementPinDraggedCallback: (lat: Double, lon: Double) -> Unit,
@@ -402,8 +426,16 @@ class AndroidMapBridge(
     fun getSelectedParkId(): String = selectedParkIdProvider()
 
     @JavascriptInterface
-    fun onMapMoved(lat: Double, lon: Double, zoom: Float) {
-        mainHandler.post { onMapMovedCallback(lat, lon, zoom) }
+    fun onMapMoved(
+        lat: Double,
+        lon: Double,
+        zoom: Float,
+        swLat: Double,
+        swLon: Double,
+        neLat: Double,
+        neLon: Double,
+    ) {
+        mainHandler.post { onMapMovedWithBoundsCallback(lat, lon, zoom, swLat, swLon, neLat, neLon) }
     }
 
     @JavascriptInterface

@@ -116,6 +116,15 @@ class SqlDelightWindParkRepository(
         windTurbineDao.getAll()
     }
 
+    override suspend fun getWindTurbinesInBounds(
+        swLat: Double,
+        swLon: Double,
+        neLat: Double,
+        neLon: Double,
+    ): List<WindTurbine> = withContext(Dispatchers.Default) {
+        windTurbineDao.getInBounds(swLat, swLon, neLat, neLon)
+    }
+
     override suspend fun countActiveWindTurbines(includeOffshore: Boolean): Int = withContext(Dispatchers.Default) {
         windTurbineDao.countActive(includeOffshore)
     }

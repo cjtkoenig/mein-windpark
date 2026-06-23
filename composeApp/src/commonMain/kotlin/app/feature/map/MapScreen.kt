@@ -146,6 +146,7 @@ fun MapScreen(
                 markers = uiState.mapMarkers,
                 selectedParkId = uiState.selectedPark?.id,
                 onMapMoved = viewModel::onMapMoved,
+                onMapMovedWithBounds = viewModel::onMapMovedWithBounds,
                 onParkClicked = viewModel::onParkClickedById,
                 onClusterClicked = viewModel::onClusterClicked,
                 onPlacementPinDragged = viewModel::updatePlacementPinLocation,

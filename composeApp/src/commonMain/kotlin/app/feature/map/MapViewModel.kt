@@ -7,9 +7,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.core.model.MapMarkerKind
 import app.core.model.MapMarkerUiModel
+import app.core.model.WindTurbine
 import app.core.model.WindPark
 import app.data.repository.WindParkRepository
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.floor
 
@@ -23,6 +28,8 @@ class MapViewModel(
         private set
 
     private var parkStatuses: Map<String, String> = emptyMap()
+    private var viewportBounds: MapBounds? = null
+    private var filterJob: Job? = null
 
     init {
         loadMapData()
@@ -86,6 +93,7 @@ class MapViewModel(
     }
 
     fun onSearchResultSelected(park: WindPark) {
+        viewportBounds = null
         uiState = uiState.copy(
             mapCenterLat = park.latitude,
             mapCenterLon = park.longitude,
@@ -206,6 +214,7 @@ class MapViewModel(
     }
 
     fun centerOnLocation(lat: Double, lon: Double) {
+        viewportBounds = null
         uiState = uiState.copy(
             mapCenterLat = lat,
             mapCenterLon = lon,
@@ -237,11 +246,13 @@ class MapViewModel(
     }
 
     fun onZoomChanged(zoom: Float) {
+        viewportBounds = null
         uiState = uiState.copy(zoomLevel = zoom.coerceIn(5.0f, 18.0f))
         applyFilters()
     }
 
     fun onClusterClicked(lat: Double, lon: Double) {
+        viewportBounds = null
         uiState = uiState.copy(
             mapCenterLat = lat,
             mapCenterLon = lon,
@@ -254,9 +265,42 @@ class MapViewModel(
     }
 
     fun onMapMoved(lat: Double, lon: Double, zoom: Float) {
+        viewportBounds = null
         if (abs(uiState.mapCenterLat - lat) > 0.0001 || 
             abs(uiState.mapCenterLon - lon) > 0.0001 || 
             abs(uiState.zoomLevel - zoom) > 0.1) {
+            uiState = uiState.copy(
+                mapCenterLat = lat,
+                mapCenterLon = lon,
+                zoomLevel = zoom.coerceIn(5.0f, 18.0f)
+            )
+            applyFilters()
+        }
+    }
+
+    fun onMapMovedWithBounds(
+        lat: Double,
+        lon: Double,
+        zoom: Float,
+        swLat: Double,
+        swLon: Double,
+        neLat: Double,
+        neLon: Double,
+    ) {
+        val nextBounds = MapBounds(
+            swLat = minOf(swLat, neLat),
+            swLon = swLon,
+            neLat = maxOf(swLat, neLat),
+            neLon = neLon,
+        )
+        val boundsChanged = viewportBounds?.isCloseTo(nextBounds) != true
+        viewportBounds = nextBounds
+
+        if (boundsChanged ||
+            abs(uiState.mapCenterLat - lat) > 0.0001 ||
+            abs(uiState.mapCenterLon - lon) > 0.0001 ||
+            abs(uiState.zoomLevel - zoom) > 0.1
+        ) {
             uiState = uiState.copy(
                 mapCenterLat = lat,
                 mapCenterLon = lon,
@@ -273,37 +317,7 @@ class MapViewModel(
         )
     }
 
-    private var allTurbines: List<app.core.model.WindTurbine>? = null
-
-    private fun loadTurbinesAndApplyFilters(currentStatus: String, filteredParks: List<WindPark>) {
-        if (allTurbines != null) {
-            val filteredTurbines = filterTurbines(allTurbines!!, currentStatus)
-            uiState = uiState.copy(
-                filteredParks = filteredParks,
-                mapMarkers = turbinesToMarkers(filteredTurbines)
-            )
-            return
-        }
-        viewModelScope.launch {
-            try {
-                val turbines = repository.getAllWindTurbines()
-                allTurbines = turbines
-                val filteredTurbines = filterTurbines(turbines, currentStatus)
-                uiState = uiState.copy(
-                    filteredParks = filteredParks,
-                    mapMarkers = turbinesToMarkers(filteredTurbines)
-                )
-            } catch (e: Throwable) {
-                e.printStackTrace()
-                uiState = uiState.copy(
-                    filteredParks = filteredParks,
-                    mapMarkers = emptyList()
-                )
-            }
-        }
-    }
-
-    private fun filterTurbines(turbines: List<app.core.model.WindTurbine>, statusFilter: String): List<app.core.model.WindTurbine> {
+    private fun filterTurbines(turbines: List<WindTurbine>, statusFilter: String): List<WindTurbine> {
         if (statusFilter == "Alle") {
             return turbines.filter { determineTurbineStatus(it.status) != "Stillgelegt" }
         }
@@ -325,7 +339,7 @@ class MapViewModel(
         return "Geplant"
     }
 
-    private fun turbinesToMarkers(turbines: List<app.core.model.WindTurbine>): List<MapMarkerUiModel> {
+    private fun turbinesToMarkers(turbines: List<WindTurbine>): List<MapMarkerUiModel> {
         return turbines.map { turbine ->
             MapMarkerUiModel(
                 id = turbine.id,
@@ -339,6 +353,7 @@ class MapViewModel(
     }
 
     private fun applyFilters() {
+        filterJob?.cancel()
         if (uiState.isPinPlacementMode) {
             uiState = uiState.copy(
                 mapMarkers = listOf(
@@ -354,32 +369,82 @@ class MapViewModel(
             return
         }
 
-        val currentStatus = uiState.selectedStatus
-        val filteredParks = parksForStatus(currentStatus)
-        if (uiState.zoomLevel > 14.0f) {
-            loadTurbinesAndApplyFilters(currentStatus, filteredParks)
-        } else {
-            uiState = uiState.copy(
-                filteredParks = filteredParks,
-                mapMarkers = markersForZoom(filteredParks, uiState.zoomLevel)
-            )
+        val snapshot = uiState
+        val currentStatus = snapshot.selectedStatus
+        val currentStatuses = parkStatuses
+        val bounds = viewportBounds
+        val turbineBounds = bounds ?: fallbackBounds(snapshot.mapCenterLat, snapshot.mapCenterLon, snapshot.zoomLevel)
+
+        filterJob = viewModelScope.launch {
+            try {
+                val filteredParks = withContext(Dispatchers.Default) {
+                    filterParksInBounds(
+                        parksForStatus(snapshot.parks, currentStatuses, currentStatus),
+                        bounds,
+                    )
+                }
+
+                val markers = if (snapshot.zoomLevel > 14.0f) {
+                    val turbines = repository.getWindTurbinesInBounds(
+                        swLat = turbineBounds.swLat,
+                        swLon = turbineBounds.swLon,
+                        neLat = turbineBounds.neLat,
+                        neLon = turbineBounds.neLon,
+                    )
+                    withContext(Dispatchers.Default) {
+                        turbinesToMarkers(filterTurbines(turbines, currentStatus))
+                    }
+                } else {
+                    withContext(Dispatchers.Default) {
+                        markersForZoom(filteredParks, snapshot.zoomLevel)
+                    }
+                }
+
+                uiState = uiState.copy(
+                    filteredParks = filteredParks,
+                    mapMarkers = markers
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                uiState = uiState.copy(
+                    filteredParks = emptyList(),
+                    mapMarkers = emptyList()
+                )
+            }
         }
     }
 
     private fun parksForStatus(status: String): List<WindPark> =
+        parksForStatus(uiState.parks, parkStatuses, status)
+
+    private fun parksForStatus(
+        parks: List<WindPark>,
+        statuses: Map<String, String>,
+        status: String,
+    ): List<WindPark> =
         if (status == "Alle") {
-            uiState.parks.filter { statusForPark(it.id) != "Stillgelegt" }
+            parks.filter { statusForPark(statuses, it.id) != "Stillgelegt" }
         } else if (status == "Geplant") {
-            uiState.parks.filter {
-                val s = statusForPark(it.id)
+            parks.filter {
+                val s = statusForPark(statuses, it.id)
                 s == "Geplant" || s == "Im Bau"
             }
         } else {
-            uiState.parks.filter { park -> statusForPark(park.id) == status }
+            parks.filter { park -> statusForPark(statuses, park.id) == status }
         }
 
     private fun statusForPark(parkId: String): String =
-        parkStatuses[parkId] ?: "Aktiv"
+        statusForPark(parkStatuses, parkId)
+
+    private fun statusForPark(statuses: Map<String, String>, parkId: String): String =
+        statuses[parkId] ?: "Aktiv"
+
+    private fun filterParksInBounds(parks: List<WindPark>, bounds: MapBounds?): List<WindPark> =
+        bounds?.let { mapBounds ->
+            parks.filter { park -> mapBounds.contains(park.latitude, park.longitude) }
+        } ?: parks
 
     private fun markersForZoom(parks: List<WindPark>, zoom: Float): List<MapMarkerUiModel> {
         val gridSize = when {
@@ -433,5 +498,44 @@ class MapViewModel(
                     )
                 }
             }
+    }
+
+    private fun fallbackBounds(centerLat: Double, centerLon: Double, zoom: Float): MapBounds {
+        val latSpan = when {
+            zoom > 16.0f -> 0.04
+            zoom > 15.0f -> 0.08
+            zoom > 14.0f -> 0.16
+            else -> 10.0
+        }
+        val lonSpan = latSpan * 1.5
+        return MapBounds(
+            swLat = centerLat - latSpan,
+            swLon = centerLon - lonSpan,
+            neLat = centerLat + latSpan,
+            neLon = centerLon + lonSpan,
+        )
+    }
+
+    private data class MapBounds(
+        val swLat: Double,
+        val swLon: Double,
+        val neLat: Double,
+        val neLon: Double,
+    ) {
+        fun contains(latitude: Double, longitude: Double): Boolean {
+            val inLatitude = latitude in swLat..neLat
+            val inLongitude = if (swLon <= neLon) {
+                longitude in swLon..neLon
+            } else {
+                longitude >= swLon || longitude <= neLon
+            }
+            return inLatitude && inLongitude
+        }
+
+        fun isCloseTo(other: MapBounds): Boolean =
+            abs(swLat - other.swLat) <= 0.0001 &&
+                abs(swLon - other.swLon) <= 0.0001 &&
+                abs(neLat - other.neLat) <= 0.0001 &&
+                abs(neLon - other.neLon) <= 0.0001
     }
 }

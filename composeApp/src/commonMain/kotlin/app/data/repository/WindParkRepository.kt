@@ -25,6 +25,7 @@ interface WindParkRepository {
     suspend fun setOffshoreEnabled(enabled: Boolean)
     suspend fun getWindTurbinesForPark(parkId: String): List<WindTurbine>
     suspend fun getAllWindTurbines(): List<WindTurbine>
+    suspend fun getWindTurbinesInBounds(swLat: Double, swLon: Double, neLat: Double, neLon: Double): List<WindTurbine>
     suspend fun countActiveWindTurbines(includeOffshore: Boolean): Int
     suspend fun getWindParkStatuses(): Map<String, String>
 
