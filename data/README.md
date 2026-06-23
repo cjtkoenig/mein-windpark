@@ -54,6 +54,24 @@ Copy the selected demo snapshot to
 `composeApp/src/commonMain/composeResources/files/snapshots/windklar_snapshot.json`
 before building the app.
 
+### Manual preseed SQLite generator
+
+Measure A starts the preseed path without changing app runtime startup yet. To
+generate a SQLDelight-compatible SQLite database from the bundled app snapshot,
+run this command from the repository root:
+
+```powershell
+python scripts/generate_preseed_sqlite.py --force
+```
+
+By default this reads
+`composeApp/src/commonMain/composeResources/files/snapshots/windklar_snapshot.json`
+and `windklar_snapshot_metadata.json`, then writes
+`data/snapshots/windklar_seed.db`. The output directory is ignored, so the
+database can be regenerated manually when the bundled snapshot or SQLDelight
+schema changes. The current app runtime still uses the JSON import fallback
+until platform-specific asset copying is implemented in a separate slice.
+
 ## Known limitations
 
 - Wind park grouping is derived preprocessing, not official MaStR meaning.
