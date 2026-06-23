@@ -4,6 +4,7 @@ import app.core.model.WindPark
 import app.core.model.Metric
 import app.core.model.SnapshotAssumption
 import app.core.model.WindTurbine
+import app.core.model.DataHint
 
 interface WindParkRepository {
     suspend fun getWindParks(): List<WindPark>
@@ -44,4 +45,6 @@ interface WindParkRepository {
     suspend fun getSnapshotAttribution(): String
     suspend fun getSnapshotLimitations(): List<String>
     suspend fun getSnapshotAssumptions(): List<SnapshotAssumption>
+    
+    suspend fun getDataHints(): List<DataHint>
 }

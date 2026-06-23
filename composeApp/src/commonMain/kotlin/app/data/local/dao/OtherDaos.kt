@@ -7,6 +7,7 @@ import app.data.local.db.Snapshot_metadata
 import app.data.local.db.Data_hint
 import app.core.model.WindTurbine
 import app.core.model.Metric
+import app.core.model.DataHint
 
 // --- Turbine DAO ---
 interface WindTurbineDao {
@@ -186,6 +187,7 @@ class SqlDelightRecentWindParkDao(private val database: AppDatabase) : RecentWin
 // --- Data Hint DAO ---
 
 interface DataHintDao {
+    suspend fun getAll(): List<DataHint>
     suspend fun insertOrReplace(
         id: String,
         category: String,
@@ -205,6 +207,10 @@ interface DataHintDao {
 }
 
 class SqlDelightDataHintDao(private val database: AppDatabase) : DataHintDao {
+    override suspend fun getAll(): List<DataHint> {
+        return database.dataHintQueries.selectDataHints().executeAsList().map { it.toDomain() }
+    }
+
     override suspend fun insertOrReplace(
         id: String,
         category: String,
@@ -238,6 +244,23 @@ class SqlDelightDataHintDao(private val database: AppDatabase) : DataHintDao {
             updated_at_epoch_millis = updatedAt
         )
     }
+
+    private fun Data_hint.toDomain() = DataHint(
+        id = id,
+        category = category,
+        confidence = confidence,
+        status = status,
+        description = description,
+        windTurbineId = wind_turbine_id,
+        windParkId = wind_park_id,
+        municipalityId = municipality_id,
+        latitude = latitude,
+        longitude = longitude,
+        suggestedValue = suggested_value,
+        imageUri = image_uri,
+        createdAtEpochMillis = created_at_epoch_millis,
+        updatedAtEpochMillis = updated_at_epoch_millis
+    )
 }
 
 // --- Snapshot Metadata DAO ---

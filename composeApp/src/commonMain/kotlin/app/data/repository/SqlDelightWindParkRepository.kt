@@ -4,6 +4,7 @@ import app.core.model.WindPark
 import app.core.model.Metric
 import app.core.model.SnapshotAssumption
 import app.core.model.WindTurbine
+import app.core.model.DataHint
 import app.core.model.isOffshoreMunicipalityId
 import app.data.local.dao.*
 import app.data.local.entity.WindParkEntity
@@ -194,6 +195,10 @@ class SqlDelightWindParkRepository(
     override suspend fun getSnapshotLimitations(): List<String> = withContext(Dispatchers.Default) {
         val raw = snapshotMetadataDao.getLatest()?.limitations ?: ""
         if (raw.isBlank()) emptyList() else raw.split("\n")
+    }
+
+    override suspend fun getDataHints(): List<DataHint> = withContext(Dispatchers.Default) {
+        dataHintDao.getAll()
     }
 
     override suspend fun getSnapshotAssumptions(): List<SnapshotAssumption> = withContext(Dispatchers.Default) {
