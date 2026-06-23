@@ -50,4 +50,7 @@ interface WindParkRepository {
     suspend fun getAllMetrics(): List<Metric>
     
     suspend fun getDataHints(): List<DataHint>
+    
+    suspend fun isOnboardingCompleted(): Boolean
+    suspend fun setOnboardingCompleted(completed: Boolean)
 }

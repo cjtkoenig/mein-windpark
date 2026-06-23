@@ -20,7 +20,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -67,6 +69,7 @@ fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
     var isSeeded by remember { mutableStateOf(false) }
     var seedError by remember { mutableStateOf<String?>(null) }
     var retryCount by remember { mutableStateOf(0) }
+    var startRoute by remember { mutableStateOf<Route>(Route.Start) }
 
     LaunchedEffect(database, retryCount) {
         try {
@@ -78,6 +81,11 @@ fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
             )
             importer.importIfNeeded()
             println("AppNavHost: Database seeding succeeded!")
+            
+            val repositoryTemp = SqlDelightWindParkRepository(database)
+            val completed = repositoryTemp.isOnboardingCompleted()
+            startRoute = if (completed) Route.Map else Route.Start
+            
             isSeeded = true
         } catch (e: Throwable) {
             println("AppNavHost ERROR: Database seeding failed!")
@@ -155,8 +163,9 @@ fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
     }
 
     val repository = remember(database) { SqlDelightWindParkRepository(database) }
-    var currentRoute: Route by remember { mutableStateOf(Route.Start) }
+    var currentRoute: Route by remember(startRoute) { mutableStateOf(startRoute) }
     var routeHistory by remember { mutableStateOf(listOf<Route>()) }
+    val coroutineScope = rememberCoroutineScope()
 
     val navigateTo: (Route) -> Unit = { newRoute ->
         routeHistory = routeHistory + currentRoute
@@ -203,7 +212,12 @@ fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
         Box(modifier = Modifier.padding(innerPadding)) {
             when (val route = currentRoute) {
                 Route.Start -> StartScreen(
-                    onGetStartedClick = { currentRoute = Route.Map },
+                    onGetStartedClick = {
+                        coroutineScope.launch {
+                            repository.setOnboardingCompleted(true)
+                        }
+                        currentRoute = Route.Map
+                    },
                 )
 
                 Route.Map -> MapScreen(
@@ -234,6 +248,9 @@ fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
                 
                 Route.Profile -> ProfileScreen(
                     viewModel = profileViewModel,
+                    onReplayOnboarding = {
+                        navigateTo(Route.Start)
+                    }
                 )
                 
                 is Route.Detail -> {

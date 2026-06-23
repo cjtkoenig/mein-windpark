@@ -39,6 +39,7 @@ import app.core.ui.theme.WindklarTheme
 import app.core.util.rememberPlatformSharer
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -59,6 +60,7 @@ private val PaleGreen @Composable get() = WindklarTheme.colors.paleGreen
 @Composable
 fun ProfileScreen(
     viewModel: ProfileViewModel,
+    onReplayOnboarding: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState = viewModel.uiState
@@ -89,6 +91,7 @@ fun ProfileScreen(
                 onOffshoreEnabledChange = viewModel::setOffshoreEnabled,
                 onPrivacyClick = { showPrivacyDialog = true },
                 onClearHistoryClick = { showClearHistoryDialog = true },
+                onReplayOnboardingClick = onReplayOnboarding,
                 onExportDataHintsClick = {
                     viewModel.exportDataHints { csvContent ->
                         platformSharer.shareText(csvContent, "WindKlar Datenhinweise")
@@ -212,6 +215,7 @@ private fun InfoSettingsCard(
     onOffshoreEnabledChange: (Boolean) -> Unit,
     onPrivacyClick: () -> Unit,
     onClearHistoryClick: () -> Unit,
+    onReplayOnboardingClick: () -> Unit,
     onExportDataHintsClick: () -> Unit,
 ) {
     Surface(
@@ -262,6 +266,14 @@ private fun InfoSettingsCard(
                 icon = Icons.Outlined.Share,
                 label = "Datenhinweise exportieren",
                 onClick = onExportDataHintsClick
+            )
+
+            SettingsRowDivider()
+
+            SettingsActionRow(
+                icon = Icons.AutoMirrored.Outlined.HelpOutline,
+                label = "Einführung erneut anzeigen",
+                onClick = onReplayOnboardingClick
             )
 
             SettingsRowDivider()

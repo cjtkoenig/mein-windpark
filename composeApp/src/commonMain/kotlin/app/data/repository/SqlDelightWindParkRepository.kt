@@ -25,6 +25,7 @@ class SqlDelightWindParkRepository(
 ) : WindParkRepository {
     private companion object {
         const val OFFSHORE_ENABLED_KEY = "offshore_enabled"
+        const val ONBOARDING_COMPLETED_KEY = "onboarding_completed"
     }
 
     private val windParkDao: WindParkDao = SqlDelightWindParkDao(database)
@@ -180,6 +181,18 @@ class SqlDelightWindParkRepository(
 
     override suspend fun getDataHints(): List<DataHint> = withContext(Dispatchers.Default) {
         dataHintDao.getAll()
+    }
+
+    override suspend fun isOnboardingCompleted(): Boolean = withContext(Dispatchers.Default) {
+        settingsDao.getValue(ONBOARDING_COMPLETED_KEY)
+            ?.trim()
+            ?.lowercase()
+            ?.let { it == "true" }
+            ?: false
+    }
+
+    override suspend fun setOnboardingCompleted(completed: Boolean): Unit = withContext(Dispatchers.Default) {
+        settingsDao.upsertValue(ONBOARDING_COMPLETED_KEY, completed.toString())
     }
 
     override suspend fun getSnapshotAssumptions(): List<SnapshotAssumption> = withContext(Dispatchers.Default) {
