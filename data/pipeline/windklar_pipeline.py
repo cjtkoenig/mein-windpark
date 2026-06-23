@@ -16,7 +16,7 @@ from math import cos, radians, sqrt
 from pathlib import Path
 from typing import Any, Iterable
 
-PIPELINE_VERSION = "0.3.0"
+PIPELINE_VERSION = "0.3.1"
 SOURCE_NAME = "Marktstammdatenregister der Bundesnetzagentur"
 SOURCE_URL = "https://www.marktstammdatenregister.de/MaStR/Datendownload"
 ATTRIBUTION = "Quelle: Marktstammdatenregister der Bundesnetzagentur"
@@ -42,16 +42,19 @@ OFFSHORE_BALTIC_SEA_ID = "offshore_baltic_sea"
 OFFSHORE_BALTIC_SEA_NAME = "Offshore Ostsee"
 OFFSHORE_MIN_LAT = 53.5
 OFFSHORE_NORTH_SEA_MAX_LON = 10.0
+PRODUCTION_ESTIMATE_YEAR = 2026
+ANNUAL_WIND_TURBINE_DEGRADATION_RATE = 0.0063
+MINIMUM_AGE_MULTIPLIER = 0.80
 
 DEFAULT_ASSUMPTIONS = {
     "full_load_hours": {
         "label": "Angenommene jährliche Volllaststunden",
         "value": 2000.0,
         "unit": "h/a",
-        "sourceName": "WindKlar MVP-Annahme",
-        "sourceUrl": SOURCE_URL,
+        "sourceName": "WindKlar MVP-Annahme mit Quellenabgleich",
+        "sourceUrl": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0211028",
         "sourceDate": "2026-06-18",
-        "calculationNote": "Berechnung basiert auf lage- und altersabhängigen Volllaststunden der einzelnen Anlagen (Basis: Inland 1.700h, Küste 2.200h, Offshore 4.000h), skaliert nach Inbetriebnahmejahr (Faktor 0,75 bis 1,30).",
+        "calculationNote": "Berechnung basiert auf lageabhängigen Volllaststunden der einzelnen Anlagen (Basis: Inland 1.700h, Küste 2.200h, Offshore 4.000h). Wenn das Inbetriebnahmejahr bekannt ist, wird ein kontinuierlicher Alterungsabschlag von 0,63% pro Betriebsjahr angesetzt und bei 80% gedeckelt.",
     },
     "emission_factor_kg_per_kwh": {
         "label": "Vermiedenes CO₂ pro kWh",
@@ -764,7 +767,7 @@ def build_snapshot(
         "assumptions": assumptions,
         "windTurbines": sorted(enriched_turbines, key=lambda item: item["id"]),
         "windParks": sorted(enriched_parks, key=lambda item: item["id"]),
-        "metrics": [],
+        "metrics": sorted(metrics, key=lambda item: item["id"]),
     }
     snapshot["snapshotMetadata"]["checksumSha256"] = snapshot_checksum(snapshot)
     return snapshot
@@ -778,29 +781,15 @@ def build_metrics(parks: list[dict[str, Any]], turbines: list[dict[str, Any]]) -
     household_consumption = DEFAULT_ASSUMPTIONS["household_consumption_kwh"]["value"]
     municipal_rate = DEFAULT_ASSUMPTIONS["municipal_benefit_eur_per_kwh"]["value"]
     
-    def get_year_multiplier(year: int) -> float:
-        if year < 2000:
-            return 0.75
-        elif year < 2005:
-            return 0.85
-        elif year < 2010:
-            return 0.95
-        elif year < 2015:
-            return 1.05
-        elif year < 2020:
-            return 1.15
-        else:
-            return 1.30
-
     metrics: list[dict[str, Any]] = []
     for park in parks:
         park_turbines = [turbine_by_id[tid] for tid in park.get("turbineIds", []) if tid in turbine_by_id]
-        
+
         # Calculate custom production for each turbine in the park
         annual_kwh = 0.0
         for t in park_turbines:
             capacity = t.get("installedCapacityKw") or 0
-            
+
             # Determine base hours from location (municipalityId prefix / offshore ID)
             muni_id = t.get("municipalityId") or ""
             if muni_id in ("offshore_north_sea", "offshore_baltic_sea"):
@@ -809,19 +798,19 @@ def build_metrics(parks: list[dict[str, Any]], turbines: list[dict[str, Any]]) -
                 base_hours = 2200.0
             else:
                 base_hours = 1700.0
-                
+
             # Determine year factor from commissioningDate
             comm_date = t.get("commissioningDate")
             year = extract_year(comm_date)
-            year_factor = get_year_multiplier(year) if year is not None else 1.0
-            
+            year_factor = wind_turbine_age_multiplier(year)
+
             annual_kwh += capacity * base_hours * year_factor
-            
+
         note_annual = (
             "Geschätzte Jahresproduktion basierend auf lage- und altersabhängigen Volllaststunden der einzelnen Anlagen "
-            "(Basis: Inland 1.700h, Küste 2.200h, Offshore 4.000h, skaliert nach Inbetriebnahmejahr)."
+            "(Basis: Inland 1.700h, Küste 2.200h, Offshore 4.000h; Alterungsabschlag 0,63% pro Betriebsjahr, maximal 20%)."
         )
-        
+
         metrics.extend(
             [
                 metric(park["id"], "annual_production", annual_kwh, "kWh/a", note_annual),
@@ -857,6 +846,14 @@ def metric(park_id: str, metric_type: str, value: float, unit: str, note: str) -
         "dataQuality": "estimated",
         "calculationNote": note,
     }
+
+
+def wind_turbine_age_multiplier(commissioning_year: int | None) -> float:
+    if commissioning_year is None:
+        return 1.0
+    operating_years = max(0, PRODUCTION_ESTIMATE_YEAR - commissioning_year)
+    multiplier = 1.0 - operating_years * ANNUAL_WIND_TURBINE_DEGRADATION_RATE
+    return max(MINIMUM_AGE_MULTIPLIER, multiplier)
 
 
 def iter_source_rows(input_path: Path) -> Iterable[dict[str, Any]]:
@@ -1547,6 +1544,8 @@ def validate_snapshot(snapshot: dict[str, Any]) -> list[str]:
         errors.append("Snapshot must contain at least one wind turbine")
     if not parks:
         errors.append("Snapshot must contain at least one wind park")
+    if not metrics:
+        errors.append("Snapshot must contain at least one metric")
 
     turbine_ids = {item.get("id") for item in turbines}
     park_ids = {item.get("id") for item in parks}
