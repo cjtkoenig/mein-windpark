@@ -194,6 +194,22 @@ class RegionDetailViewModel(
                 else -> emptyList()
             }
 
+            val regionFullLoadHours = calculateFullLoadHours(
+                annualProductionKwh = annualProductionKwh,
+                installedCapacityKw = installedCapacityKw.toDouble(),
+            )
+            val updatedAssumptions = assumptions.map { assumption ->
+                if (assumption.id == "full_load_hours" && regionFullLoadHours > 0.0) {
+                    assumption.copy(
+                        value = regionFullLoadHours,
+                        label = "Berechnete mittlere Volllaststunden",
+                        calculationNote = "Aus der summierten Jahresproduktion der Windparks in dieser Region und ihrer installierten Gesamtleistung berechnet. Der Wert zeigt den gewichteten regionalen Durchschnitt; bundesweiter Richtwert: 2.000 h/a.",
+                    )
+                } else {
+                    assumption
+                }
+            }
+
             uiState = RegionDetailUiState(
                 regionId = regionId,
                 regionType = regionType,
@@ -216,7 +232,7 @@ class RegionDetailViewModel(
                 co2SavingsTons = co2SavingsTons,
                 householdsSupplied = householdsSupplied,
                 municipalBenefitEur = municipalBenefitEur,
-                assumptions = assumptions,
+                assumptions = updatedAssumptions,
                 windParks = regionParks.sortedBy { it.name },
                 subRegionRankings = subRegionRankings,
                 attribution = attribution,
@@ -238,6 +254,15 @@ private fun Double.roundTo(decimals: Int): Double {
     var multiplier = 1.0
     repeat(decimals) { multiplier *= 10 }
     return kotlin.math.round(this * multiplier) / multiplier
+}
+
+private fun calculateFullLoadHours(
+    annualProductionKwh: Double,
+    installedCapacityKw: Double,
+): Double = if (annualProductionKwh > 0.0 && installedCapacityKw > 0.0) {
+    kotlin.math.round(annualProductionKwh / installedCapacityKw)
+} else {
+    0.0
 }
 
 private fun formatPercent(value: Float): String {
