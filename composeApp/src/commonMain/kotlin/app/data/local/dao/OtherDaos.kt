@@ -16,8 +16,14 @@ interface WindTurbineDao {
     suspend fun getInBounds(swLat: Double, swLon: Double, neLat: Double, neLon: Double): List<WindTurbine>
     suspend fun countActive(includeOffshore: Boolean): Int
     suspend fun getParkStatuses(): Map<String, String>
+    suspend fun getValidParkStats(): Map<String, ValidParkStats>
     suspend fun insertOrReplace(turbine: WindTurbine)
 }
+
+data class ValidParkStats(
+    val turbineCount: Int,
+    val capacityKw: Long,
+)
 
 class SqlDelightWindTurbineDao(private val database: AppDatabase) : WindTurbineDao {
     override suspend fun getByParkId(parkId: String): List<WindTurbine> {
@@ -51,6 +57,15 @@ class SqlDelightWindTurbineDao(private val database: AppDatabase) : WindTurbineD
     override suspend fun getParkStatuses(): Map<String, String> {
         return database.windTurbineQueries.selectParkStatuses().executeAsList().associate { row ->
             row.wind_park_id to row.park_status
+        }
+    }
+
+    override suspend fun getValidParkStats(): Map<String, ValidParkStats> {
+        return database.windTurbineQueries.selectValidParkStats().executeAsList().associate { row ->
+            row.wind_park_id to ValidParkStats(
+                turbineCount = row.valid_turbine_count.toInt(),
+                capacityKw = row.valid_capacity_kw?.toLong() ?: 0L
+            )
         }
     }
     override suspend fun insertOrReplace(turbine: WindTurbine) {

@@ -64,6 +64,12 @@ WHERE metric.subject_type = 'wind_park'
       :includeOffshore != 0
       OR wind_park.municipality_id NOT IN (:offshoreNorthSeaMunicipalityId, :offshoreBalticSeaMunicipalityId)
   )
+  AND wind_park.id NOT IN (
+      SELECT wind_park_id
+      FROM wind_turbine
+      GROUP BY wind_park_id
+      HAVING COUNT(*) = SUM(CASE WHEN status LIKE '%stillgelegt%' THEN 1 ELSE 0 END)
+  )
 GROUP BY metric.metric_type
 ORDER BY metric.metric_type;
 

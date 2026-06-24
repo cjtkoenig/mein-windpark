@@ -72,6 +72,17 @@ SELECT
 FROM wind_turbine
 GROUP BY wind_park_id;
 
+selectValidParkStats:
+SELECT 
+    wind_park_id,
+    COUNT(*) AS valid_turbine_count,
+    SUM(installed_capacity_kw) AS valid_capacity_kw
+FROM wind_turbine
+WHERE status IS NULL 
+   OR LOWER(status) NOT LIKE '%stillgelegt%'
+GROUP BY wind_park_id;
+
+
 
 
 upsertWindTurbine:

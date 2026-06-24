@@ -41,25 +41,38 @@ class SqlDelightWindParkRepository(
 
     override suspend fun getWindParks(): List<WindPark> = withContext(Dispatchers.Default) {
         val favorites = favoriteDao.getFavoriteIds().toSet()
-        windParkDao.getAll().map { it.toDomain(favorites.contains(it.id)) }
+        val statuses = windTurbineDao.getParkStatuses()
+        val validStats = windTurbineDao.getValidParkStats()
+        windParkDao.getAll()
+            .filter { statuses[it.id] != "Stillgelegt" }
+            .map { it.toDomain(favorites.contains(it.id), validStats[it.id]) }
     }
 
     override suspend fun getWindPark(id: String): WindPark? = withContext(Dispatchers.Default) {
         val entity = windParkDao.getById(id) ?: return@withContext null
+        val statuses = windTurbineDao.getParkStatuses()
+        if (statuses[id] == "Stillgelegt") return@withContext null
         val isFav = favoriteDao.isFavorite(id)
-        entity.toDomain(isFav)
+        val validStats = windTurbineDao.getValidParkStats()[id]
+        entity.toDomain(isFav, validStats)
     }
 
     override suspend fun searchWindParks(query: String): List<WindPark> = withContext(Dispatchers.Default) {
         val favorites = favoriteDao.getFavoriteIds().toSet()
-        windParkDao.search(query).map { it.toDomain(favorites.contains(it.id)) }
+        val statuses = windTurbineDao.getParkStatuses()
+        val validStats = windTurbineDao.getValidParkStats()
+        windParkDao.search(query)
+            .filter { statuses[it.id] != "Stillgelegt" }
+            .map { it.toDomain(favorites.contains(it.id), validStats[it.id]) }
     }
 
     override suspend fun getFavoriteWindParks(): List<WindPark> = withContext(Dispatchers.Default) {
         val favorites = favoriteDao.getFavoriteIds().toSet()
+        val statuses = windTurbineDao.getParkStatuses()
+        val validStats = windTurbineDao.getValidParkStats()
         windParkDao.getAll()
-            .filter { favorites.contains(it.id) }
-            .map { it.toDomain(true) }
+            .filter { favorites.contains(it.id) && statuses[it.id] != "Stillgelegt" }
+            .map { it.toDomain(true, validStats[it.id]) }
     }
 
     override suspend fun isFavorite(parkId: String): Boolean = withContext(Dispatchers.Default) {
@@ -78,7 +91,8 @@ class SqlDelightWindParkRepository(
         val favoriteEntities = favoriteDao.getFavoriteRegions()
         if (favoriteEntities.isEmpty()) return@withContext emptyList()
         
-        val allParks = windParkDao.getAll()
+        val statuses = windTurbineDao.getParkStatuses()
+        val allParks = windParkDao.getAll().filter { statuses[it.id] != "Stillgelegt" }
         
         favoriteEntities.mapNotNull { entity ->
             val regionParks = allParks.filter { park ->
@@ -119,9 +133,13 @@ class SqlDelightWindParkRepository(
     override suspend fun getRecentWindParks(limit: Long): List<WindPark> = withContext(Dispatchers.Default) {
         val favorites = favoriteDao.getFavoriteIds().toSet()
         val recentIds = recentWindParkDao.getRecentWindParkIds(limit)
-        val entitiesMap = windParkDao.getAll().filter { recentIds.contains(it.id) }.associateBy { it.id }
+        val statuses = windTurbineDao.getParkStatuses()
+        val validStats = windTurbineDao.getValidParkStats()
+        val entitiesMap = windParkDao.getAll()
+            .filter { recentIds.contains(it.id) && statuses[it.id] != "Stillgelegt" }
+            .associateBy { it.id }
         recentIds.mapNotNull { id ->
-            entitiesMap[id]?.toDomain(favorites.contains(id))
+            entitiesMap[id]?.toDomain(favorites.contains(id), validStats[id])
         }
     }
 
@@ -284,7 +302,10 @@ class SqlDelightWindParkRepository(
         metricDao.getForSubjects("wind_park", parkIds)
     }
 
-    private fun WindParkEntity.toDomain(isFavorite: Boolean) = WindPark(
+    private fun WindParkEntity.toDomain(
+        isFavorite: Boolean,
+        validStats: ValidParkStats? = null
+    ) = WindPark(
         id = id,
         name = name,
         municipalityId = municipalityId,
@@ -295,8 +316,8 @@ class SqlDelightWindParkRepository(
         stateName = stateName,
         latitude = latitude,
         longitude = longitude,
-        turbineCount = turbineCount ?: 0,
-        installedCapacityKw = installedCapacityKw,
+        turbineCount = validStats?.turbineCount ?: turbineCount ?: 0,
+        installedCapacityKw = validStats?.capacityKw ?: installedCapacityKw,
         isFavorite = isFavorite,
         sourceName = sourceName,
         sourceUrl = sourceUrl,
