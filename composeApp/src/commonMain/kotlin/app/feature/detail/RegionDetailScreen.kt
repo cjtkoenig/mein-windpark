@@ -176,7 +176,7 @@ fun RegionDetailScreen(
             )
 
             Text(
-                text = uiState.regionName,
+                text = if (uiState.regionType.lowercase() == "district") cleanDistrictName(uiState.regionName) else uiState.regionName,
                 color = Color.White,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
@@ -741,6 +741,21 @@ private fun DataSourceAttributionCard(attribution: String) {
             }
         }
     }
+}
+
+private fun cleanDistrictName(name: String): String {
+    val prefixes = listOf("landkreis", "kreis", "stadtkreis", "regionalverband", "städteregion", "städte-region")
+    var cleaned = name.trim()
+    for (prefix in prefixes) {
+        if (cleaned.lowercase().startsWith("$prefix ")) {
+            cleaned = cleaned.substring(prefix.length + 1)
+            break
+        }
+    }
+    if (cleaned.lowercase().endsWith("-kreis")) {
+        cleaned = cleaned.dropLast(6)
+    }
+    return cleaned.trim()
 }
 
 private fun formatNumber(number: Int): String = formatGermanNumber(number)
