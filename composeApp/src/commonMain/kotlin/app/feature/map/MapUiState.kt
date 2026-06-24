@@ -53,6 +53,7 @@ data class MapUiState(
     val isPinPlacementMode: Boolean = false,
     val placementMarkerLat: Double = 0.0,
     val placementMarkerLon: Double = 0.0,
+    val pendingReportPark: WindPark? = null,
     val isOffshoreEnabled: Boolean = false,
 )
 

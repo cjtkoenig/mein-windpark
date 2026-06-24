@@ -136,7 +136,7 @@ private val defaultFaqQuestions = listOf(
     FaqQuestionUiModel(
         id = "data-hint",
         question = "Kann ich fehlende oder falsche Daten melden?",
-        answer = "Perspektivisch ja: als lokalen Datenhinweis. Das ist keine offizielle MaStR-Korrektur und kein rechtsverbindlicher Antrag, sondern ein strukturierter Hinweis, dass eine Windanlage fehlen, falsch zugeordnet oder veraltet sein könnte.",
+        answer = "Ja, als lokalen Datenhinweis. Über den Pin-Placement-Knopf in der Kartenansicht können Sie einen Hinweis an eine Position setzen und lokal speichern. Das ist keine offizielle MaStR-Korrektur und kein rechtsverbindlicher Antrag, sondern ein strukturierter Hinweis, dass eine Windanlage fehlen, falsch zugeordnet oder veraltet sein könnte. Gespeicherte Hinweise bleiben lokal auf dem Gerät und können exportiert werden.",
         icon = FaqQuestionIcon.Warning,
         category = FaqCategory.DataTrust,
     ),

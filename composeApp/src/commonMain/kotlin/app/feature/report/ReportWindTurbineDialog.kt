@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 fun ReportWindTurbineDialog(
     currentLatitude: Double,
     currentLongitude: Double,
+    parkName: String?,
     onDismiss: () -> Unit,
     onSubmit: (category: String, confidence: String, description: String, suggestedValue: String?) -> Unit
 ) {
@@ -88,6 +89,16 @@ fun ReportWindTurbineDialog(
                     color = WindklarTheme.colors.mutedGreen,
                     fontSize = 13.sp,
                     lineHeight = 18.sp
+                )
+
+                val contextText = parkName?.takeIf { it.isNotBlank() }
+                    ?.let { "Bezug: Windpark $it" }
+                    ?: "Bezug: manuell gesetzter Pin (kein Windpark zugeordnet)"
+                Text(
+                    text = contextText,
+                    color = WindklarTheme.colors.darkGreen.copy(alpha = 0.7f),
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
                 )
                 
                 // Categories

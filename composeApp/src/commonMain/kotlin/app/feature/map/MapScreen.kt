@@ -428,13 +428,14 @@ fun MapScreen(
 
     // Report Dialog
     if (showReportDialog) {
-        val reportPark = uiState.selectedPark
+        val reportPark = uiState.pendingReportPark ?: uiState.selectedPark
         val reportLatitude = reportedLatitude
         val reportLongitude = reportedLongitude
 
         ReportWindTurbineDialog(
             currentLatitude = reportLatitude,
             currentLongitude = reportLongitude,
+            parkName = reportPark?.name,
             onDismiss = { showReportDialog = false },
             onSubmit = { category, confidence, description, suggestedValue ->
                 viewModel.submitDataHint(

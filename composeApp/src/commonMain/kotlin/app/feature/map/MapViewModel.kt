@@ -372,12 +372,12 @@ class MapViewModel(
     }
 
     fun startPinPlacement() {
+        val reportPark = uiState.selectedPark
         uiState = uiState.copy(
             isPinPlacementMode = true,
-            placementMarkerLat = uiState.mapCenterLat,
-            placementMarkerLon = uiState.mapCenterLon,
-            selectedPark = null,
-            selectedPreviewData = null
+            placementMarkerLat = reportPark?.latitude ?: uiState.mapCenterLat,
+            placementMarkerLon = reportPark?.longitude ?: uiState.mapCenterLon,
+            pendingReportPark = reportPark,
         )
         applyFilters()
     }
@@ -391,7 +391,10 @@ class MapViewModel(
     }
 
     fun cancelPinPlacement() {
-        uiState = uiState.copy(isPinPlacementMode = false)
+        uiState = uiState.copy(
+            isPinPlacementMode = false,
+            pendingReportPark = null,
+        )
         applyFilters()
     }
 
