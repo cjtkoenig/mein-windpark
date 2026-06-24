@@ -114,6 +114,7 @@ class MapViewModel(
                     isOffshoreEnabled = isOffshoreEnabled,
                 )
                 applyFilters()
+                loadRecentParks()
                 println("MapViewModel: loadMapData finished successfully.")
             } catch (e: Throwable) {
                 println("MapViewModel ERROR: loadMapData failed!")
@@ -134,6 +135,34 @@ class MapViewModel(
                 uiState = uiState.copy(isOffshoreEnabled = enabled)
                 applyFilters()
             }
+            loadRecentParks()
+        }
+    }
+
+    fun loadRecentParks() {
+        viewModelScope.launch {
+            try {
+                val includeOffshore = repository.isOffshoreEnabled()
+                val recents = repository.getRecentWindParks(5)
+                    .filter { includeOffshore || !it.isOffshore() }
+                uiState = uiState.copy(recentParks = recents)
+            } catch (e: Throwable) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun onSearchFocusChanged(focused: Boolean) {
+        uiState = uiState.copy(isSearchFocused = focused)
+        if (focused) {
+            loadRecentParks()
+            if (uiState.searchQuery.length >= 2) {
+                uiState = uiState.copy(showSearchOverlay = uiState.searchResults.isNotEmpty())
+            } else {
+                uiState = uiState.copy(showSearchOverlay = uiState.recentParks.isNotEmpty())
+            }
+        } else {
+            uiState = uiState.copy(showSearchOverlay = false)
         }
     }
 
@@ -176,7 +205,7 @@ class MapViewModel(
         } else {
             uiState = uiState.copy(
                 searchResults = emptyList(),
-                showSearchOverlay = false
+                showSearchOverlay = uiState.isSearchFocused && uiState.recentParks.isNotEmpty()
             )
         }
     }
@@ -260,6 +289,7 @@ class MapViewModel(
         viewModelScope.launch {
             try {
                 repository.recordRecentWindPark(park.id)
+                loadRecentParks()
                 val metrics = repository.getMetricsForPark(park.id)
                 val annualMetric = metrics.firstOrNull { it.metricType == "annual_production" }
                 val co2Metric = metrics.firstOrNull { it.metricType == "co2_savings" }

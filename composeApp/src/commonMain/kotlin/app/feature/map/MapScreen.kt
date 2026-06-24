@@ -51,6 +51,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -110,6 +112,7 @@ fun MapScreen(
 ) {
     val uiState = viewModel.uiState
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
     
     LaunchedEffect(viewModel) {
         viewModel.refreshOffshoreSetting()
@@ -154,10 +157,22 @@ fun MapScreen(
                 zoomLevel = uiState.zoomLevel,
                 markers = uiState.mapMarkers,
                 selectedParkId = uiState.selectedPark?.id,
-                onMapMoved = viewModel::onMapMoved,
-                onMapMovedWithBounds = viewModel::onMapMovedWithBounds,
-                onParkClicked = viewModel::onParkClickedById,
-                onClusterClicked = viewModel::onClusterClicked,
+                onMapMoved = { lat, lon, zoom ->
+                    focusManager.clearFocus()
+                    viewModel.onMapMoved(lat, lon, zoom)
+                },
+                onMapMovedWithBounds = { lat, lon, zoom, swLat, swLon, neLat, neLon ->
+                    focusManager.clearFocus()
+                    viewModel.onMapMovedWithBounds(lat, lon, zoom, swLat, swLon, neLat, neLon)
+                },
+                onParkClicked = { parkId ->
+                    focusManager.clearFocus()
+                    viewModel.onParkClickedById(parkId)
+                },
+                onClusterClicked = { lat, lon ->
+                    focusManager.clearFocus()
+                    viewModel.onClusterClicked(lat, lon)
+                },
                 onPlacementPinDragged = viewModel::updatePlacementPinLocation,
                 modifier = Modifier.fillMaxSize()
             )
@@ -174,6 +189,7 @@ fun MapScreen(
                 SearchBar(
                     query = uiState.searchQuery,
                     onQueryChange = viewModel::onQueryChange,
+                    onFocusChanged = viewModel::onSearchFocusChanged,
                 )
                 
                 // Search results dropdown overlay
@@ -186,73 +202,123 @@ fun MapScreen(
                         color = WindklarTheme.colors.cardBackground,
                         shadowElevation = 8.dp
                     ) {
-                        if (uiState.searchResults.isEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 24.dp, horizontal = 16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
+                        if (uiState.searchQuery.isEmpty()) {
+                            Column(modifier = Modifier.padding(8.dp)) {
                                 Text(
-                                    text = "Keine Ergebnisse gefunden",
-                                    color = MutedGreen,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium
+                                    text = "Zuletzt angesehen",
+                                    color = WindklarTheme.colors.mutedGreen,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                                 )
+                                LazyColumn {
+                                    items(uiState.recentParks) { park ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    focusManager.clearFocus()
+                                                    viewModel.onSearchResultSelected(MapSearchResult.Park(park))
+                                                }
+                                                .padding(vertical = 8.dp, horizontal = 12.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.LocationOn,
+                                                contentDescription = null,
+                                                tint = WindklarTheme.colors.primaryGreen,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = park.name,
+                                                    color = WindklarTheme.colors.darkGreen,
+                                                    fontWeight = FontWeight.Medium,
+                                                    fontSize = 14.sp
+                                                )
+                                                Text(
+                                                    text = "${park.municipalityName} • ${park.turbineCount} Anlagen",
+                                                    color = WindklarTheme.colors.mutedGreen,
+                                                    fontSize = 12.sp
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         } else {
-                            LazyColumn(modifier = Modifier.padding(8.dp)) {
-                                items(uiState.searchResults) { result ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { viewModel.onSearchResultSelected(result) }
-                                            .padding(vertical = 8.dp, horizontal = 12.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.LocationOn,
-                                            contentDescription = null,
-                                            tint = WindklarTheme.colors.primaryGreen,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        
-                                         val title: String
-                                         val subtitle: String
-                                         
-                                         when (result) {
-                                             is MapSearchResult.State -> {
-                                                 title = result.name
-                                                 subtitle = "Bundesland"
+                            if (uiState.searchResults.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 24.dp, horizontal = 16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Keine Ergebnisse gefunden",
+                                        color = MutedGreen,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            } else {
+                                LazyColumn(modifier = Modifier.padding(8.dp)) {
+                                    items(uiState.searchResults) { result ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    focusManager.clearFocus()
+                                                    viewModel.onSearchResultSelected(result)
+                                                }
+                                                .padding(vertical = 8.dp, horizontal = 12.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.LocationOn,
+                                                contentDescription = null,
+                                                tint = WindklarTheme.colors.primaryGreen,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            
+                                             val title: String
+                                             val subtitle: String
+                                             
+                                             when (result) {
+                                                 is MapSearchResult.State -> {
+                                                     title = result.name
+                                                     subtitle = "Bundesland"
+                                                 }
+                                                 is MapSearchResult.District -> {
+                                                     title = result.name
+                                                     subtitle = "Landkreis in ${result.stateName}"
+                                                 }
+                                                 is MapSearchResult.Municipality -> {
+                                                     title = result.name
+                                                     subtitle = "Gemeinde in ${result.stateName}"
+                                                 }
+                                                 is MapSearchResult.Park -> {
+                                                     title = result.park.name
+                                                     subtitle = "${result.park.municipalityName} • ${result.park.turbineCount} Anlagen"
+                                                 }
                                              }
-                                             is MapSearchResult.District -> {
-                                                 title = result.name
-                                                 subtitle = "Landkreis in ${result.stateName}"
+                                             
+                                             Column(modifier = Modifier.weight(1f)) {
+                                                 Text(
+                                                     text = title,
+                                                     color = WindklarTheme.colors.darkGreen,
+                                                     fontWeight = FontWeight.Medium,
+                                                     fontSize = 14.sp
+                                                 )
+                                                 Text(
+                                                     text = subtitle,
+                                                     color = WindklarTheme.colors.mutedGreen,
+                                                     fontSize = 12.sp
+                                                 )
                                              }
-                                             is MapSearchResult.Municipality -> {
-                                                 title = result.name
-                                                 subtitle = "Gemeinde in ${result.stateName}"
-                                             }
-                                             is MapSearchResult.Park -> {
-                                                 title = result.park.name
-                                                 subtitle = "${result.park.municipalityName} • ${result.park.turbineCount} Anlagen"
-                                             }
-                                         }
-                                         
-                                         Column(modifier = Modifier.weight(1f)) {
-                                             Text(
-                                                 text = title,
-                                                 color = WindklarTheme.colors.darkGreen,
-                                                 fontWeight = FontWeight.Medium,
-                                                 fontSize = 14.sp
-                                             )
-                                             Text(
-                                                 text = subtitle,
-                                                 color = WindklarTheme.colors.mutedGreen,
-                                                 fontSize = 12.sp
-                                             )
-                                         }
+                                        }
                                     }
                                 }
                             }
@@ -466,6 +532,7 @@ fun MapScreen(
 private fun SearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
+    onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -477,7 +544,11 @@ private fun SearchBar(
         TextField(
             value = query,
             onValueChange = onQueryChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { focusState ->
+                    onFocusChanged(focusState.isFocused)
+                },
             placeholder = {
                 Text(
                     text = "Windpark oder Gemeinde suchen...",
