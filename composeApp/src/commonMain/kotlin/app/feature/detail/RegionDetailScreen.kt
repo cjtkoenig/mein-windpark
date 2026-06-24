@@ -57,6 +57,7 @@ import app.core.ui.components.ImpactMetric
 import app.core.ui.theme.WindklarTheme
 import app.core.util.formatGermanNumber
 import app.core.ui.components.WindklarHeader
+import app.core.util.isRedundantMunicipality
 
 
 
@@ -140,21 +141,27 @@ fun RegionDetailScreen(
                             )
                         }
                     )
-                    "city" -> listOfNotNull(
-                        app.core.ui.components.BreadcrumbSegment(name = "Deutschland", onClick = onNavigateToCountry),
-                        uiState.parentStateName?.takeIf { it.isNotEmpty() }?.let { name ->
-                            app.core.ui.components.BreadcrumbSegment(
-                                name = name,
-                                onClick = uiState.parentStateId?.let { id -> { onRegionSelected("state", id) } }
-                            )
-                        },
-                        uiState.parentDistrictName?.takeIf { it.isNotEmpty() }?.let { name ->
-                            app.core.ui.components.BreadcrumbSegment(
-                                name = name,
-                                onClick = uiState.parentDistrictId?.let { id -> { onRegionSelected("district", id) } }
-                            )
-                        }
-                    )
+                    "city" -> {
+                        val shouldShowParentDistrict = uiState.parentDistrictName
+                            ?.takeIf { it.isNotEmpty() }
+                            ?.let { !isRedundantMunicipality(it, uiState.regionName) }
+                            ?: false
+                        listOfNotNull(
+                            app.core.ui.components.BreadcrumbSegment(name = "Deutschland", onClick = onNavigateToCountry),
+                            uiState.parentStateName?.takeIf { it.isNotEmpty() }?.let { name ->
+                                app.core.ui.components.BreadcrumbSegment(
+                                    name = name,
+                                    onClick = uiState.parentStateId?.let { id -> { onRegionSelected("state", id) } }
+                                )
+                            },
+                            uiState.parentDistrictName?.takeIf { shouldShowParentDistrict }?.let { name ->
+                                app.core.ui.components.BreadcrumbSegment(
+                                    name = name,
+                                    onClick = uiState.parentDistrictId?.let { id -> { onRegionSelected("district", id) } }
+                                )
+                            }
+                        )
+                    }
                     else -> listOfNotNull(
                         app.core.ui.components.BreadcrumbSegment(name = "Deutschland", onClick = onNavigateToCountry)
                     )
@@ -246,10 +253,16 @@ fun RegionDetailScreen(
                 metrics = regionImpactMetrics
             )
 
-            // Display ranking of sub-regions for State and District, and flat list of parks for City
-            if (uiState.regionType.lowercase() == "city") {
+            // Display ranking of sub-regions, except cities and districts that only contain one municipality.
+            val showParksDirectly = uiState.regionType.lowercase() == "city" || uiState.isSingleMunicipalityDistrict
+            if (showParksDirectly) {
+                val sectionTitle = uiState.singleMunicipalityName
+                    ?.takeIf { uiState.isSingleMunicipalityDistrict && !isRedundantMunicipality(uiState.regionName, it) }
+                    ?.let { "Windparks in Gemeinde $it (${uiState.windParks.size})" }
+                    ?: "Windparks in dieser Region (${uiState.windParks.size})"
                 WindParksSection(
                     windParks = uiState.windParks,
+                    title = sectionTitle,
                     onParkSelected = onParkSelected
                 )
             } else {
@@ -453,11 +466,12 @@ private fun SubRegionsSection(
 @Composable
 private fun WindParksSection(
     windParks: List<WindPark>,
+    title: String = "Windparks in dieser Region (${windParks.size})",
     onParkSelected: (String) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = "Windparks in dieser Region (${windParks.size})",
+            text = title,
             color = WindklarTheme.colors.darkGreen,
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,

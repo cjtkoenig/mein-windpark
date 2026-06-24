@@ -100,6 +100,15 @@ class RegionDetailViewModel(
                     "district" -> firstPark.stateName
                     else -> null
                 }
+                val singleMunicipalityName = if (regionType.lowercase() == "district") {
+                    regionParks
+                        .distinctBy { it.municipalityId }
+                        .singleOrNull()
+                        ?.municipalityName
+                } else {
+                    null
+                }
+                val isSingleMunicipalityDistrict = singleMunicipalityName != null
 
                 val windParkCount = regionParks.size
                 val turbineCount = regionParks.sumOf { it.turbineCount }
@@ -220,6 +229,8 @@ class RegionDetailViewModel(
                     parentDistrictName = parentDistrictName,
                     parentStateId = parentStateId,
                     parentStateName = parentStateName,
+                    isSingleMunicipalityDistrict = isSingleMunicipalityDistrict,
+                    singleMunicipalityName = singleMunicipalityName,
                     windParkCount = windParkCount,
                     turbineCount = turbineCount,
                     installedCapacityMw = installedCapacityMw,

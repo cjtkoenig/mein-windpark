@@ -14,6 +14,7 @@ import app.core.model.isOffshoreMunicipalityId
 import app.core.ui.components.EntityType
 import app.core.ui.components.EntityPreviewData
 import app.core.ui.components.PreviewSheetState
+import app.core.util.isRedundantMunicipality
 import app.data.repository.WindParkRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -190,6 +191,7 @@ class MapViewModel(
                     .filter { it.name.contains(newQuery, ignoreCase = true) }
                 val matchingMunicipalities = municipalitiesList
                     .filter { isOffshoreEnabled || !it.id.isOffshoreMunicipalityId() }
+                    .filterNot { isRedundantMunicipality(it.districtName, it.name) }
                     .filter { it.name.contains(newQuery, ignoreCase = true) }
                 val matchingParks = dbParks
                     .filter { isOffshoreEnabled || !it.isOffshore() }

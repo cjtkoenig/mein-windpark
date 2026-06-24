@@ -17,6 +17,8 @@ data class RegionDetailUiState(
     val parentDistrictName: String? = null,
     val parentStateId: String? = null,
     val parentStateName: String? = null,
+    val isSingleMunicipalityDistrict: Boolean = false,
+    val singleMunicipalityName: String? = null,
 
     // Summary statistics
     val windParkCount: Int = 0,

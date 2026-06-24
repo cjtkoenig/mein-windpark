@@ -61,6 +61,7 @@ import app.core.ui.components.DataStatusFooter
 import app.core.ui.components.ImpactMetric
 import androidx.compose.ui.text.style.TextOverflow
 import app.core.util.formatGermanNumber
+import app.core.util.isRedundantMunicipality
 import app.core.ui.components.WindklarHeader
 
 private val ScreenBackground @Composable get() = WindklarTheme.colors.screenBackground
@@ -150,11 +151,14 @@ fun ParkDetailScreen(
                 }
             },
             breadcrumbs = {
-                val breadcrumbSegments = listOf(
+                val breadcrumbSegments = listOfNotNull(
                     app.core.ui.components.BreadcrumbSegment(name = "Deutschland", onClick = onNavigateToCountry),
                     app.core.ui.components.BreadcrumbSegment(name = park.stateName, onClick = { onNavigateToRegion("state", park.stateId) }),
                     app.core.ui.components.BreadcrumbSegment(name = park.districtName, onClick = { onNavigateToRegion("district", park.districtId) }),
-                    app.core.ui.components.BreadcrumbSegment(name = "Gemeinde ${park.municipalityName}", onClick = { onNavigateToRegion("city", park.municipalityId) })
+                    app.core.ui.components.BreadcrumbSegment(
+                        name = "Gemeinde ${park.municipalityName}",
+                        onClick = { onNavigateToRegion("city", park.municipalityId) }
+                    ).takeUnless { isRedundantMunicipality(park.districtName, park.municipalityName) }
                 )
                 app.core.ui.components.Breadcrumbs(
                     segments = breadcrumbSegments,
