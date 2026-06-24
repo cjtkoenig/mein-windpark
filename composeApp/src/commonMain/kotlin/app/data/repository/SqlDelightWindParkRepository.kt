@@ -3,6 +3,7 @@ package app.data.repository
 import app.core.model.WindPark
 import app.core.model.Metric
 import app.core.model.SnapshotAssumption
+import app.core.model.SnapshotInfo
 import app.core.model.WindTurbine
 import app.core.model.DataHint
 import app.core.model.FavoriteRegion
@@ -220,6 +221,24 @@ class SqlDelightWindParkRepository(
     override suspend fun getSnapshotLimitations(): List<String> = withContext(Dispatchers.Default) {
         val raw = snapshotMetadataDao.getLatest()?.limitations ?: ""
         if (raw.isBlank()) emptyList() else raw.split("\n")
+    }
+
+    override suspend fun getSnapshotInfo(): SnapshotInfo? = withContext(Dispatchers.Default) {
+        val metadata = snapshotMetadataDao.getLatest() ?: return@withContext null
+        val limitations = metadata.limitations
+            .takeIf { it.isNotBlank() }
+            ?.split("\n")
+            ?: emptyList()
+        SnapshotInfo(
+            snapshotId = metadata.snapshot_id,
+            sourceName = metadata.source_name,
+            attribution = metadata.attribution,
+            mastrExportDate = metadata.mastr_export_date,
+            processedAt = metadata.processed_at,
+            pipelineVersion = metadata.pipeline_version,
+            limitations = limitations,
+            isLocalSnapshot = true,
+        )
     }
 
     override suspend fun getDataHints(): List<DataHint> = withContext(Dispatchers.Default) {

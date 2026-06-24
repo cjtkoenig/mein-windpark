@@ -5,6 +5,7 @@ import app.core.model.RankingDetailLine
 
 data class StatsUiState(
     val subtitle: String = "Snapshot wird geladen",
+    val snapshotInfoLine: String = "",
     val overviewCards: List<StatsOverviewCard> = emptyList(),
     val impactCards: List<StatsImpactCard> = emptyList(),
     val rankingType: RankingType = RankingType.DISTRICTS,

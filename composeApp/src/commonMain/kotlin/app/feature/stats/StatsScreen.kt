@@ -130,6 +130,7 @@ fun StatsScreen(
     ) {
         StatsHeader(
             subtitle = uiState.subtitle,
+            snapshotInfoLine = uiState.snapshotInfoLine,
             overviewCards = uiState.overviewCards,
         )
 
@@ -346,6 +347,7 @@ private fun StatsTabSwitch(
 @Composable
 private fun StatsHeader(
     subtitle: String,
+    snapshotInfoLine: String,
     overviewCards: List<StatsOverviewCard>,
 ) {
     Box(
@@ -414,6 +416,14 @@ private fun StatsHeader(
                         fontSize = 13.sp,
                         lineHeight = 16.sp,
                     )
+                    if (snapshotInfoLine.isNotBlank()) {
+                        Text(
+                            text = snapshotInfoLine,
+                            color = Color.White.copy(alpha = 0.68f),
+                            fontSize = 11.sp,
+                            lineHeight = 14.sp,
+                        )
+                    }
                 }
             }
 

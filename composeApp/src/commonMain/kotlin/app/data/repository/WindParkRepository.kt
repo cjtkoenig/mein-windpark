@@ -3,6 +3,7 @@ package app.data.repository
 import app.core.model.WindPark
 import app.core.model.Metric
 import app.core.model.SnapshotAssumption
+import app.core.model.SnapshotInfo
 import app.core.model.WindTurbine
 import app.core.model.DataHint
 import app.core.model.FavoriteRegion
@@ -52,6 +53,7 @@ interface WindParkRepository {
     suspend fun getSnapshotAttribution(): String
     suspend fun getSnapshotLimitations(): List<String>
     suspend fun getSnapshotAssumptions(): List<SnapshotAssumption>
+    suspend fun getSnapshotInfo(): SnapshotInfo?
     suspend fun getAllMetrics(): List<Metric>
     
     suspend fun getDataHints(): List<DataHint>

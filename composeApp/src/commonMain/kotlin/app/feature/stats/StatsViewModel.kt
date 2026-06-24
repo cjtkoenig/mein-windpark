@@ -143,6 +143,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
             val recentParks = repository.getRecentWindParks(limit = 1)
             val assumptions = repository.getSnapshotAssumptions()
             val attribution = repository.getSnapshotAttribution()
+            val snapshotInfo = repository.getSnapshotInfo()
 
             val allMetrics = repository.getAllMetrics()
             loadedMetricsByParkId = allMetrics.groupBy { it.subjectId }
@@ -207,7 +208,16 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
             )
 
             uiState = StatsUiState(
-                subtitle = "Deutschland · Snapshot 2025",
+                subtitle = snapshotInfo?.let { "Deutschland · lokaler Snapshot ${it.mastrExportDate}" }
+                    ?: "Deutschland · lokaler Snapshot",
+                snapshotInfoLine = snapshotInfo?.let { info ->
+                    buildString {
+                        append("Lokaler Snapshot, keine Live-Daten")
+                        if (info.processedAt.isNotBlank()) {
+                            append(" · verarbeitet ${info.processedAt}")
+                        }
+                    }
+                } ?: "Lokaler Snapshot, keine Live-Daten",
                 overviewCards = listOf(
                     StatsOverviewCard(
                         value = formatInteger(parks.size),
