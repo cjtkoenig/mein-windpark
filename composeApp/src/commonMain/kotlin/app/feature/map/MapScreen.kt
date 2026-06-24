@@ -197,12 +197,20 @@ fun MapScreen(
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 240.dp),
+                            .heightIn(max = 240.dp)
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent()
+                                        event.changes.forEach { it.consume() }
+                                    }
+                                }
+                            },
                         shape = RoundedCornerShape(16.dp),
                         color = WindklarTheme.colors.cardBackground,
                         shadowElevation = 8.dp
                     ) {
-                        if (uiState.searchQuery.isEmpty()) {
+                        if (uiState.searchQuery.length < 2) {
                             Column(modifier = Modifier.padding(8.dp)) {
                                 Text(
                                     text = "Zuletzt angesehen",

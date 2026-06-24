@@ -94,22 +94,34 @@ def read_json(path: Path) -> dict[str, Any]:
     return value
 
 
-def extract_create_tables(sql_path: Path) -> list[str]:
+def extract_schema_statements(sql_path: Path) -> list[str]:
     sql = sql_path.read_text(encoding="utf-8")
-    marker = "CREATE TABLE"
     statements = []
-    start = 0
-    while True:
-        start = sql.find(marker, start)
-        if start == -1:
-            break
+    
+    # We find occurrences of both CREATE TABLE and CREATE INDEX
+    markers = ["CREATE TABLE", "CREATE INDEX"]
+    occurrences = []
+    for marker in markers:
+        start = 0
+        while True:
+            start = sql.find(marker, start)
+            if start == -1:
+                break
+            occurrences.append((start, marker))
+            start += len(marker)
+            
+    # Sort by character index to maintain logical sequence in the file (tables first, then indexes)
+    occurrences.sort(key=lambda x: x[0])
+    
+    for start, marker in occurrences:
         end = sql.find(";", start)
         if end == -1:
-            raise ValueError(f"Unterminated CREATE TABLE statement in {sql_path}.")
+            raise ValueError(f"Unterminated schema statement ({marker}) in {sql_path}.")
         statements.append(sql[start : end + 1])
-        start = end + 1
+        
+    # We must have at least one statement (typically CREATE TABLE)
     if not statements:
-        raise ValueError(f"No CREATE TABLE statement found in {sql_path}.")
+        raise ValueError(f"No schema statements found in {sql_path}.")
     return statements
 
 
@@ -159,8 +171,9 @@ def validate_metadata(snapshot: dict[str, Any], metadata_wrapper: dict[str, Any]
 
 def create_schema(connection: sqlite3.Connection) -> None:
     for filename in SCHEMA_FILES:
-        for statement in extract_create_tables(SCHEMA_DIR / filename):
+        for statement in extract_schema_statements(SCHEMA_DIR / filename):
             connection.execute(statement)
+
     connection.execute(f"PRAGMA user_version = {current_sqldelight_schema_version()}")
 
 

@@ -27,9 +27,9 @@ class MainActivity : ComponentActivity() {
                     super.onConfigure(db)
                     db.enableWriteAheadLogging()
                     runCatching {
-                        db.query("PRAGMA synchronous = NORMAL").close()
-                        db.query("PRAGMA temp_store = MEMORY").close()
-                        db.query("PRAGMA cache_size = -64000").close()
+                        db.execSQL("PRAGMA synchronous = NORMAL")
+                        db.execSQL("PRAGMA temp_store = MEMORY")
+                        db.execSQL("PRAGMA cache_size = -64000")
                     }.onFailure { error ->
                         println("MainActivity: Failed to apply performance PRAGMAs: ${error.message}")
                     }
@@ -47,7 +47,41 @@ class MainActivity : ComponentActivity() {
 
     private fun preseedDatabaseFromAssets(context: Context, databaseName: String) {
         val targetFile = context.getDatabasePath(databaseName)
-        if (targetFile.exists()) return
+        
+        if (targetFile.exists()) {
+            var hasIndex = false
+            runCatching {
+                android.database.sqlite.SQLiteDatabase.openDatabase(
+                    targetFile.path,
+                    null,
+                    android.database.sqlite.SQLiteDatabase.OPEN_READONLY
+                ).use { db ->
+                    db.rawQuery(
+                        "SELECT 1 FROM sqlite_master WHERE type='index' AND name='idx_wind_turbine_park_id'",
+                        null
+                    ).use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            hasIndex = true
+                        }
+                    }
+                }
+            }.onFailure { error ->
+                println("MainActivity: Failed to check database indexes: ${error.message}")
+            }
+            
+            if (hasIndex) {
+                println("MainActivity: Database is valid and has indexes.")
+                return
+            }
+            
+            println("MainActivity: Database is missing indexes. Deleting old database to replace it...")
+            runCatching {
+                context.deleteDatabase(databaseName)
+            }.onFailure { error ->
+                println("MainActivity: Failed to delete old database: ${error.message}")
+            }
+        }
+        
         runCatching {
             context.assets.open("windklar_seed.db").use { input ->
                 targetFile.parentFile?.mkdirs()
@@ -60,4 +94,5 @@ class MainActivity : ComponentActivity() {
             println("MainActivity: No preseed database available, falling back to JSON import: ${error.message}")
         }
     }
+
 }
