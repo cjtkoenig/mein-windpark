@@ -28,7 +28,17 @@ class FavoritesViewModel(private val repository: WindParkRepository) : ViewModel
             val favRegions = repository.getFavoriteRegions().filter { includeOffshore || !it.id.isOffshoreMunicipalityId() }
             
             val allParks = repository.getWindParks()
-            val allMetrics = repository.getAllMetrics()
+            val favRegionParkIds = favRegions.flatMap { region ->
+                allParks.filter { park ->
+                    when (region.type.lowercase()) {
+                        "city" -> park.municipalityId == region.id
+                        "district" -> park.districtId == region.id
+                        "state" -> park.stateId == region.id
+                        else -> false
+                    }
+                }
+            }.map { it.id }.toSet()
+            val regionMetricsList = repository.getMetricsForParks(favRegionParkIds.toList())
             
             val favUiList = favs.map { park ->
                 val metrics = repository.getMetricsForPark(park.id)
@@ -60,7 +70,7 @@ class FavoritesViewModel(private val repository: WindParkRepository) : ViewModel
                 }
                 
                 val regionParkIds = regionParks.map { it.id }.toSet()
-                val regionMetrics = allMetrics.filter { it.subjectId in regionParkIds }
+                val regionMetrics = regionMetricsList.filter { it.subjectId in regionParkIds }
                 
                 val prodMetricSum = regionMetrics.filter { it.metricType == "annual_production" }.sumOf { it.value ?: 0.0 }
                 val co2MetricSum = regionMetrics.filter { it.metricType == "co2_savings" }.sumOf { it.value ?: 0.0 }

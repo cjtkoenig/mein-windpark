@@ -13,11 +13,21 @@ CREATE TABLE metric (
     calculation_note TEXT
 );
 
+CREATE INDEX IF NOT EXISTS idx_metric_subject ON metric(subject_type, subject_id);
+CREATE INDEX IF NOT EXISTS idx_metric_type ON metric(metric_type);
+
 selectMetricsForSubject:
 SELECT *
 FROM metric
 WHERE subject_type = ?
   AND subject_id = ?
+ORDER BY metric_type;
+
+selectMetricsForSubjects:
+SELECT *
+FROM metric
+WHERE subject_type = :subjectType
+  AND subject_id IN :subjectIds
 ORDER BY metric_type;
 
 selectAllMetrics:

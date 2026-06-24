@@ -1,0 +1,3 @@
+-- Add index on metric(subject_type, subject_id) and metric(metric_type) to optimize queries
+CREATE INDEX IF NOT EXISTS idx_metric_subject ON metric(subject_type, subject_id);
+CREATE INDEX IF NOT EXISTS idx_metric_type ON metric(metric_type);

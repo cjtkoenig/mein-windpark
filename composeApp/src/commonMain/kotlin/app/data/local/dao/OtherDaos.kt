@@ -113,6 +113,7 @@ class SqlDelightWindTurbineDao(private val database: AppDatabase) : WindTurbineD
 
 interface MetricDao {
     suspend fun getForSubject(subjectType: String, subjectId: String): List<Metric>
+    suspend fun getForSubjects(subjectType: String, subjectIds: List<String>): List<Metric>
     suspend fun getAll(): List<Metric>
     suspend fun getNationalAggregates(includeOffshore: Boolean): List<Metric>
     suspend fun insertOrReplace(metric: Metric)
@@ -121,6 +122,11 @@ interface MetricDao {
 class SqlDelightMetricDao(private val database: AppDatabase) : MetricDao {
     override suspend fun getForSubject(subjectType: String, subjectId: String): List<Metric> {
         return database.metricQueries.selectMetricsForSubject(subjectType, subjectId).executeAsList().map { it.toDomain() }
+    }
+
+    override suspend fun getForSubjects(subjectType: String, subjectIds: List<String>): List<Metric> {
+        if (subjectIds.isEmpty()) return emptyList()
+        return database.metricQueries.selectMetricsForSubjects(subjectType, subjectIds).executeAsList().map { it.toDomain() }
     }
 
     override suspend fun getAll(): List<Metric> {
@@ -144,7 +150,7 @@ class SqlDelightMetricDao(private val database: AppDatabase) : MetricDao {
                 sourceName = row.source_name ?: "WindKlar MVP-Berechnung",
                 sourceUrl = row.source_url.orEmpty(),
                 sourceUpdatedAt = row.source_updated_at.orEmpty(),
-                dataQuality = row.data_quality ?: "derived",
+                dataQuality = row.data_quality,
                 calculationNote = row.calculation_note?.let {
                     "Bundesweite Summe aus Windpark-Metriken. $it"
                 } ?: "Bundesweite Summe aus Windpark-Metriken.",

@@ -279,6 +279,11 @@ class SqlDelightWindParkRepository(
         metricDao.getAll()
     }
 
+    override suspend fun getMetricsForParks(parkIds: List<String>): List<Metric> = withContext(Dispatchers.Default) {
+        if (parkIds.isEmpty()) return@withContext emptyList()
+        metricDao.getForSubjects("wind_park", parkIds)
+    }
+
     private fun WindParkEntity.toDomain(isFavorite: Boolean) = WindPark(
         id = id,
         name = name,

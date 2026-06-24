@@ -117,9 +117,8 @@ class RegionDetailViewModel(
             }
 
             // Sum up precalculated park-level metrics for the region instead of using flat assumptions
-            val allMetrics = repository.getAllMetrics()
             val regionParkIds = regionParks.map { it.id }.toSet()
-            val regionMetrics = allMetrics.filter { it.subjectId in regionParkIds }
+            val regionMetrics = repository.getMetricsForParks(regionParkIds.toList())
 
             val annualProductionKwh = regionMetrics.filter { it.metricType == "annual_production" }.sumOf { it.value ?: 0.0 }
             val annualProductionGwh = annualProductionKwh / 1_000_000.0

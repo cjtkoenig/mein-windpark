@@ -147,7 +147,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
             val attribution = repository.getSnapshotAttribution()
             val snapshotInfo = repository.getSnapshotInfo()
 
-            val allMetrics = repository.getAllMetrics()
+            val allMetrics = repository.getMetricsForParks(parks.map { it.id })
             loadedMetricsByParkId = allMetrics.groupBy { it.subjectId }
             loadedParks = parks
             loadedAssumptions = assumptions
