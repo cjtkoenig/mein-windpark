@@ -27,6 +27,9 @@ import kotlin.math.floor
 
 import app.core.location.LocationProvider
 
+private const val SearchDebounceMillis = 80L
+private const val SearchResultLimit = 50
+
 
 class MapViewModel(
     private val repository: WindParkRepository,
@@ -43,6 +46,7 @@ class MapViewModel(
     private var statesList: List<MapSearchResult.State> = emptyList()
     private var districtsList: List<MapSearchResult.District> = emptyList()
     private var municipalitiesList: List<MapSearchResult.Municipality> = emptyList()
+    private var searchIndex: List<MapSearchIndexEntry> = emptyList()
 
     init {
         loadMapData()
@@ -108,6 +112,13 @@ class MapViewModel(
                 municipalitiesList = municipalityMap.values.filter { it.count > 0 }.map { agg ->
                     MapSearchResult.Municipality(agg.id, agg.name, agg.districtName, agg.stateName, agg.sumLat / agg.count, agg.sumLon / agg.count)
                 }.sortedBy { it.name }
+
+                searchIndex = buildSearchIndex(
+                    states = statesList,
+                    districts = districtsList,
+                    municipalities = municipalitiesList,
+                    parks = allParks,
+                )
 
                 uiState = uiState.copy(
                     isLoading = false,
@@ -177,32 +188,21 @@ class MapViewModel(
     fun onQueryChange(newQuery: String) {
         uiState = uiState.copy(searchQuery = newQuery)
         searchJob?.cancel()
-        if (newQuery.length >= 2) {
+        val normalizedQuery = newQuery.trim().normalizeForSearch()
+        if (normalizedQuery.length >= 2) {
             searchJob = viewModelScope.launch {
-                delay(200)
-                val dbParks = repository.searchWindParks(newQuery)
+                delay(SearchDebounceMillis)
                 val isOffshoreEnabled = uiState.isOffshoreEnabled
-                
-                val matchingStates = statesList
-                    .filter { isOffshoreEnabled || !it.id.isOffshoreMunicipalityId() }
-                    .filter { it.name.contains(newQuery, ignoreCase = true) }
-                val matchingDistricts = districtsList
-                    .filter { isOffshoreEnabled || !it.id.isOffshoreMunicipalityId() }
-                    .filter { it.name.contains(newQuery, ignoreCase = true) }
-                val matchingMunicipalities = municipalitiesList
-                    .filter { isOffshoreEnabled || !it.id.isOffshoreMunicipalityId() }
-                    .filterNot { isRedundantMunicipality(it.districtName, it.name) }
-                    .filter { it.name.contains(newQuery, ignoreCase = true) }
-                val matchingParks = dbParks
-                    .filter { isOffshoreEnabled || !it.isOffshore() }
-                    .map { MapSearchResult.Park(it) }
+                val combinedResults = withContext(Dispatchers.Default) {
+                    searchMapIndex(normalizedQuery, isOffshoreEnabled)
+                }
 
-                val combinedResults = matchingStates + matchingDistricts + matchingMunicipalities + matchingParks
-
-                uiState = uiState.copy(
-                    searchResults = combinedResults,
-                    showSearchOverlay = true
-                )
+                if (uiState.searchQuery == newQuery) {
+                    uiState = uiState.copy(
+                        searchResults = combinedResults,
+                        showSearchOverlay = true
+                    )
+                }
             }
         } else {
             uiState = uiState.copy(
@@ -211,6 +211,104 @@ class MapViewModel(
             )
         }
     }
+
+    private fun buildSearchIndex(
+        states: List<MapSearchResult.State>,
+        districts: List<MapSearchResult.District>,
+        municipalities: List<MapSearchResult.Municipality>,
+        parks: List<WindPark>,
+    ): List<MapSearchIndexEntry> =
+        buildList {
+            states.forEach { state ->
+                add(
+                    MapSearchIndexEntry(
+                        result = state,
+                        typeRank = 0,
+                        id = state.id.normalizeForSearch(),
+                        name = state.name.normalizeForSearch(),
+                        haystack = listOf(state.id, state.name).toSearchHaystack(),
+                        sortName = state.name,
+                        isOffshoreOnly = state.id.isOffshoreMunicipalityId(),
+                    )
+                )
+            }
+            districts.forEach { district ->
+                add(
+                    MapSearchIndexEntry(
+                        result = district,
+                        typeRank = 1,
+                        id = district.id.normalizeForSearch(),
+                        name = district.name.normalizeForSearch(),
+                        haystack = listOf(district.id, district.name, district.stateName).toSearchHaystack(),
+                        sortName = district.name,
+                        isOffshoreOnly = district.id.isOffshoreMunicipalityId(),
+                    )
+                )
+            }
+            municipalities
+                .filterNot { isRedundantMunicipality(it.districtName, it.name) }
+                .forEach { municipality ->
+                    add(
+                        MapSearchIndexEntry(
+                            result = municipality,
+                            typeRank = 2,
+                            id = municipality.id.normalizeForSearch(),
+                            name = municipality.name.normalizeForSearch(),
+                            haystack = listOf(
+                                municipality.id,
+                                municipality.name,
+                                municipality.districtName,
+                                municipality.stateName,
+                            ).toSearchHaystack(),
+                            sortName = municipality.name,
+                            isOffshoreOnly = municipality.id.isOffshoreMunicipalityId(),
+                        )
+                    )
+                }
+            parks.forEach { park ->
+                add(
+                    MapSearchIndexEntry(
+                        result = MapSearchResult.Park(park),
+                        typeRank = 3,
+                        id = park.id.normalizeForSearch(),
+                        name = park.name.normalizeForSearch(),
+                        haystack = listOf(
+                            park.id,
+                            park.name,
+                            park.municipalityName,
+                            park.districtName,
+                            park.stateName,
+                        ).toSearchHaystack(),
+                        sortName = park.name,
+                        isOffshoreOnly = park.isOffshore(),
+                    )
+                )
+            }
+        }
+
+    private fun searchMapIndex(
+        normalizedQuery: String,
+        isOffshoreEnabled: Boolean,
+    ): List<MapSearchResult> =
+        searchIndex
+            .asSequence()
+            .filter { isOffshoreEnabled || !it.isOffshoreOnly }
+            .mapNotNull { entry ->
+                entry.matchRank(normalizedQuery)?.let { matchRank ->
+                    SearchMatch(entry, matchRank)
+                }
+            }
+            .sortedWith(
+                compareBy<SearchMatch>(
+                    { it.entry.typeRank },
+                    { it.matchRank },
+                    { it.entry.sortName.lowercase() },
+                    { it.entry.id },
+                )
+            )
+            .take(SearchResultLimit)
+            .map { it.entry.result }
+            .toList()
 
     fun onSearchResultSelected(result: MapSearchResult) {
         searchJob?.cancel()
@@ -825,3 +923,32 @@ private data class MunicipalityAggregate(
     var sumLon: Double = 0.0,
     var count: Int = 0
 )
+
+private data class MapSearchIndexEntry(
+    val result: MapSearchResult,
+    val typeRank: Int,
+    val id: String,
+    val name: String,
+    val haystack: String,
+    val sortName: String,
+    val isOffshoreOnly: Boolean,
+) {
+    fun matchRank(query: String): Int? =
+        when {
+            id == query || name == query -> 0
+            id.startsWith(query) || name.startsWith(query) -> 1
+            haystack.contains(query) -> 2
+            else -> null
+        }
+}
+
+private data class SearchMatch(
+    val entry: MapSearchIndexEntry,
+    val matchRank: Int,
+)
+
+private fun String.normalizeForSearch(): String =
+    trim().lowercase()
+
+private fun List<String>.toSearchHaystack(): String =
+    joinToString(separator = " ") { it.normalizeForSearch() }
