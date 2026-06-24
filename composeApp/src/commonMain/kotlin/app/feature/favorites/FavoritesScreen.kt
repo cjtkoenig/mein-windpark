@@ -44,6 +44,8 @@ import windklar.composeapp.generated.resources.favorite_windpark_nordsee
 import windklar.composeapp.generated.resources.favorite_windpark_ostsee
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import app.core.ui.components.WindklarHeader
+import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.LaunchedEffect
 import app.core.ui.theme.WindklarTheme
 
@@ -78,18 +80,9 @@ fun FavoritesScreen(
 
         Column(
             modifier = Modifier
-                .padding(horizontal = 20.dp)
-                .padding(top = 24.dp),
+                .padding(start = 20.dp, top = 20.dp, end = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Favorites Section
-            Text(
-                text = "Meine Favoriten",
-                color = DarkGreen,
-                fontSize = 18.sp,
-                lineHeight = 24.sp,
-                fontWeight = FontWeight.Bold,
-            )
 
             if (uiState.parks.isEmpty() && uiState.regions.isEmpty()) {
                 Surface(
@@ -166,28 +159,11 @@ fun FavoritesScreen(
 
 @Composable
 private fun FavoritesHeader() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(PrimaryGreen, HeaderEndGreen),
-                    start = Offset.Zero,
-                    end = Offset(900f, 900f),
-                ),
-            )
-            .padding(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 32.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "Favoriten",
-            color = Color.White,
-            fontSize = 24.sp,
-            lineHeight = 32.sp,
-            fontWeight = FontWeight.Medium,
-        )
-    }
+    WindklarHeader(
+        title = "Favoriten",
+        subtitle = "Deine gespeicherten Windparks und Regionen",
+        bottomPadding = 24.dp
+    )
 }
 
 @Composable

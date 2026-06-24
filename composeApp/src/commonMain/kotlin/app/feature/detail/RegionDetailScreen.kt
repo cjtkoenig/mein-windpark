@@ -56,6 +56,7 @@ import app.core.ui.components.DataStatusFooter
 import app.core.ui.components.ImpactMetric
 import app.core.ui.theme.WindklarTheme
 import app.core.util.formatGermanNumber
+import app.core.ui.components.WindklarHeader
 
 
 
@@ -88,23 +89,10 @@ fun RegionDetailScreen(
             .verticalScroll(rememberScrollState()),
     ) {
         // Header
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(WindklarTheme.colors.primaryGreen, WindklarTheme.colors.headerEndGreen),
-                        start = Offset.Zero,
-                        end = Offset(900f, 900f),
-                    ),
-                )
-                .padding(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 48.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+        WindklarHeader(
+            title = if (uiState.regionType.lowercase() == "district") cleanDistrictName(uiState.regionName) else uiState.regionName,
+            subtitle = uiState.regionTypeLabel,
+            navigationIcon = {
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -120,7 +108,8 @@ fun RegionDetailScreen(
                         modifier = Modifier.size(20.dp),
                     )
                 }
-
+            },
+            actionIcon = {
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -136,61 +125,47 @@ fun RegionDetailScreen(
                         modifier = Modifier.size(20.dp),
                     )
                 }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            val breadcrumbSegments = when (uiState.regionType.lowercase()) {
-                "state" -> listOfNotNull(
-                    app.core.ui.components.BreadcrumbSegment(name = "Deutschland", onClick = onNavigateToCountry)
+            },
+            breadcrumbs = {
+                val breadcrumbSegments = when (uiState.regionType.lowercase()) {
+                    "state" -> listOfNotNull(
+                        app.core.ui.components.BreadcrumbSegment(name = "Deutschland", onClick = onNavigateToCountry)
+                    )
+                    "district" -> listOfNotNull(
+                        app.core.ui.components.BreadcrumbSegment(name = "Deutschland", onClick = onNavigateToCountry),
+                        uiState.parentStateName?.takeIf { it.isNotEmpty() }?.let { name ->
+                            app.core.ui.components.BreadcrumbSegment(
+                                name = name,
+                                onClick = uiState.parentStateId?.let { id -> { onRegionSelected("state", id) } }
+                            )
+                        }
+                    )
+                    "city" -> listOfNotNull(
+                        app.core.ui.components.BreadcrumbSegment(name = "Deutschland", onClick = onNavigateToCountry),
+                        uiState.parentStateName?.takeIf { it.isNotEmpty() }?.let { name ->
+                            app.core.ui.components.BreadcrumbSegment(
+                                name = name,
+                                onClick = uiState.parentStateId?.let { id -> { onRegionSelected("state", id) } }
+                            )
+                        },
+                        uiState.parentDistrictName?.takeIf { it.isNotEmpty() }?.let { name ->
+                            app.core.ui.components.BreadcrumbSegment(
+                                name = name,
+                                onClick = uiState.parentDistrictId?.let { id -> { onRegionSelected("district", id) } }
+                            )
+                        }
+                    )
+                    else -> listOfNotNull(
+                        app.core.ui.components.BreadcrumbSegment(name = "Deutschland", onClick = onNavigateToCountry)
+                    )
+                }
+                app.core.ui.components.Breadcrumbs(
+                    segments = breadcrumbSegments,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                "district" -> listOfNotNull(
-                    app.core.ui.components.BreadcrumbSegment(name = "Deutschland", onClick = onNavigateToCountry),
-                    uiState.parentStateName?.takeIf { it.isNotEmpty() }?.let { name ->
-                        app.core.ui.components.BreadcrumbSegment(
-                            name = name,
-                            onClick = uiState.parentStateId?.let { id -> { onRegionSelected("state", id) } }
-                        )
-                    }
-                )
-                "city" -> listOfNotNull(
-                    app.core.ui.components.BreadcrumbSegment(name = "Deutschland", onClick = onNavigateToCountry),
-                    uiState.parentStateName?.takeIf { it.isNotEmpty() }?.let { name ->
-                        app.core.ui.components.BreadcrumbSegment(
-                            name = name,
-                            onClick = uiState.parentStateId?.let { id -> { onRegionSelected("state", id) } }
-                        )
-                    },
-                    uiState.parentDistrictName?.takeIf { it.isNotEmpty() }?.let { name ->
-                        app.core.ui.components.BreadcrumbSegment(
-                            name = name,
-                            onClick = uiState.parentDistrictId?.let { id -> { onRegionSelected("district", id) } }
-                        )
-                    }
-                )
-                else -> listOfNotNull(
-                    app.core.ui.components.BreadcrumbSegment(name = "Deutschland", onClick = onNavigateToCountry)
-                )
-            }
-            app.core.ui.components.Breadcrumbs(
-                segments = breadcrumbSegments,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-            )
-
-            Text(
-                text = if (uiState.regionType.lowercase() == "district") cleanDistrictName(uiState.regionName) else uiState.regionName,
-                color = Color.White,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Bold,
-            )
-
-            Text(
-                text = uiState.regionTypeLabel,
-                color = Color.White.copy(alpha = 0.9f),
-                fontSize = 16.sp,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
+            },
+            bottomPadding = 48.dp
+        )
 
         // Content Area
         Column(

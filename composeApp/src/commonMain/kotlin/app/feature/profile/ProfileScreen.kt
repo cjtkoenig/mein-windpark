@@ -36,6 +36,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import app.core.ui.theme.WindklarTheme
+import app.core.ui.components.WindklarHeader
 import app.core.util.rememberPlatformSharer
 import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material.icons.outlined.Share
@@ -161,52 +162,30 @@ fun ProfileScreen(
 
 @Composable
 private fun ProfileHeader() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(PrimaryGreen, HeaderEndGreen),
-                    start = Offset.Zero,
-                    end = Offset(900f, 900f),
-                ),
-            )
-            .padding(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 48.dp),
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "Info & Einstellungen",
-                color = Color.White,
-                fontSize = 24.sp,
-                lineHeight = 32.sp,
-                fontWeight = FontWeight.Medium,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center,
-        ) {
+    WindklarHeader(
+        title = "Info & Einstellungen",
+        bottomPadding = 48.dp,
+        extraContent = {
             Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .background(Color.White.copy(alpha = 0.2f), CircleShape),
+                modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Air,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(40.dp),
-                )
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .background(Color.White.copy(alpha = 0.2f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Air,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(40.dp),
+                    )
+                }
             }
         }
-    }
+    )
 }
 
 @Composable

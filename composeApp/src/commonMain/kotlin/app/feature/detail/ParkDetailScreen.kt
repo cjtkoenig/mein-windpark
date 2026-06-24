@@ -61,6 +61,7 @@ import app.core.ui.components.DataStatusFooter
 import app.core.ui.components.ImpactMetric
 import androidx.compose.ui.text.style.TextOverflow
 import app.core.util.formatGermanNumber
+import app.core.ui.components.WindklarHeader
 
 private val ScreenBackground @Composable get() = WindklarTheme.colors.screenBackground
 private val PrimaryGreen @Composable get() = WindklarTheme.colors.primaryGreen
@@ -111,23 +112,10 @@ fun ParkDetailScreen(
             .verticalScroll(rememberScrollState()),
     ) {
         // Header
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(PrimaryGreen, HeaderEndGreen),
-                        start = Offset.Zero,
-                        end = Offset(900f, 900f),
-                    ),
-                )
-                .padding(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 48.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+        WindklarHeader(
+            title = park.name,
+            subtitle = "Gemeinde ${park.municipalityName}",
+            navigationIcon = {
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -143,7 +131,8 @@ fun ParkDetailScreen(
                         modifier = Modifier.size(20.dp),
                     )
                 }
-
+            },
+            actionIcon = {
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -159,35 +148,21 @@ fun ParkDetailScreen(
                         modifier = Modifier.size(20.dp),
                     )
                 }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            val breadcrumbSegments = listOf(
-                app.core.ui.components.BreadcrumbSegment(name = "Deutschland", onClick = onNavigateToCountry),
-                app.core.ui.components.BreadcrumbSegment(name = park.stateName, onClick = { onNavigateToRegion("state", park.stateId) }),
-                app.core.ui.components.BreadcrumbSegment(name = park.districtName, onClick = { onNavigateToRegion("district", park.districtId) }),
-                app.core.ui.components.BreadcrumbSegment(name = "Gemeinde ${park.municipalityName}", onClick = { onNavigateToRegion("city", park.municipalityId) })
-            )
-            app.core.ui.components.Breadcrumbs(
-                segments = breadcrumbSegments,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-            )
-
-            Text(
-                text = park.name,
-                color = Color.White,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Bold,
+            },
+            breadcrumbs = {
+                val breadcrumbSegments = listOf(
+                    app.core.ui.components.BreadcrumbSegment(name = "Deutschland", onClick = onNavigateToCountry),
+                    app.core.ui.components.BreadcrumbSegment(name = park.stateName, onClick = { onNavigateToRegion("state", park.stateId) }),
+                    app.core.ui.components.BreadcrumbSegment(name = park.districtName, onClick = { onNavigateToRegion("district", park.districtId) }),
+                    app.core.ui.components.BreadcrumbSegment(name = "Gemeinde ${park.municipalityName}", onClick = { onNavigateToRegion("city", park.municipalityId) })
                 )
-
-            Text(
-                text = "Gemeinde ${park.municipalityName}",
-                color = Color.White.copy(alpha = 0.9f),
-                fontSize = 16.sp,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
+                app.core.ui.components.Breadcrumbs(
+                    segments = breadcrumbSegments,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            bottomPadding = 48.dp
+        )
 
         // Content
         Column(

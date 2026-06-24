@@ -76,6 +76,7 @@ import app.core.ui.components.qualityColors
 import app.core.ui.components.RankingList
 import app.core.ui.components.RankingItemRow
 import app.core.ui.theme.WindklarTheme
+import app.core.ui.components.WindklarHeader
 import app.core.util.formatGermanNumber
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -137,7 +138,7 @@ fun StatsScreen(
 
         Column(
             modifier = Modifier
-                .offset(y = (-36).dp)
+                .offset(y = (-32).dp)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
@@ -351,85 +352,12 @@ private fun StatsHeader(
     snapshotInfoLine: String,
     overviewCards: List<StatsOverviewCard>,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(305.dp)
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(PrimaryGreen, HeaderGreen),
-                    start = Offset.Zero,
-                    end = Offset(900f, 900f),
-                ),
-            ),
-    ) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = 32.dp, y = (-64).dp)
-                .size(224.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.08f)),
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = 8.dp, y = (-24).dp)
-                .size(150.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.08f)),
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 20.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.White.copy(alpha = 0.18f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Air,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-                Column {
-                    Text(
-                        text = "Statistiken",
-                        color = Color.White,
-                        fontSize = 28.sp,
-                        lineHeight = 32.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = subtitle,
-                        color = Color.White.copy(alpha = 0.82f),
-                        fontSize = 13.sp,
-                        lineHeight = 16.sp,
-                    )
-                    if (snapshotInfoLine.isNotBlank()) {
-                        Text(
-                            text = snapshotInfoLine,
-                            color = Color.White.copy(alpha = 0.68f),
-                            fontSize = 11.sp,
-                            lineHeight = 14.sp,
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(28.dp))
-
+    WindklarHeader(
+        title = "Statistiken",
+        subtitle = subtitle,
+        snapshotInfoLine = snapshotInfoLine,
+        bottomPadding = 48.dp,
+        extraContent = {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -442,7 +370,7 @@ private fun StatsHeader(
                 }
             }
         }
-    }
+    )
 }
 
 @Composable

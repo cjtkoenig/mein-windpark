@@ -40,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import app.core.ui.theme.WindklarTheme
+import app.core.ui.components.WindklarHeader
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -79,8 +80,7 @@ fun FaqScreen(
 
         Column(
             modifier = Modifier
-                .offset(y = (-16).dp)
-                .padding(start = 20.dp, top = 16.dp, end = 20.dp),
+                .padding(start = 20.dp, top = 20.dp, end = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             uiState.questions
@@ -114,28 +114,11 @@ fun FaqScreen(
 
 @Composable
 private fun FaqHeader() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(PrimaryGreen, HeaderEndGreen),
-                    start = Offset.Zero,
-                    end = Offset(900f, 900f),
-                ),
-            )
-            .padding(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 32.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "Häufige Fragen",
-            color = Color.White,
-            fontSize = 24.sp,
-            lineHeight = 32.sp,
-            fontWeight = FontWeight.Medium,
-        )
-    }
+    WindklarHeader(
+        title = "Häufige Fragen",
+        subtitle = "Hintergründe zu Datenquellen und Berechnungen",
+        bottomPadding = 24.dp
+    )
 }
 
 @Composable
