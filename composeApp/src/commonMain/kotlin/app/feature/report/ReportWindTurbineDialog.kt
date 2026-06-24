@@ -34,12 +34,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import app.core.ui.theme.WindklarTheme
 import androidx.compose.ui.unit.sp
-
-private val PrimaryGreen = Color(0xFF2D5A2D)
-private val DarkGreen = Color(0xFF1A3A1A)
-private val MutedGreen = Color(0xFF5A7A5A)
-private val PaleGreen = Color(0xFFE8F5E9)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -75,7 +71,7 @@ fun ReportWindTurbineDialog(
         title = {
             Text(
                 text = "Datenhinweis senden",
-                color = DarkGreen,
+                color = WindklarTheme.colors.darkGreen,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp
             )
@@ -89,7 +85,7 @@ fun ReportWindTurbineDialog(
             ) {
                 Text(
                     text = "Helfen Sie mit, die Datenqualität zu verbessern. Ihr Hinweis wird lokal für den Review gespeichert.",
-                    color = MutedGreen,
+                    color = WindklarTheme.colors.mutedGreen,
                     fontSize = 13.sp,
                     lineHeight = 18.sp
                 )
@@ -98,7 +94,7 @@ fun ReportWindTurbineDialog(
                 Column {
                     Text(
                         text = "Kategorie *",
-                        color = DarkGreen,
+                        color = WindklarTheme.colors.darkGreen,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -112,11 +108,11 @@ fun ReportWindTurbineDialog(
                             Surface(
                                 onClick = { selectedCategory = key },
                                 shape = CircleShape,
-                                color = if (isSelected) PrimaryGreen else PaleGreen,
+                                color = if (isSelected) WindklarTheme.colors.primaryGreen else WindklarTheme.colors.paleGreen,
                             ) {
                                 Text(
                                     text = value,
-                                    color = if (isSelected) Color.White else PrimaryGreen,
+                                    color = if (isSelected) Color.White else WindklarTheme.colors.primaryGreen,
                                     fontSize = 12.sp,
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                                 )
@@ -148,7 +144,7 @@ fun ReportWindTurbineDialog(
                 Column {
                     Text(
                         text = "Hinweissicherheit *",
-                        color = DarkGreen,
+                        color = WindklarTheme.colors.darkGreen,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -162,11 +158,11 @@ fun ReportWindTurbineDialog(
                             Surface(
                                 onClick = { selectedConfidence = key },
                                 shape = CircleShape,
-                                color = if (isSelected) PrimaryGreen else PaleGreen,
+                                color = if (isSelected) WindklarTheme.colors.primaryGreen else WindklarTheme.colors.paleGreen,
                             ) {
                                 Text(
                                     text = value,
-                                    color = if (isSelected) Color.White else PrimaryGreen,
+                                    color = if (isSelected) Color.White else WindklarTheme.colors.primaryGreen,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium,
                                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp)
@@ -179,7 +175,7 @@ fun ReportWindTurbineDialog(
                 // Coordinates info
                 Text(
                     text = "Gemeldete Koordinaten: ${currentLatitude.roundTo(5)}° N, ${currentLongitude.roundTo(5)}° O",
-                    color = MutedGreen,
+                    color = WindklarTheme.colors.mutedGreen,
                     fontSize = 12.sp
                 )
             }
@@ -196,7 +192,7 @@ fun ReportWindTurbineDialog(
                         )
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                colors = ButtonDefaults.buttonColors(containerColor = WindklarTheme.colors.primaryGreen)
             ) {
                 Text("Absenden")
             }
@@ -206,7 +202,7 @@ fun ReportWindTurbineDialog(
                 onClick = onDismiss,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.Transparent,
-                    contentColor = PrimaryGreen
+                    contentColor = WindklarTheme.colors.primaryGreen
                 )
             ) {
                 Text("Abbrechen")

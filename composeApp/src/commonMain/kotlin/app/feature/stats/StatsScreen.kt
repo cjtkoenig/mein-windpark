@@ -89,7 +89,6 @@ private val AccentGreen @Composable get() = WindklarTheme.colors.primaryGreen
 private val DarkText @Composable get() = WindklarTheme.colors.darkGreen
 private val MutedText @Composable get() = WindklarTheme.colors.mutedGreen
 private val SoftGreen @Composable get() = WindklarTheme.colors.paleGreen
-private val TrackGreen @Composable get() = Color(0xFFDDEBDD)
 private val ImpactTones @Composable get() = listOf(
     ImpactTone(container = PrimaryGreen, content = Color.White, secondary = SoftGreen),
     ImpactTone(container = HeaderGreen, content = Color.White, secondary = SoftGreen),
@@ -863,7 +862,7 @@ private fun FullRankingDialog(
                             onActionClick = onActionClick,
                             onDetailsClick = onDetailsClick,
                         )
-                        HorizontalDivider(color = TrackGreen.copy(alpha = 0.5f))
+                        HorizontalDivider(color = WindklarTheme.colors.trackGreen.copy(alpha = 0.5f))
                     }
                 }
             }
@@ -977,7 +976,7 @@ private fun CapacityClassChart(values: List<CapacityClassStat>) {
 
     val primaryGreen = PrimaryGreen
     val accentGreen = AccentGreen
-    val trackGreen = TrackGreen
+    val trackGreen = WindklarTheme.colors.trackGreen
 
     var selectedIndex by remember(values) { mutableStateOf<Int?>(null) }
     Column {
@@ -1391,7 +1390,7 @@ private fun ComparisonMetricRow(row: ComparisonRow) {
                     .weight(1f)
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(topStart = 999.dp, bottomStart = 999.dp))
-                    .background(TrackGreen),
+                    .background(WindklarTheme.colors.trackGreen),
                 contentAlignment = Alignment.CenterEnd,
             ) {
                 Box(
@@ -1413,7 +1412,7 @@ private fun ComparisonMetricRow(row: ComparisonRow) {
                     .weight(1f)
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(topEnd = 999.dp, bottomEnd = 999.dp))
-                    .background(TrackGreen),
+                    .background(WindklarTheme.colors.trackGreen),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 Box(
@@ -1616,7 +1615,7 @@ private fun ProgressTrack(progress: Float) {
             .fillMaxWidth()
             .height(8.dp)
             .clip(RoundedCornerShape(999.dp))
-            .background(TrackGreen),
+            .background(WindklarTheme.colors.trackGreen),
     ) {
         Box(
             modifier = Modifier

@@ -212,7 +212,7 @@ fun MapScreen(
                                         Icon(
                                             imageVector = Icons.Outlined.LocationOn,
                                             contentDescription = null,
-                                            tint = Color(0xFF2D5A2D),
+                                            tint = WindklarTheme.colors.primaryGreen,
                                             modifier = Modifier.size(18.dp)
                                         )
                                         
@@ -241,13 +241,13 @@ fun MapScreen(
                                          Column(modifier = Modifier.weight(1f)) {
                                              Text(
                                                  text = title,
-                                                 color = Color(0xFF1A3A1A),
+                                                 color = WindklarTheme.colors.darkGreen,
                                                  fontWeight = FontWeight.Medium,
                                                  fontSize = 14.sp
                                              )
                                              Text(
                                                  text = subtitle,
-                                                 color = Color(0xFF5A7A5A),
+                                                 color = WindklarTheme.colors.mutedGreen,
                                                  fontSize = 12.sp
                                              )
                                          }
@@ -511,13 +511,13 @@ private fun StatusChip(
     Surface(
         onClick = onClick,
         shape = CircleShape,
-        color = if (selected) Color(0xFF2D5A2D) else Color.White,
+        color = if (selected) WindklarTheme.colors.primaryGreen else Color.White,
         shadowElevation = 4.dp,
     ) {
         Text(
             text = text,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
-            color = if (selected) Color.White else Color(0xFF2D5A2D),
+            color = if (selected) Color.White else WindklarTheme.colors.primaryGreen,
             fontSize = 14.sp,
             lineHeight = 20.sp,
             fontWeight = FontWeight.Medium,

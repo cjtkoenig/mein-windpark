@@ -25,7 +25,6 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,6 +42,7 @@ import androidx.compose.material.icons.outlined.QueryStats
 import androidx.compose.ui.graphics.vector.ImageVector
 import app.core.ui.components.WindKlarBottomNav
 import app.core.ui.components.WindKlarBottomNavItem
+import app.core.ui.theme.WindklarTheme
 import app.data.local.db.AppDatabase
 import app.data.repository.SqlDelightWindParkRepository
 import app.data.seed.SnapshotSeedDataImporter
@@ -98,7 +98,7 @@ fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF8FAF7))
+                .background(WindklarTheme.colors.screenBackground)
                 .padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -109,13 +109,13 @@ fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
                 if (seedError != null) {
                     Text(
                         text = "Fehler beim Laden",
-                        color = Color(0xFFD32F2F),
+                        color = WindklarTheme.colors.errorRed,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "Beim Laden der Windparkdaten ist ein Fehler aufgetreten:\n$seedError",
-                        color = Color(0xFF5C1D1D),
+                        color = WindklarTheme.colors.errorDarkRed,
                         fontSize = 14.sp,
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
@@ -126,7 +126,7 @@ fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
                     ) {
                         Button(
                             onClick = { retryCount++ },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2D5A2D))
+                            colors = ButtonDefaults.buttonColors(containerColor = WindklarTheme.colors.primaryGreen)
                         ) {
                             Text("Erneut versuchen")
                         }
@@ -135,25 +135,25 @@ fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
                                 println("AppNavHost: Seeding bypassed by user.")
                                 isSeeded = true 
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF757575))
+                            colors = ButtonDefaults.buttonColors(containerColor = WindklarTheme.colors.gray)
                         ) {
                             Text("Ohne Daten starten")
                         }
                     }
                 } else {
                     CircularProgressIndicator(
-                        color = Color(0xFF2D5A2D),
+                        color = WindklarTheme.colors.primaryGreen,
                         strokeWidth = 4.dp
                     )
                     Text(
                         text = "WindKlar",
-                        color = Color(0xFF1A3A1A),
+                        color = WindklarTheme.colors.darkGreen,
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "Windparkdaten werden geladen...",
-                        color = Color(0xFF5A7A5A),
+                        color = WindklarTheme.colors.mutedGreen,
                         fontSize = 14.sp
                     )
                 }

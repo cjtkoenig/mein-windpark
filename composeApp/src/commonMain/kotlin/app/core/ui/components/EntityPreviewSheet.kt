@@ -211,7 +211,7 @@ fun EntityPreviewSheet(
                     ) {
                         Text(
                             text = previewData.title,
-                            color = Color(0xFF1A3A1A),
+                            color = WindklarTheme.colors.darkGreen,
                             fontSize = 18.sp,
                             lineHeight = 24.sp,
                             fontWeight = FontWeight.Medium,
@@ -226,12 +226,12 @@ fun EntityPreviewSheet(
                             Icon(
                                 imageVector = Icons.Outlined.LocationOn,
                                 contentDescription = null,
-                                tint = Color(0xFF5A7A5A),
+                                tint = WindklarTheme.colors.mutedGreen,
                                 modifier = Modifier.size(15.dp),
                             )
                             Text(
                                 text = previewData.subtitle,
-                                color = Color(0xFF5A7A5A),
+                                color = WindklarTheme.colors.mutedGreen,
                                 fontSize = 13.sp,
                                 lineHeight = 18.sp,
                                 maxLines = 1,
@@ -242,11 +242,11 @@ fun EntityPreviewSheet(
 
                     Surface(
                         shape = CircleShape,
-                        color = Color(0xFFE8F5E9),
+                        color = WindklarTheme.colors.paleGreen,
                     ) {
                         Text(
                             text = "Öffnen",
-                            color = Color(0xFF2D5A2D),
+                            color = WindklarTheme.colors.primaryGreen,
                             fontSize = 13.sp,
                             lineHeight = 18.sp,
                             fontWeight = FontWeight.Medium,
@@ -275,7 +275,7 @@ fun EntityPreviewSheet(
                             .align(Alignment.TopEnd)
                             .padding(8.dp),
                         shape = CircleShape,
-                        color = Color(0xFF2D5A2D),
+                        color = WindklarTheme.colors.primaryGreen,
                     ) {
                         Text(
                             text = previewData.badgeLabel,
@@ -290,7 +290,7 @@ fun EntityPreviewSheet(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = previewData.title,
-                        color = Color(0xFF1A3A1A),
+                        color = WindklarTheme.colors.darkGreen,
                         fontSize = 24.sp,
                         lineHeight = 28.sp,
                         fontWeight = FontWeight.Medium,
@@ -303,12 +303,12 @@ fun EntityPreviewSheet(
                         Icon(
                             imageVector = Icons.Outlined.LocationOn,
                             contentDescription = null,
-                            tint = Color(0xFF5A7A5A),
+                            tint = WindklarTheme.colors.mutedGreen,
                             modifier = Modifier.size(16.dp),
                         )
                         Text(
                             text = previewData.subtitle,
-                            color = Color(0xFF5A7A5A),
+                            color = WindklarTheme.colors.mutedGreen,
                             fontSize = 14.sp,
                             lineHeight = 20.sp,
                         )
@@ -345,7 +345,7 @@ fun EntityPreviewSheet(
                         .height(48.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2D5A2D),
+                        containerColor = WindklarTheme.colors.primaryGreen,
                         contentColor = Color.White,
                     ),
                 ) {
@@ -373,7 +373,7 @@ private fun MetricCard(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(20.dp),
-        color = Color(0xFFE8F5E9),
+        color = WindklarTheme.colors.paleGreen,
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -386,19 +386,19 @@ private fun MetricCard(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = Color(0xFF2D5A2D),
+                        tint = WindklarTheme.colors.primaryGreen,
                     modifier = Modifier.size(16.dp),
                 )
                 Text(
                     text = label,
-                    color = Color(0xFF2D5A2D),
+                    color = WindklarTheme.colors.primaryGreen,
                     fontSize = 12.sp,
                     lineHeight = 16.sp,
                 )
             }
             Text(
                 text = value,
-                color = Color(0xFF1A3A1A),
+                color = WindklarTheme.colors.darkGreen,
                 fontSize = 18.sp,
                 lineHeight = 28.sp,
             )

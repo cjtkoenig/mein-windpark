@@ -18,12 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.core.model.RankingItem
-
-private val PrimaryGreen = Color(0xFF2D5A2D)
-private val SoftGreen = Color(0xFFE8F5E9)
-private val DarkText = Color(0xFF17261A)
-private val MutedText = Color(0xFF647568)
-private val TrackGreen = Color(0xFFDDEBDD)
+import app.core.ui.theme.WindklarTheme
 
 @Composable
 fun RankingList(
@@ -75,7 +70,7 @@ fun RankingItemRow(
         ) {
             Text(
                 text = "${item.rank}",
-                color = PrimaryGreen,
+                color = WindklarTheme.colors.primaryGreen,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -91,7 +86,7 @@ fun RankingItemRow(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = item.name.ifBlank { "Unbekannter Name" },
-                            color = DarkText,
+                            color = WindklarTheme.colors.darkText,
                             fontSize = 13.sp,
                             lineHeight = 18.sp,
                             fontWeight = FontWeight.Medium,
@@ -100,7 +95,7 @@ fun RankingItemRow(
                         )
                         Text(
                             text = item.subtitle,
-                            color = MutedText,
+                            color = WindklarTheme.colors.mutedText,
                             fontSize = 11.sp,
                             lineHeight = 14.sp,
                             maxLines = 1,
@@ -109,7 +104,7 @@ fun RankingItemRow(
                     }
                     Text(
                         text = item.valueLabel,
-                        color = MutedText,
+                        color = WindklarTheme.colors.mutedText,
                         fontSize = 12.sp,
                         lineHeight = 18.sp,
                         modifier = Modifier.padding(start = 8.dp),
@@ -125,7 +120,7 @@ fun RankingItemRow(
                 modifier = Modifier.padding(start = 32.dp, top = 10.dp, bottom = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                HorizontalDivider(color = TrackGreen)
+                HorizontalDivider(color = WindklarTheme.colors.trackGreen)
                 item.details.forEach { line ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -134,13 +129,13 @@ fun RankingItemRow(
                     ) {
                         Text(
                             text = line.label,
-                            color = MutedText,
+                            color = WindklarTheme.colors.mutedText,
                             fontSize = 12.sp,
                             lineHeight = 16.sp,
                         )
                         Text(
                             text = line.value,
-                            color = DarkText,
+                            color = WindklarTheme.colors.darkText,
                             fontSize = 12.sp,
                             lineHeight = 16.sp,
                             fontWeight = FontWeight.SemiBold,
@@ -155,7 +150,7 @@ fun RankingItemRow(
                 ) {
                     Button(
                         onClick = { onDetailsClick(item.id) },
-                        colors = ButtonDefaults.buttonColors(containerColor = SoftGreen, contentColor = PrimaryGreen),
+                        colors = ButtonDefaults.buttonColors(containerColor = WindklarTheme.colors.paleGreen, contentColor = WindklarTheme.colors.primaryGreen),
                         shape = RoundedCornerShape(8.dp),
                         modifier = Modifier.weight(1f)
                     ) {
@@ -169,7 +164,7 @@ fun RankingItemRow(
                     if (onActionClick != null) {
                         Button(
                             onClick = { onActionClick(item.id) },
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen, contentColor = Color.White),
+                            colors = ButtonDefaults.buttonColors(containerColor = WindklarTheme.colors.primaryGreen, contentColor = Color.White),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.weight(1f)
                         ) {
@@ -194,14 +189,14 @@ private fun ProgressTrack(progress: Float) {
             .fillMaxWidth()
             .height(8.dp)
             .clip(RoundedCornerShape(999.dp))
-            .background(TrackGreen),
+            .background(WindklarTheme.colors.trackGreen),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth(progress.coerceIn(0f, 1f))
                 .fillMaxHeight()
                 .clip(RoundedCornerShape(999.dp))
-                .background(PrimaryGreen),
+                .background(WindklarTheme.colors.primaryGreen),
         )
     }
 }
@@ -210,7 +205,7 @@ private fun ProgressTrack(progress: Float) {
 private fun EmptyText(text: String) {
     Text(
         text = text,
-        color = MutedText,
+        color = WindklarTheme.colors.mutedText,
         fontSize = 13.sp,
         lineHeight = 18.sp,
     )

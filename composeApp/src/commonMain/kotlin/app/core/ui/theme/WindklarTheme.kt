@@ -19,7 +19,18 @@ data class WindklarColors(
     val mutedGreen: Color,
     val paleGreen: Color,
     val cardBackground: Color,
-    val dividerColor: Color
+    val dividerColor: Color,
+    val trackGreen: Color,
+    val heartRed: Color,
+    val errorRed: Color,
+    val errorDarkRed: Color,
+    val warningYellowLight: Color,
+    val warningAmber: Color,
+    val warningAmberDark: Color,
+    val warningBrown: Color,
+    val gray: Color,
+    val darkText: Color,
+    val mutedText: Color,
 )
 
 val LightWindklarColors = WindklarColors(
@@ -30,7 +41,18 @@ val LightWindklarColors = WindklarColors(
     mutedGreen = Color(0xFF5A7A5A),
     paleGreen = Color(0xFFE8F5E9),
     cardBackground = Color.White,
-    dividerColor = Color(0xFFE8F5E9)
+    dividerColor = Color(0xFFE8F5E9),
+    trackGreen = Color(0xFFDDEBDD),
+    heartRed = Color(0xFFE53935),
+    errorRed = Color(0xFFD32F2F),
+    errorDarkRed = Color(0xFF5C1D1D),
+    warningYellowLight = Color(0xFFFFF9C4),
+    warningAmber = Color(0xFFFBC02D),
+    warningAmberDark = Color(0xFFF57F17),
+    warningBrown = Color(0xFF5D4037),
+    gray = Color(0xFF757575),
+    darkText = Color(0xFF17261A),
+    mutedText = Color(0xFF647568),
 )
 
 @Immutable

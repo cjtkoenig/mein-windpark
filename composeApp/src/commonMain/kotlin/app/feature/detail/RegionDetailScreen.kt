@@ -52,15 +52,9 @@ import app.core.ui.components.LabelWithBadge
 import app.core.ui.components.formatDataQuality
 import app.core.ui.components.qualityColors
 import app.core.ui.components.RankingList
+import app.core.ui.theme.WindklarTheme
 
-private val ScreenBackground = Color(0xFFF8FAF7)
-private val PrimaryGreen = Color(0xFF2D5A2D)
-private val HeaderEndGreen = Color(0xFF43A047)
-private val DarkGreen = Color(0xFF1A3A1A)
-private val MutedGreen = Color(0xFF5A7A5A)
-private val PaleGreen = Color(0xFFE8F5E9)
-private val TrackGreen = Color(0xFFDDEBDD)
-private val HeartRed = Color(0xFFE53935)
+
 
 @Composable
 fun RegionDetailScreen(
@@ -75,10 +69,10 @@ fun RegionDetailScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(ScreenBackground),
+                .background(WindklarTheme.colors.screenBackground),
             contentAlignment = Alignment.Center
         ) {
-            CircularProgressIndicator(color = PrimaryGreen)
+            CircularProgressIndicator(color = WindklarTheme.colors.primaryGreen)
         }
         return
     }
@@ -86,7 +80,7 @@ fun RegionDetailScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(ScreenBackground)
+            .background(WindklarTheme.colors.screenBackground)
             .verticalScroll(rememberScrollState()),
     ) {
         // Header
@@ -95,7 +89,7 @@ fun RegionDetailScreen(
                 .fillMaxWidth()
                 .background(
                     brush = Brush.linearGradient(
-                        colors = listOf(PrimaryGreen, HeaderEndGreen),
+                        colors = listOf(WindklarTheme.colors.primaryGreen, WindklarTheme.colors.headerEndGreen),
                         start = Offset.Zero,
                         end = Offset(900f, 900f),
                     ),
@@ -134,7 +128,7 @@ fun RegionDetailScreen(
                     Icon(
                         imageVector = if (uiState.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                         contentDescription = "Favorit",
-                        tint = if (uiState.isFavorite) HeartRed else Color.White,
+                        tint = if (uiState.isFavorite) WindklarTheme.colors.heartRed else Color.White,
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -274,35 +268,35 @@ private fun RegionSummaryCard(
         ) {
             Text(
                 text = "Übersicht",
-                color = DarkGreen,
+                color = WindklarTheme.colors.darkGreen,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Windparks", color = MutedGreen, fontSize = 12.sp)
+                    Text("Windparks", color = WindklarTheme.colors.mutedGreen, fontSize = 12.sp)
                     Text(
                         text = "$windParkCount Park${if (windParkCount == 1) "" else "s"}",
-                        color = DarkGreen,
+                        color = WindklarTheme.colors.darkGreen,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Windräder", color = MutedGreen, fontSize = 12.sp)
+                    Text("Windräder", color = WindklarTheme.colors.mutedGreen, fontSize = 12.sp)
                     Text(
                         text = "$turbineCount Anlage${if (turbineCount == 1) "" else "n"}",
-                        color = DarkGreen,
+                        color = WindklarTheme.colors.darkGreen,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
                 Column(modifier = Modifier.weight(1.2f)) {
-                    Text("Gesamtleistung", color = MutedGreen, fontSize = 12.sp)
+                    Text("Gesamtleistung", color = WindklarTheme.colors.mutedGreen, fontSize = 12.sp)
                     Text(
                         text = "${installedCapacityMw.roundTo(1).toString().replace(".", ",")} MW",
-                        color = DarkGreen,
+                        color = WindklarTheme.colors.darkGreen,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -318,12 +312,12 @@ private fun RegionSummaryCard(
                     ) {
                         Text(
                             text = "Anteil am Bundesland ($parentStateName)",
-                            color = MutedGreen,
+                            color = WindklarTheme.colors.mutedGreen,
                             fontSize = 12.sp
                         )
                         Text(
                             text = formatPercent(shareOfStateCapacity),
-                            color = DarkGreen,
+                            color = WindklarTheme.colors.darkGreen,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -334,8 +328,8 @@ private fun RegionSummaryCard(
                             .fillMaxWidth()
                             .height(6.dp)
                             .clip(RoundedCornerShape(3.dp)),
-                        color = PrimaryGreen,
-                        trackColor = TrackGreen
+                        color = WindklarTheme.colors.primaryGreen,
+                        trackColor = WindklarTheme.colors.trackGreen
                     )
                 }
             }
@@ -348,12 +342,12 @@ private fun RegionSummaryCard(
                 ) {
                     Text(
                         text = "Anteil am Bund (Deutschland)",
-                        color = MutedGreen,
+                        color = WindklarTheme.colors.mutedGreen,
                         fontSize = 12.sp
                     )
                     Text(
                         text = formatPercent(shareOfNationalCapacity),
-                        color = DarkGreen,
+                        color = WindklarTheme.colors.darkGreen,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -364,8 +358,8 @@ private fun RegionSummaryCard(
                         .fillMaxWidth()
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp)),
-                    color = PrimaryGreen,
-                    trackColor = TrackGreen
+                    color = WindklarTheme.colors.primaryGreen,
+                    trackColor = WindklarTheme.colors.trackGreen
                 )
             }
         }
@@ -392,7 +386,7 @@ private fun RegionCitizenImpactDashboard(
         ) {
             Text(
                 text = "Regionale Klimawirkung",
-                color = DarkGreen,
+                color = WindklarTheme.colors.darkGreen,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
             )
@@ -461,23 +455,23 @@ private fun RegionImpactRow(
         Box(
             modifier = Modifier
                 .size(36.dp)
-                .background(PaleGreen, CircleShape),
+                .background(WindklarTheme.colors.paleGreen, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = PrimaryGreen,
+                tint = WindklarTheme.colors.primaryGreen,
                 modifier = Modifier.size(20.dp)
             )
         }
 
         Column(modifier = Modifier.weight(1f)) {
-            LabelWithBadge(label = label, quality = quality, labelColor = DarkGreen)
-            Text(value, color = PrimaryGreen, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
+            LabelWithBadge(label = label, quality = quality, labelColor = WindklarTheme.colors.darkGreen)
+            Text(value, color = WindklarTheme.colors.primaryGreen, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
             Text(
                 text = note,
-                color = MutedGreen,
+                color = WindklarTheme.colors.mutedGreen,
                 fontSize = 11.sp,
                 lineHeight = 15.sp,
                 modifier = Modifier.padding(top = 4.dp)
@@ -501,7 +495,7 @@ private fun SubRegionsSection(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = sectionTitle,
-            color = DarkGreen,
+            color = WindklarTheme.colors.darkGreen,
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
             modifier = Modifier.padding(vertical = 4.dp)
@@ -532,7 +526,7 @@ private fun WindParksSection(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = "Windparks in dieser Region (${windParks.size})",
-            color = DarkGreen,
+            color = WindklarTheme.colors.darkGreen,
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp,
             modifier = Modifier.padding(vertical = 4.dp)
@@ -560,7 +554,7 @@ private fun WindParksSection(
                     ) {
                         Text(
                             text = park.name,
-                            color = DarkGreen,
+                            color = WindklarTheme.colors.darkGreen,
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 15.sp
                         )
@@ -571,12 +565,12 @@ private fun WindParksSection(
                         ) {
                             Text(
                                 text = "${park.turbineCount} Anlage${if (park.turbineCount == 1) "" else "n"}",
-                                color = MutedGreen,
+                                color = WindklarTheme.colors.mutedGreen,
                                 fontSize = 12.sp
                             )
                             Text(
                                 text = "${capMw.roundTo(1).toString().replace(".", ",")} MW",
-                                color = MutedGreen,
+                                color = WindklarTheme.colors.mutedGreen,
                                 fontSize = 12.sp
                             )
                         }
@@ -599,7 +593,7 @@ private fun WindParksSection(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = "Öffnen",
-                        tint = MutedGreen,
+                        tint = WindklarTheme.colors.mutedGreen,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -634,13 +628,13 @@ private fun CalculationAssumptionsCard(assumptions: List<SnapshotAssumption>) {
         ) {
             Text(
                 text = "Welche Annahmen stecken dahinter?",
-                color = DarkGreen,
+                color = WindklarTheme.colors.darkGreen,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
             )
             Text(
                 text = "Diese Werte erklären, wie WindKlar die geschätzten Wirkungswerte berechnet.",
-                color = MutedGreen,
+                color = WindklarTheme.colors.mutedGreen,
                 fontSize = 12.sp,
                 lineHeight = 17.sp
             )
@@ -662,7 +656,7 @@ private fun AssumptionRow(assumption: SnapshotAssumption) {
         ) {
             Text(
                 text = assumption.label,
-                color = DarkGreen,
+                color = WindklarTheme.colors.darkGreen,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -670,7 +664,7 @@ private fun AssumptionRow(assumption: SnapshotAssumption) {
             )
             Text(
                 text = "${formatAssumptionValue(assumption.value)} ${assumption.unit}",
-                color = PrimaryGreen,
+                color = WindklarTheme.colors.primaryGreen,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
                 fontWeight = FontWeight.Bold,
@@ -681,7 +675,7 @@ private fun AssumptionRow(assumption: SnapshotAssumption) {
         if (!assumption.calculationNote.isNullOrBlank()) {
             Text(
                 text = assumption.calculationNote,
-                color = MutedGreen,
+                color = WindklarTheme.colors.mutedGreen,
                 fontSize = 11.sp,
                 lineHeight = 15.sp,
                 modifier = Modifier.padding(top = 2.dp)
@@ -699,8 +693,8 @@ private fun DataSourceAttributionCard(attribution: String) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFFFF9C4),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFBC02D))
+        color = WindklarTheme.colors.warningYellowLight,
+        border = androidx.compose.foundation.BorderStroke(1.dp, WindklarTheme.colors.warningAmber)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -710,19 +704,19 @@ private fun DataSourceAttributionCard(attribution: String) {
             Icon(
                 imageVector = Icons.Outlined.Warning,
                 contentDescription = null,
-                tint = Color(0xFFF57F17),
+                tint = WindklarTheme.colors.warningAmberDark,
                 modifier = Modifier.size(18.dp)
             )
             Column {
                 Text(
                     text = "Datenhinweis",
-                    color = Color(0xFFF57F17),
+                    color = WindklarTheme.colors.warningAmberDark,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp
                 )
                 Text(
                     text = "Berechnete Werte beruhen auf typischen Durchschnittsannahmen. Regionale Unterschiede können zu Abweichungen führen. Quelle: $normalizedAttribution.",
-                    color = Color(0xFF5D4037),
+                    color = WindklarTheme.colors.warningBrown,
                     fontSize = 11.sp,
                     lineHeight = 15.sp,
                     modifier = Modifier.padding(top = 2.dp)

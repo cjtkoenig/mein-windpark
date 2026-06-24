@@ -59,7 +59,7 @@ private val HeaderEndGreen @Composable get() = WindklarTheme.colors.headerEndGre
 private val DarkGreen @Composable get() = WindklarTheme.colors.darkGreen
 private val MutedGreen @Composable get() = WindklarTheme.colors.mutedGreen
 private val PaleGreen @Composable get() = WindklarTheme.colors.paleGreen
-private val HeartRed = Color(0xFFE53935)
+
 
 @Composable
 fun ParkDetailScreen(
@@ -145,7 +145,7 @@ fun ParkDetailScreen(
                     Icon(
                         imageVector = if (uiState.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                         contentDescription = "Favorit",
-                        tint = if (uiState.isFavorite) HeartRed else Color.White,
+                        tint = if (uiState.isFavorite) WindklarTheme.colors.heartRed else Color.White,
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -537,8 +537,8 @@ private fun TurbineCard(turbine: WindTurbine) {
                 Spacer(modifier = Modifier.width(8.dp))
                 StatusBadge(
                     text = turbine.status ?: "Unbekannt",
-                    containerColor = if (turbine.status?.lowercase() == "in betrieb") Color(0xFFE8F5E9) else Color(0xFFFFF3E0),
-                    contentColor = if (turbine.status?.lowercase() == "in betrieb") Color(0xFF2D5A2D) else Color(0xFFE65100),
+                    containerColor = if (turbine.status?.lowercase() == "in betrieb") WindklarTheme.colors.paleGreen else Color(0xFFFFF3E0),
+                    contentColor = if (turbine.status?.lowercase() == "in betrieb") WindklarTheme.colors.primaryGreen else Color(0xFFE65100),
                 )
             }
 
@@ -596,8 +596,8 @@ private fun DataSourceAttributionCard(attribution: String) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFFFF9C4),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFBC02D))
+        color = WindklarTheme.colors.warningYellowLight,
+        border = androidx.compose.foundation.BorderStroke(1.dp, WindklarTheme.colors.warningAmber)
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -607,19 +607,19 @@ private fun DataSourceAttributionCard(attribution: String) {
             Icon(
                 imageVector = Icons.Outlined.Warning,
                 contentDescription = null,
-                tint = Color(0xFFF57F17),
+                tint = WindklarTheme.colors.warningAmberDark,
                 modifier = Modifier.size(18.dp)
             )
             Column {
                 Text(
                     text = "Datenhinweis",
-                    color = Color(0xFFF57F17),
+                    color = WindklarTheme.colors.warningAmberDark,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp
                 )
                 Text(
                     text = "Berechnete Werte beruhen auf typischen Durchschnittsannahmen. Regionale Unterschiede können zu Abweichungen führen. Quelle: $normalizedAttribution.",
-                    color = Color(0xFF5D4037),
+                    color = WindklarTheme.colors.warningBrown,
                     fontSize = 11.sp,
                     lineHeight = 15.sp,
                     modifier = Modifier.padding(top = 2.dp)

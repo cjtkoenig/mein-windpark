@@ -30,7 +30,7 @@ fun PrimaryButton(
         shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = Color(0xFFE6E8E5),
-            contentColor = Color(0xFF2D5934),
+            contentColor = WindklarTheme.colors.primaryGreen,
             disabledContainerColor = Color(0xFFB7BCB6),
             disabledContentColor = Color(0xFF4C594C),
         ),

@@ -341,12 +341,12 @@ private fun DataSourceCard(
                     Icon(
                         imageVector = Icons.Outlined.Warning,
                         contentDescription = null,
-                        tint = Color(0xFFD32F2F),
+                        tint = WindklarTheme.colors.errorRed,
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
                         text = "Wichtige Einschränkungen:",
-                        color = Color(0xFFD32F2F),
+                        color = WindklarTheme.colors.errorRed,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )

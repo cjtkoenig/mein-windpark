@@ -53,7 +53,7 @@ private val HeaderEndGreen @Composable get() = WindklarTheme.colors.headerEndGre
 private val DarkGreen @Composable get() = WindklarTheme.colors.darkGreen
 private val MutedGreen @Composable get() = WindklarTheme.colors.mutedGreen
 private val PaleGreen @Composable get() = WindklarTheme.colors.paleGreen
-private val HeartRed = Color(0xFFE53935)
+
 
 @Composable
 fun FavoritesScreen(
@@ -215,7 +215,7 @@ private fun FavoriteParkCard(
             ) {
                 Text(
                     text = park.name,
-                    color = Color(0xFF1A3A1A),
+                    color = WindklarTheme.colors.darkGreen,
                     fontSize = 18.sp,
                     lineHeight = 22.sp,
                     fontWeight = FontWeight.Medium,
@@ -290,7 +290,7 @@ private fun FavoriteThumbnail(
                 Icon(
                     imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                     contentDescription = if (isFavorite) "Favorit" else "Nicht Favorit",
-                    tint = if (isFavorite) HeartRed else Color.Gray,
+                    tint = if (isFavorite) WindklarTheme.colors.heartRed else Color.Gray,
                     modifier = Modifier.size(16.dp),
                 )
             }
@@ -354,7 +354,7 @@ private fun FavoriteRegionCard(
             ) {
                 Text(
                     text = region.name,
-                    color = Color(0xFF1A3A1A),
+                    color = WindklarTheme.colors.darkGreen,
                     fontSize = 18.sp,
                     lineHeight = 22.sp,
                     fontWeight = FontWeight.Medium,
