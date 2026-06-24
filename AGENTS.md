@@ -44,14 +44,15 @@ Current routes:
 - `Faq`
 - `Profile`
 - `Detail(parkId)`
+- `RegionDetail(type, id)`
 
 Bottom nav is owned by `AppNavHost` and contains `Map`, `Stats`, `Favorites`, `Faq`, `Profile`.
 
 Rules:
 - Do not duplicate bottom-nav ownership inside feature screens.
 - Top-level screens should not show their own back button to `Map`.
-- Back affordances belong to subflows such as detail, search overlay/sheet, data hint form and turbine subdetail.
-- Add `ReportWindTurbine` only when implementing the data-hint slice.
+- Back affordances belong to subflows such as detail, search overlay/sheet, data hint dialog and turbine subdetail.
+- `ReportWindTurbine` is implemented as a dialog inside the `Map` flow, not as a separate navigation route.
 
 ## Data
 Use this boundary:
@@ -92,11 +93,14 @@ Data-quality labels: `official`, `measured`, `derived`, `estimated`, `simulated`
 
 ## Current Baseline
 - App root: `app.App`, wrapping `AppNavHost` in `WindklarTheme`.
-- Implemented visual slices: `StartScreen`, `MapScreen`, `FavoritesScreen`, `FaqScreen`, `StatsScreen`, `ProfileScreen`.
-- Search is implemented inside the `Map` flow; the separate `SearchScreen`/`SearchViewModel`/`SearchUiState` placeholder has been removed.
-- Remaining scaffold slices: `ParkDetailScreen`, map/detail viewmodels, database driver factory and snapshot seed importer.
-- Missing slice: `ReportWindTurbine` route/package/form.
-- UI is mostly mock `UiState`; repositories/DAO contracts are not yet wired through generated SQLDelight APIs.
+- All screens implemented and wired to repository: `StartScreen`, `MapScreen`, `StatsScreen`, `FavoritesScreen`, `FaqScreen`, `ProfileScreen`, `ParkDetailScreen`, `RegionDetailScreen`.
+- Search is implemented inside the `Map` flow as an overlay/sheet.
+- `ReportWindTurbine` is implemented as a dialog composable (`ReportWindTurbineDialog`) triggered from the `MapScreen` pin-placement FAB.
+- All repositories/DAO contracts are wired through generated SQLDelight APIs.
+- Snapshot seed importer (`SnapshotSeedDataImporter`) runs on app startup with checksum-aware fast-path.
+- Data wireframe: `UI -> ViewModel -> Repository -> SQLDelight DAOs -> SQLite`.
+- `Favorites` supports both parks and regions; `Recents` records every opened park.
+- `FaqScreen` renders static content from `FaqUiState.defaultFaqQuestions` (no ViewModel).
 - AGP 9.x/KMP compatibility warning is accepted for the seminar MVP unless the build breaks.
 
 ## Build And Verify
