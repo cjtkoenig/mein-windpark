@@ -66,8 +66,10 @@ import app.feature.map.MapViewModel
 import app.feature.profile.ProfileScreen
 import app.feature.profile.ProfileViewModel
 import app.feature.start.StartScreen
+import app.feature.stats.ImpactDetailScreen
 import app.feature.stats.StatsScreen
 import app.feature.stats.StatsViewModel
+import app.feature.stats.toImpactDetailUiState
 
 import app.core.location.LocationProvider
 
@@ -307,6 +309,9 @@ fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
                     onNavigateToRegionDetail = { type, id ->
                         navigateTo(Route.RegionDetail(type, id))
                     },
+                    onNavigateToImpactDetail = { metricType ->
+                        navigateTo(Route.ImpactDetail(metricType))
+                    },
                 )
 
                 Route.Favorites -> FavoritesScreen(
@@ -356,6 +361,19 @@ fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
                         onNavigateToCountry = navigateToCountry,
                     )
                 }
+
+                is Route.ImpactDetail -> {
+                    ImpactDetailScreen(
+                        uiState = statsViewModel.uiState.toImpactDetailUiState(route.metricType),
+                        onBack = { navigateBack() },
+                        onNavigateToParkDetail = { parkId ->
+                            navigateTo(Route.Detail(parkId))
+                        },
+                        onNavigateToRegionDetail = { type, id ->
+                            navigateTo(Route.RegionDetail(type, id))
+                        },
+                    )
+                }
             }
         }
     }
@@ -380,4 +398,5 @@ private fun Route.navIcon(selected: Boolean): ImageVector = when (this) {
     Route.Start -> Icons.Outlined.Map
     is Route.Detail -> Icons.Outlined.Map
     is Route.RegionDetail -> Icons.Outlined.Map
+    is Route.ImpactDetail -> Icons.Outlined.QueryStats
 }

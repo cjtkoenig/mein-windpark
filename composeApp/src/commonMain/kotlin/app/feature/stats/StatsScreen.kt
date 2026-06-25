@@ -28,15 +28,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Air
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Eco
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.MonetizationOn
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.WindPower
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -58,7 +61,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -92,16 +94,28 @@ private val DarkText @Composable get() = WindklarTheme.colors.darkGreen
 private val MutedText @Composable get() = WindklarTheme.colors.mutedGreen
 private val SoftGreen @Composable get() = WindklarTheme.colors.paleGreen
 private val ImpactTones @Composable get() = listOf(
-    ImpactTone(container = PrimaryGreen, content = Color.White, secondary = SoftGreen),
-    ImpactTone(container = HeaderGreen, content = Color.White, secondary = SoftGreen),
-    ImpactTone(container = Color(0xFFB8DDB8), content = DarkText, secondary = Color(0xFF36543B)),
-    ImpactTone(container = Color(0xFFD6ECD2), content = DarkText, secondary = Color(0xFF4D6752)),
+    ImpactTone(container = Color.White, accent = PrimaryGreen, iconContainer = SoftGreen),
+    ImpactTone(
+        container = WindklarTheme.colors.impactToneContainer2,
+        accent = HeaderGreen,
+        iconContainer = WindklarTheme.colors.impactToneIcon2,
+    ),
+    ImpactTone(
+        container = WindklarTheme.colors.impactToneContainer3,
+        accent = WindklarTheme.colors.impactToneAccent3,
+        iconContainer = WindklarTheme.colors.impactToneIcon3,
+    ),
+    ImpactTone(
+        container = Color.White,
+        accent = WindklarTheme.colors.mutedGreen,
+        iconContainer = WindklarTheme.colors.impactToneIcon4,
+    ),
 )
 
 private data class ImpactTone(
     val container: Color,
-    val content: Color,
-    val secondary: Color,
+    val accent: Color,
+    val iconContainer: Color,
 )
 
 @Composable
@@ -109,14 +123,11 @@ fun StatsScreen(
     viewModel: StatsViewModel,
     onNavigateToParkDetail: (String) -> Unit,
     onNavigateToRegionDetail: (type: String, id: String) -> Unit,
+    onNavigateToImpactDetail: (metricType: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState = viewModel.uiState
     val scrollState = rememberScrollState()
-
-    LaunchedEffect(viewModel) {
-        viewModel.refresh()
-    }
 
     LaunchedEffect(uiState.selectedTab) {
         scrollState.scrollTo(0)
@@ -149,39 +160,30 @@ fun StatsScreen(
 
             when (uiState.selectedTab) {
                 StatsTab.OVERVIEW -> {
-                    ImpactGrid(cards = uiState.impactCards)
+                    ImpactGrid(
+                        cards = uiState.impactCards,
+                        onCardClick = { card -> onNavigateToImpactDetail(card.type.name) },
+                    )
 
                     StatsSectionCard {
                         SectionHeader(
-                            title = "CO2-Einsparung einordnen",
-                            subtitle = "Jahreswert mit groben Alltagsvergleichen",
-                        )
-                        Spacer(modifier = Modifier.height(14.dp))
-                        Co2ContextBlock(
-                            summary = uiState.co2Summary,
-                            values = uiState.co2Comparisons,
-                        )
-                        SourceFootnote(text = "Vergleichswerte sind gerundete Einordnungen auf Basis dokumentierter Annahmen.")
-                    }
-
-                    StatsSectionCard {
-                        SectionHeader(
-                            title = "Leistungsklassen",
-                            subtitle = "Windparks nach installierter Gesamtleistung",
+                            title = "Größenklassen der Windparks",
+                            subtitle = "Installierte Gesamtleistung pro Windpark, nicht pro einzelner Anlage",
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         CapacityClassChart(values = uiState.capacityClasses)
+                        SourceFootnote(text = "Die Klassen sind bewusst grob, damit die Verteilung lesbar bleibt.")
                     }
 
                     uiState.districtComparison?.let { comparison ->
-                        StatsSectionCard {
+                        StatsSectionCard(
+                            modifier = Modifier.clickable {
+                                onNavigateToRegionDetail("district", comparison.districtId)
+                            },
+                        ) {
                             SectionHeader(
-                                title = "Kreis des letzten Parks",
-                                subtitle = if (comparison.isFallback) {
-                                    "Kein zuletzt geöffneter Park, daher stärkster Kreis im Snapshot"
-                                } else {
-                                    "Aus dem zuletzt geöffneten Windpark abgeleitet"
-                                },
+                                title = "Region zum letzten Park",
+                                subtitle = "Aus dem zuletzt geöffneten Windpark abgeleitet",
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             DistrictComparisonBlock(comparison = comparison)
@@ -189,12 +191,7 @@ fun StatsScreen(
                     }
 
                     StatsSectionCard {
-                        SectionHeader(
-                            title = "Datenqualität",
-                            subtitle = "Warum manche Werte Schätzungen sind",
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        QualityNotes(notes = uiState.qualityNotes)
+                        CollapsibleQualityNotes(notes = uiState.qualityNotes)
                         if (uiState.attribution.isNotBlank()) {
                             SourceFootnote(text = uiState.attribution)
                         }
@@ -245,7 +242,7 @@ fun StatsScreen(
                                 RankingType.PARKS -> "Windparks im Snapshot basierend auf MaStR/Open-MaStR-Stammdaten."
                                 RankingType.CITIES -> "Städte und Gemeinden aggregiert nach dem Gemeindeschlüssel (AGS)."
                                 RankingType.DISTRICTS -> "Die Kreisebene wird aus den ersten fünf Stellen der AGS-Gemeindekennung abgeleitet; fehlende Kreisnamen werden angenähert."
-                                RankingType.STATES -> "Bundesländer aggregiert auf Basis der offiziellen Länderkennungen; Offshore-Windparks werden gemäß ihrer Netzanschlusspunkte den Küstenländern zugeordnet."
+                                RankingType.STATES -> "Bundesländer aggregiert auf Basis der offiziellen Länderkennungen."
                             }
                         )
                     }
@@ -415,7 +412,10 @@ private fun OverviewCard(
 }
 
 @Composable
-private fun ImpactGrid(cards: List<StatsImpactCard>) {
+private fun ImpactGrid(
+    cards: List<StatsImpactCard>,
+    onCardClick: (StatsImpactCard) -> Unit,
+) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         cards.take(4).chunked(2).forEach { rowCards ->
             Row(
@@ -427,7 +427,10 @@ private fun ImpactGrid(cards: List<StatsImpactCard>) {
                     ImpactCard(
                         card = card,
                         tone = ImpactTones[toneIndex.coerceIn(0, ImpactTones.lastIndex)],
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(220.dp),
+                        onClick = { onCardClick(card) },
                     )
                 }
                 if (rowCards.size == 1) {
@@ -443,18 +446,23 @@ private fun ImpactCard(
     card: StatsImpactCard,
     tone: ImpactTone,
     modifier: Modifier = Modifier,
+    onClick: () -> Unit,
 ) {
+    val shape = RoundedCornerShape(12.dp)
     Surface(
-        modifier = modifier.heightIn(min = 228.dp),
-        shape = RoundedCornerShape(12.dp),
+        modifier = modifier
+            .clip(shape)
+            .clickable(onClick = onClick),
+        shape = shape,
         color = tone.container,
-        shadowElevation = 4.dp,
+        shadowElevation = 2.dp,
+        tonalElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -462,21 +470,21 @@ private fun ImpactCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(tone.content.copy(alpha = 0.14f)),
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(tone.iconContainer),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = card.icon.imageVector(),
                         contentDescription = null,
-                        tint = tone.content,
-                        modifier = Modifier.size(20.dp),
+                        tint = tone.accent,
+                        modifier = Modifier.size(19.dp),
                     )
                 }
                 Text(
                     text = card.title,
-                    color = tone.content,
+                    color = DarkText,
                     fontSize = 13.sp,
                     lineHeight = 16.sp,
                     fontWeight = FontWeight.Medium,
@@ -487,9 +495,9 @@ private fun ImpactCard(
 
             Text(
                 text = card.value,
-                color = tone.content,
-                fontSize = 26.sp,
-                lineHeight = 30.sp,
+                color = DarkText,
+                fontSize = 25.sp,
+                lineHeight = 29.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -497,7 +505,7 @@ private fun ImpactCard(
 
             Text(
                 text = card.description,
-                color = tone.secondary,
+                color = MutedText,
                 fontSize = 13.sp,
                 lineHeight = 17.sp,
                 maxLines = 3,
@@ -505,119 +513,50 @@ private fun ImpactCard(
             )
 
             Spacer(modifier = Modifier.weight(1f))
-            QualityPill(quality = card.quality)
-        }
-    }
-}
-
-@Composable
-private fun Co2ContextBlock(
-    summary: String,
-    values: List<Co2Comparison>,
-) {
-    if (summary.isBlank() && values.isEmpty()) {
-        EmptyText(text = "Noch keine CO2-Vergleichswerte verfügbar.")
-        return
-    }
-
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(SoftGreen),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Eco,
-                    contentDescription = null,
-                    tint = PrimaryGreen,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = summary.ifBlank { "Keine Angabe" },
-                    color = DarkText,
-                    fontSize = 24.sp,
-                    lineHeight = 29.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = "geschätzte vermiedene Emissionen pro Jahr",
-                    color = MutedText,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
-                )
-            }
-        }
-
-        values.forEach { value ->
-            Co2ComparisonRow(value = value)
-        }
-    }
-}
-
-@Composable
-private fun Co2ComparisonRow(value: Co2Comparison) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Box(
-            modifier = Modifier
-                .padding(top = 5.dp)
-                .size(7.dp)
-                .clip(CircleShape)
-                .background(PrimaryGreen),
-        )
-        Column(modifier = Modifier.weight(1f)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = value.label,
-                    color = DarkText,
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp,
+                    text = card.metaLabel,
+                    color = MutedText,
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
                 )
-                Text(
-                    text = value.value,
-                    color = DarkText,
-                    fontSize = 14.sp,
-                    lineHeight = 18.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(start = 10.dp),
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "Details",
+                        color = tone.accent,
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = tone.accent,
+                        modifier = Modifier.size(15.dp),
+                    )
+                }
             }
-            Text(
-                text = value.description,
-                color = MutedText,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-            )
         }
     }
 }
 
 @Composable
 private fun StatsSectionCard(
+    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         color = WindklarTheme.colors.cardBackground,
         shadowElevation = 3.dp,
@@ -809,7 +748,6 @@ private fun FullRankingDialog(
     }
 }
 
-
 @Composable
 private fun DistrictComparisonBlock(comparison: DistrictComparison) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -869,6 +807,30 @@ private fun DistrictComparisonBlock(comparison: DistrictComparison) {
                 label = "Anlagen",
                 value = comparison.turbines,
                 modifier = Modifier.weight(1f),
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(SoftGreen)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Kreisdetails öffnen",
+                color = PrimaryGreen,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Icon(
+                imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+                contentDescription = null,
+                tint = PrimaryGreen,
+                modifier = Modifier.size(18.dp),
             )
         }
     }
@@ -1014,6 +976,15 @@ private fun CapacityClassChart(values: List<CapacityClassStat>) {
                         fontSize = 11.sp,
                         lineHeight = 14.sp,
                         textAlign = TextAlign.Center,
+                    )
+                    Text(
+                        text = value.description,
+                        color = MutedText.copy(alpha = 0.78f),
+                        fontSize = 10.sp,
+                        lineHeight = 13.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = formatGermanNumber(value.count),
@@ -1500,6 +1471,68 @@ private enum class ComparisonDialogTarget {
 }
 
 @Composable
+private fun CollapsibleQualityNotes(notes: List<StatsQualityNote>) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .clickable { expanded = !expanded }
+                .padding(vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(SoftGreen),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = PrimaryGreen,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Datenqualität",
+                    color = DarkText,
+                    fontSize = 18.sp,
+                    lineHeight = 24.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = "Stammdaten offiziell, Windparks abgeleitet, Wirkungswerte geschätzt.",
+                    color = MutedText,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                )
+            }
+            Icon(
+                imageVector = if (expanded) Icons.Outlined.KeyboardArrowUp else Icons.Outlined.KeyboardArrowDown,
+                contentDescription = if (expanded) "Einklappen" else "Ausklappen",
+                tint = PrimaryGreen,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+
+        AnimatedVisibility(visible = expanded) {
+            QualityNotes(notes = notes)
+        }
+    }
+}
+
+@Composable
 private fun QualityNotes(notes: List<StatsQualityNote>) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         notes.forEach { note ->
@@ -1588,7 +1621,7 @@ private fun EmptyText(text: String) {
 }
 
 private fun StatsIcon.imageVector(): ImageVector = when (this) {
-    StatsIcon.Wind -> Icons.Outlined.Air
+    StatsIcon.Wind -> Icons.Outlined.WindPower
     StatsIcon.Production -> Icons.Outlined.Bolt
     StatsIcon.Capacity -> Icons.Outlined.Bolt
     StatsIcon.Household -> Icons.Outlined.Home

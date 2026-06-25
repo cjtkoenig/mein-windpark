@@ -39,6 +39,16 @@ sealed interface Route {
             else -> "Region"
         }
     }
+
+    data class ImpactDetail(val metricType: String) : Route {
+        override val title: String = when (metricType) {
+            "Households" -> "Haushalte"
+            "MunicipalBenefit" -> "Kommunaler Nutzen"
+            "Turbines" -> "Anlagen"
+            "Co2" -> "CO2 gespart"
+            else -> "Auswertung"
+        }
+    }
 }
 
 val topLevelRoutes: List<Route> = listOf(
