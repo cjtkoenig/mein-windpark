@@ -112,7 +112,7 @@ internal fun buildHouseholdsImpactDetail(
     val nationalShare = totalHouseholds / GERMAN_HOUSEHOLDS_TOTAL
     return HouseholdsImpactDetail(
         summaryValue = formatCompact(totalHouseholds),
-        summarySubtitle = "rechnerisch versorgte Haushalte",
+        summarySubtitle = "Haushalte mit durchschnittlichem Jahresverbrauch",
         topParks = topParks,
         nationalSharePercent = "${formatGermanNumber(nationalShare * 100.0, 2)} %",
         avgPerPark = formatCompact(avgPerPark),
@@ -147,7 +147,7 @@ internal fun buildMunicipalBenefitImpactDetail(
     )
     return MunicipalBenefitImpactDetail(
         summaryValue = formatCurrency(states.sumOf { it.municipalBenefitEur ?: 0.0 }),
-        summarySubtitle = "mögliche Beteiligung an Land (§ 6 EEG)",
+        summarySubtitle = "pro Jahr nach § 6 EEG orientiert",
         topDistricts = topDistricts,
         minPerPark = formatCurrency(min),
         medianPerPark = formatCurrency(median),
@@ -175,7 +175,7 @@ internal fun buildTurbinesImpactDetail(
     val avgPerPark = if (parks.isNotEmpty()) turbines.size.toDouble() / parks.size else 0.0
     return TurbinesImpactDetail(
         summaryValue = formatGermanNumber(turbines.size),
-        summarySubtitle = "Windanlagen im lokalen Snapshot",
+        summarySubtitle = "aus MaStR/Open-MaStR im lokalen Snapshot",
         byDecade = byDecade,
         heightBuckets = heightBuckets,
         topParks = topParks,
@@ -202,7 +202,7 @@ internal fun buildCo2ImpactDetail(
     )
     return Co2ImpactDetail(
         summaryValue = formatCo2(totalCo2Kg),
-        summarySubtitle = "geschätzte vermiedene Emissionen pro Jahr",
+        summarySubtitle = "pro Jahr gegenüber Strommix-Emissionen",
         topParks = topParks,
         equivalents = buildCo2Comparisons(totalCo2Kg),
         assumptions = listOf(

@@ -45,7 +45,6 @@ import app.core.model.RankingItem
 import app.core.ui.components.BreadcrumbSegment
 import app.core.ui.components.FactList
 import app.core.ui.components.FactListItem
-import app.core.ui.components.ImpactMetricRow
 import app.core.ui.components.RankingList
 import app.core.ui.components.WindklarHeader
 import app.core.ui.theme.WindklarTheme
@@ -77,6 +76,10 @@ fun ImpactDetailScreen(
         else -> "Auswertung"
     }
     val metricIcon = uiState.metricType.impactDetailIcon()
+    val metricSubtitle = when (uiState.metricType) {
+        "Turbines" -> "Snapshot der Stammdaten"
+        else -> "Deutschlandweite Einordnung"
+    }
 
     Column(
         modifier = Modifier
@@ -86,7 +89,7 @@ fun ImpactDetailScreen(
     ) {
         WindklarHeader(
             title = metricTitle,
-            subtitle = "Detaillierte Auswertung",
+            subtitle = metricSubtitle,
             navigationIcon = {
                 Box(
                     modifier = Modifier
@@ -130,10 +133,10 @@ fun ImpactDetailScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             when (uiState.metricType) {
-                "Households" -> uiState.householdsDetail?.let { HouseholdsDetailContent(it, metricIcon, onNavigateToParkDetail, onNavigateToRegionDetail) }
-                "MunicipalBenefit" -> uiState.municipalBenefitDetail?.let { MunicipalBenefitDetailContent(it, metricIcon, onNavigateToRegionDetail) }
-                "Turbines" -> uiState.turbinesDetail?.let { TurbinesDetailContent(it, metricIcon, onNavigateToParkDetail, onNavigateToRegionDetail) }
-                "Co2" -> uiState.co2Detail?.let { Co2DetailContent(it, metricIcon, onNavigateToParkDetail, onNavigateToRegionDetail) }
+                "Households" -> uiState.householdsDetail?.let { HouseholdsDetailContent(it, onNavigateToParkDetail, onNavigateToRegionDetail) }
+                "MunicipalBenefit" -> uiState.municipalBenefitDetail?.let { MunicipalBenefitDetailContent(it, onNavigateToRegionDetail) }
+                "Turbines" -> uiState.turbinesDetail?.let { TurbinesDetailContent(it, onNavigateToParkDetail, onNavigateToRegionDetail) }
+                "Co2" -> uiState.co2Detail?.let { Co2DetailContent(it, onNavigateToParkDetail, onNavigateToRegionDetail) }
             }
             Spacer(modifier = Modifier.height(4.dp))
         }
@@ -177,7 +180,6 @@ private fun ImpactSummaryBlock(
     label: String,
     value: String,
     subtitle: String,
-    icon: ImageVector,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -186,15 +188,31 @@ private fun ImpactSummaryBlock(
         shadowElevation = 8.dp,
         tonalElevation = 0.dp,
     ) {
-        ImpactMetricRow(
-            icon = icon,
-            label = label,
-            value = value,
-            isMissing = false,
-            note = subtitle,
-            showNote = true,
+        Column(
             modifier = Modifier.padding(16.dp),
-        )
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = label,
+                color = DarkText,
+                fontSize = 14.sp,
+                lineHeight = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = value,
+                color = PrimaryGreen,
+                fontSize = 28.sp,
+                lineHeight = 34.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = subtitle,
+                color = MutedText,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+            )
+        }
     }
 }
 
@@ -315,21 +333,19 @@ private fun HistogramChart(entries: List<ImpactBarEntry>, accentLast: Boolean = 
 @Composable
 private fun HouseholdsDetailContent(
     detail: HouseholdsImpactDetail,
-    icon: ImageVector,
     onNavigateToParkDetail: (String) -> Unit,
     onNavigateToRegionDetail: (String, String) -> Unit,
 ) {
     ImpactSummaryBlock(
-        label = "Versorgte Haushalte",
+        label = "Rechnerisch versorgbar",
         value = detail.summaryValue,
         subtitle = detail.summarySubtitle,
-        icon = icon,
     )
     ImpactSectionCard {
-        SectionTitle(title = "Einordnung")
+        SectionTitle(title = "Was bedeutet das?")
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Dieser Wert übersetzt die geschätzte Jahresproduktion in eine vertraute Haushaltsgröße. Er bedeutet nicht, dass diese Haushalte vertraglich direkt aus Windparks versorgt werden.",
+            text = "Die Zahl setzt die geschätzte Jahresproduktion ins Verhältnis zu 3.500 kWh pro Haushalt und Jahr. Sie beschreibt eine rechnerische Größenordnung, keine direkte Belieferung.",
             color = DarkText,
             fontSize = 14.sp,
             lineHeight = 21.sp,
@@ -357,18 +373,18 @@ private fun HouseholdsDetailContent(
 @Composable
 private fun MunicipalBenefitDetailContent(
     detail: MunicipalBenefitImpactDetail,
-    icon: ImageVector,
     onNavigateToRegionDetail: (String, String) -> Unit,
 ) {
     ImpactSummaryBlock(
-        label = "Kommunale Beteiligung an Land (§6 EEG)",
+        label = "Möglicher Betrag",
         value = detail.summaryValue,
         subtitle = detail.summarySubtitle,
-        icon = icon,
     )
     ImpactSectionCard {
+        SectionTitle(title = "Was bedeutet das?")
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Der Wert ordnet ein, welche Beteiligung für Gemeinden nach § 6 EEG rechnerisch möglich wäre. Er ist keine bestätigte Auszahlung und ersetzt keine lokalen Verträge oder Haushaltsdaten.",
+            text = "Der Betrag schätzt, was Gemeinden rechnerisch erhalten könnten. Ob tatsächlich gezahlt wird, hängt von lokalen Vereinbarungen ab.",
             color = DarkText,
             fontSize = 14.sp,
             lineHeight = 21.sp,
@@ -399,19 +415,19 @@ private fun MunicipalBenefitDetailContent(
 @Composable
 private fun TurbinesDetailContent(
     detail: TurbinesImpactDetail,
-    icon: ImageVector,
     onNavigateToParkDetail: (String) -> Unit,
     onNavigateToRegionDetail: (String, String) -> Unit,
 ) {
     ImpactSummaryBlock(
-        label = "Windenergieanlagen",
+        label = "Erfasste Windanlagen",
         value = detail.summaryValue,
         subtitle = detail.summarySubtitle,
-        icon = icon,
     )
     ImpactSectionCard {
+        SectionTitle(title = "Was bedeutet das?")
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Gezählt werden Windanlagen aus MaStR/Open-MaStR-Stammdaten. Eine Windanlage ist die technische Quellen- und Koordinateneinheit; Windparks sind die bürgernahe Gruppierung für Karte, Suche und Details.",
+            text = "Gezählt werden einzelne Windanlagen, nicht Windparks. Windparks sind in WindKlar die bürgernahe Gruppierung mehrerer Anlagen.",
             color = DarkText,
             fontSize = 14.sp,
             lineHeight = 21.sp,
@@ -444,19 +460,19 @@ private fun TurbinesDetailContent(
 @Composable
 private fun Co2DetailContent(
     detail: Co2ImpactDetail,
-    icon: ImageVector,
     onNavigateToParkDetail: (String) -> Unit,
     onNavigateToRegionDetail: (String, String) -> Unit,
 ) {
     ImpactSummaryBlock(
-        label = "Vermiedene CO2-Emissionen",
+        label = "Geschätzte Einsparung",
         value = detail.summaryValue,
         subtitle = detail.summarySubtitle,
-        icon = icon,
     )
     ImpactSectionCard {
+        SectionTitle(title = "Was bedeutet das?")
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "WindKlar berechnet die Einordnung aus geschätzter Jahresproduktion und einem Emissionsfaktor für den deutschen Strommix. Der Wert ist eine transparente Schätzung, keine gemessene Einsparung.",
+            text = "Die Zahl wird aus geschätzter Jahresproduktion und einem Emissionsfaktor für den deutschen Strommix berechnet. Sie ist eine Modellrechnung, kein gemessener Wert.",
             color = DarkText,
             fontSize = 14.sp,
             lineHeight = 21.sp,
