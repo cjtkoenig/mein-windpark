@@ -60,10 +60,7 @@ class MainActivity : ComponentActivity() {
                         db.hasTable("metric") &&
                         db.hasTable("snapshot_metadata") &&
                         db.hasTable("app_setting")
-                    hasRequiredTables &&
-                        db.countRows("wind_park") > 0L &&
-                        db.countRows("wind_turbine") > 0L &&
-                        db.countRows("metric") > 0L
+                    hasRequiredTables
                 }
             }.onFailure { error ->
                 println("MainActivity: Failed to validate existing database: ${error.message}")
@@ -100,10 +97,5 @@ class MainActivity : ComponentActivity() {
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
             arrayOf(tableName)
         ).use { cursor -> cursor.moveToFirst() }
-
-    private fun android.database.sqlite.SQLiteDatabase.countRows(tableName: String): Long =
-        rawQuery("SELECT COUNT(*) FROM $tableName", null).use { cursor ->
-            if (cursor.moveToFirst()) cursor.getLong(0) else 0L
-        }
 
 }

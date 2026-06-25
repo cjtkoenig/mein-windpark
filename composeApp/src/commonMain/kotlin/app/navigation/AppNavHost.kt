@@ -363,6 +363,9 @@ fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
                 }
 
                 is Route.ImpactDetail -> {
+                    LaunchedEffect(route.metricType) {
+                        statsViewModel.loadImpactDetail(route.metricType)
+                    }
                     ImpactDetailScreen(
                         uiState = statsViewModel.uiState.toImpactDetailUiState(route.metricType),
                         onBack = { navigateBack() },

@@ -129,6 +129,10 @@ fun StatsScreen(
     val uiState = viewModel.uiState
     val scrollState = rememberScrollState()
 
+    LaunchedEffect(viewModel) {
+        viewModel.loadIfNeeded()
+    }
+
     LaunchedEffect(uiState.selectedTab) {
         scrollState.scrollTo(0)
     }

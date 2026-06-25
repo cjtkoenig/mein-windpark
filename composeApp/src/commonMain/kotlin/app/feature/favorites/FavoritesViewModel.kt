@@ -15,113 +15,119 @@ class FavoritesViewModel(private val repository: WindParkRepository) : ViewModel
     var uiState: FavoritesUiState by mutableStateOf(FavoritesUiState())
         private set
 
-    init {
-        loadData()
-    }
+    private var hasLoaded = false
+    private var isLoading = false
 
-    fun loadData() {
+    fun loadData(force: Boolean = false) {
+        if (isLoading || (!force && hasLoaded)) return
+        isLoading = true
         viewModelScope.launch {
-            val favs = repository.getFavoriteWindParks()
-            val recents = repository.getRecentWindParks(5)
-            val favRegions = repository.getFavoriteRegions()
-            
-            val allParks = repository.getWindParks()
-            val favRegionParkIds = favRegions.flatMap { region ->
-                allParks.filter { park ->
-                    when (region.type.lowercase()) {
-                        "city" -> park.municipalityId == region.id
-                        "district" -> park.districtId == region.id
-                        "state" -> park.stateId == region.id
-                        else -> false
+            try {
+                val favs = repository.getFavoriteWindParks()
+                val recents = repository.getRecentWindParks(5)
+                val favRegions = repository.getFavoriteRegions()
+
+                val allParks = repository.getWindParks()
+                val favRegionParkIds = favRegions.flatMap { region ->
+                    allParks.filter { park ->
+                        when (region.type.lowercase()) {
+                            "city" -> park.municipalityId == region.id
+                            "district" -> park.districtId == region.id
+                            "state" -> park.stateId == region.id
+                            else -> false
+                        }
                     }
+                }.map { it.id }.toSet()
+                val regionMetricsList = repository.getMetricsForParks(favRegionParkIds.toList())
+
+                // Batch load all metrics for favorites and recents to avoid N+1 DB queries
+                val batchParkIds = (favs.map { it.id } + recents.map { it.id }).distinct()
+                val batchMetricsList = repository.getMetricsForParks(batchParkIds)
+                val batchMetricsByParkId = batchMetricsList.groupBy { it.subjectId }
+
+                val favUiList = favs.map { park ->
+                    val metrics = batchMetricsByParkId[park.id] ?: emptyList()
+                    val prodMetric = metrics.firstOrNull { it.metricType == "annual_production" }
+                    val co2Metric = metrics.firstOrNull { it.metricType == "co2_savings" }
+
+                    val prodStr = formatProduction(prodMetric?.value)
+                    val co2Str = formatCo2(co2Metric?.value)
+
+                    FavoriteParkUiModel(
+                        id = park.id,
+                        name = park.name,
+                        distance = "Gemeinde ${park.municipalityName}",
+                        production = prodStr,
+                        co2Reduction = co2Str,
+                        thumbnail = getThumbnailForId(park.id),
+                        isFavorite = park.isFavorite,
+                    )
                 }
-            }.map { it.id }.toSet()
-            val regionMetricsList = repository.getMetricsForParks(favRegionParkIds.toList())
-            
-            // Batch load all metrics for favorites and recents to avoid N+1 DB queries
-            val batchParkIds = (favs.map { it.id } + recents.map { it.id }).distinct()
-            val batchMetricsList = repository.getMetricsForParks(batchParkIds)
-            val batchMetricsByParkId = batchMetricsList.groupBy { it.subjectId }
 
-            val favUiList = favs.map { park ->
-                val metrics = batchMetricsByParkId[park.id] ?: emptyList()
-                val prodMetric = metrics.firstOrNull { it.metricType == "annual_production" }
-                val co2Metric = metrics.firstOrNull { it.metricType == "co2_savings" }
-                
-                val prodStr = formatProduction(prodMetric?.value)
-                val co2Str = formatCo2(co2Metric?.value)
-                
-                FavoriteParkUiModel(
-                    id = park.id,
-                    name = park.name,
-                    distance = "Gemeinde ${park.municipalityName}",
-                    production = prodStr,
-                    co2Reduction = co2Str,
-                    thumbnail = getThumbnailForId(park.id),
-                    isFavorite = park.isFavorite,
-                )
-            }
-
-            val favRegionUiList = favRegions.map { region ->
-                val regionParks = allParks.filter { park ->
-                    when (region.type.lowercase()) {
-                        "city" -> park.municipalityId == region.id
-                        "district" -> park.districtId == region.id
-                        "state" -> park.stateId == region.id
-                        else -> false
+                val favRegionUiList = favRegions.map { region ->
+                    val regionParks = allParks.filter { park ->
+                        when (region.type.lowercase()) {
+                            "city" -> park.municipalityId == region.id
+                            "district" -> park.districtId == region.id
+                            "state" -> park.stateId == region.id
+                            else -> false
+                        }
                     }
+
+                    val regionParkIds = regionParks.map { it.id }.toSet()
+                    val regionMetrics = regionMetricsList.filter { it.subjectId in regionParkIds }
+
+                    val prodMetricSum = regionMetrics.filter { it.metricType == "annual_production" }.sumOf { it.value ?: 0.0 }
+                    val co2MetricSum = regionMetrics.filter { it.metricType == "co2_savings" }.sumOf { it.value ?: 0.0 }
+
+                    val prodStr = formatProduction(prodMetricSum)
+                    val co2Str = formatCo2(co2MetricSum)
+
+                    FavoriteRegionUiModel(
+                        id = region.id,
+                        name = region.name,
+                        type = region.type,
+                        typeLabel = when (region.type.lowercase()) {
+                            "city" -> "Gemeinde"
+                            "district" -> "Landkreis"
+                            "state" -> "Bundesland"
+                            else -> "Region"
+                        },
+                        production = prodStr,
+                        co2Reduction = co2Str,
+                        thumbnail = getThumbnailForId(region.id),
+                        isFavorite = true
+                    )
                 }
-                
-                val regionParkIds = regionParks.map { it.id }.toSet()
-                val regionMetrics = regionMetricsList.filter { it.subjectId in regionParkIds }
-                
-                val prodMetricSum = regionMetrics.filter { it.metricType == "annual_production" }.sumOf { it.value ?: 0.0 }
-                val co2MetricSum = regionMetrics.filter { it.metricType == "co2_savings" }.sumOf { it.value ?: 0.0 }
-                
-                val prodStr = formatProduction(prodMetricSum)
-                val co2Str = formatCo2(co2MetricSum)
-                
-                FavoriteRegionUiModel(
-                    id = region.id,
-                    name = region.name,
-                    type = region.type,
-                    typeLabel = when (region.type.lowercase()) {
-                        "city" -> "Gemeinde"
-                        "district" -> "Landkreis"
-                        "state" -> "Bundesland"
-                        else -> "Region"
-                    },
-                    production = prodStr,
-                    co2Reduction = co2Str,
-                    thumbnail = getThumbnailForId(region.id),
-                    isFavorite = true
-                )
-            }
 
-            val recentUiList = recents.map { park ->
-                val metrics = batchMetricsByParkId[park.id] ?: emptyList()
-                val prodMetric = metrics.firstOrNull { it.metricType == "annual_production" }
-                val co2Metric = metrics.firstOrNull { it.metricType == "co2_savings" }
-                
-                val prodStr = formatProduction(prodMetric?.value)
-                val co2Str = formatCo2(co2Metric?.value)
-                
-                FavoriteParkUiModel(
-                    id = park.id,
-                    name = park.name,
-                    distance = "Gemeinde ${park.municipalityName}",
-                    production = prodStr,
-                    co2Reduction = co2Str,
-                    thumbnail = getThumbnailForId(park.id),
-                    isFavorite = park.isFavorite,
-                )
-            }
+                val recentUiList = recents.map { park ->
+                    val metrics = batchMetricsByParkId[park.id] ?: emptyList()
+                    val prodMetric = metrics.firstOrNull { it.metricType == "annual_production" }
+                    val co2Metric = metrics.firstOrNull { it.metricType == "co2_savings" }
 
-            uiState = FavoritesUiState(
-                parks = favUiList,
-                regions = favRegionUiList,
-                recents = recentUiList
-            )
+                    val prodStr = formatProduction(prodMetric?.value)
+                    val co2Str = formatCo2(co2Metric?.value)
+
+                    FavoriteParkUiModel(
+                        id = park.id,
+                        name = park.name,
+                        distance = "Gemeinde ${park.municipalityName}",
+                        production = prodStr,
+                        co2Reduction = co2Str,
+                        thumbnail = getThumbnailForId(park.id),
+                        isFavorite = park.isFavorite,
+                    )
+                }
+
+                uiState = FavoritesUiState(
+                    parks = favUiList,
+                    regions = favRegionUiList,
+                    recents = recentUiList
+                )
+                hasLoaded = true
+            } finally {
+                isLoading = false
+            }
         }
     }
 
