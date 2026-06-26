@@ -13,7 +13,7 @@ The app is built for a university seminar with the Umweltbundesamt as seminar cu
 - [Agent Instructions](AGENTS.md): concise implementation rules for coding agents.
 
 ## Product Snapshot
-- `Windanlage` is the atomic MaStR/Open-MaStR-backed onshore source-data and coordinate unit.
+- `Windanlage` is the atomic MaStR-backed onshore source-data and coordinate unit.
 - `Windpark` is the primary citizen-facing unit for map, search, favorites, detail and municipality context.
 - Excludes offshore wind parks entirely, focusing strictly on wind energy installations on land (onshore).
 - MVP runtime data is local-first via SQLDelight.
@@ -80,7 +80,7 @@ Current SQLDelight files live in `composeApp/src/commonMain/sqldelight/app/data/
 - `DataHint.sq`
 - `SnapshotMetadata.sq`
 
-MaStR/Open-MaStR preprocessing lives outside the app in `data/`. The app imports
+MaStR preprocessing lives outside the app in `data/`. The app imports
 only the app-ready JSON snapshot from Compose resources into SQLDelight.
 
 Data-quality labels: `official`, `measured`, `derived`, `estimated`, `simulated`, `missing`.

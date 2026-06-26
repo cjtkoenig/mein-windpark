@@ -333,7 +333,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                             type = StatsImpactType.Turbines,
                             title = "Anlagen",
                             value = formatInteger(activeTurbineCount),
-                            description = "MaStR/Open-MaStR-Stammdaten im Snapshot",
+                            description = "MaStR-Stammdaten im Snapshot",
                             quality = "official",
                             metaLabel = "Offiziell",
                             icon = StatsIcon.Wind,
@@ -378,7 +378,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                         StatsQualityNote(
                             label = "Windanlagen",
                             quality = "official",
-                            description = "Stammdaten aus MaStR/Open-MaStR.",
+                            description = "Stammdaten aus MaStR.",
                         ),
                         StatsQualityNote(
                             label = "Windparks",
@@ -838,13 +838,13 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
         val parkCount = (nationalSummary?.windParkCount ?: parks.size).coerceAtLeast(1)
         return TurbinesImpactDetail(
             summaryValue = formatGermanNumber(totalTurbines),
-            summarySubtitle = "aus MaStR/Open-MaStR im lokalen Snapshot",
+            summarySubtitle = "aus MaStR im lokalen Snapshot",
             byDecade = byDecade,
             heightBuckets = heightBuckets,
             topParks = topParks,
             avgPerPark = "${formatGermanNumber(totalTurbines.toDouble() / parkCount, 1)} Anlagen/Park",
             assumptions = listOf(
-                StatsImpactFact("Quelle", "MaStR/Open-MaStR"),
+                StatsImpactFact("Quelle", "MaStR"),
                 StatsImpactFact("Einheit", "Windanlage"),
                 StatsImpactFact("Darstellung", "Windpark als UX-Einheit"),
                 StatsImpactFact("Datenstand", "lokaler Snapshot, keine Live-Daten"),

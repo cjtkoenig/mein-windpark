@@ -13,7 +13,7 @@ Seminar context: the app is built for a university course with the Umweltbundesa
 Product tone: factual, accessible and transparent about uncertainty. Do not make the app feel like advertising.
 
 ## MVP Rules
-- `Windanlage` is the atomic MaStR/Open-MaStR-backed source-data and coordinate unit.
+- `Windanlage` is the atomic MaStR-backed source-data and coordinate unit.
 - `Windpark` is the citizen-facing UX unit for map, search, favorites, detail and municipality context.
 - Use a Germany-wide preprocessed local JSON snapshot imported into SQLDelight; no live API dependency for baseline runtime flows.
 - Search belongs inside the `Map` flow as an overlay/sheet, not as a bottom-nav tab.

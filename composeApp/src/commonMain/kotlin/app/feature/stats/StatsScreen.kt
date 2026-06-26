@@ -243,7 +243,7 @@ fun StatsScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         SourceFootnote(
                             text = when (uiState.rankingType) {
-                                RankingType.PARKS -> "Windparks im Snapshot basierend auf MaStR/Open-MaStR-Stammdaten."
+                                RankingType.PARKS -> "Windparks im Snapshot basierend auf MaStR-Stammdaten."
                                 RankingType.CITIES -> "Städte und Gemeinden aggregiert nach dem Gemeindeschlüssel (AGS)."
                                 RankingType.DISTRICTS -> "Die Kreisebene wird aus den ersten fünf Stellen der AGS-Gemeindekennung abgeleitet; fehlende Kreisnamen werden angenähert."
                                 RankingType.STATES -> "Bundesländer aggregiert auf Basis der offiziellen Länderkennungen."

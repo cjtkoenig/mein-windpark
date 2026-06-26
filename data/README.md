@@ -18,9 +18,8 @@ into SQLDelight.
 The official MaStR bulk download from Bundesnetzagentur is the source of truth:
 https://www.marktstammdatenregister.de/MaStR/Datendownload
 
-`open-mastr` may be used as an adapter if it makes download or parsing easier,
-but it is not the domain source. App runtime code must not call MaStR or
-open-mastr directly.
+Helper tooling may be used for download or parsing, but it is not the domain
+source. App runtime code must not call MaStR directly.
 
 Current repository snapshot:
 
@@ -104,4 +103,4 @@ Runtime behavior:
 - Raw MaStR files are intentionally ignored because they are large and updated
   frequently.
 - The smoke snapshot remains useful for contract checks, but the currently
-  bundled app snapshot is the generated open-MaStR wind snapshot.
+  bundled app snapshot is the generated MaStR wind snapshot.

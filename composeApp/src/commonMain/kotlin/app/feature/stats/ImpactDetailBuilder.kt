@@ -175,13 +175,13 @@ internal fun buildTurbinesImpactDetail(
     val avgPerPark = if (parks.isNotEmpty()) turbines.size.toDouble() / parks.size else 0.0
     return TurbinesImpactDetail(
         summaryValue = formatGermanNumber(turbines.size),
-        summarySubtitle = "aus MaStR/Open-MaStR im lokalen Snapshot",
+        summarySubtitle = "aus MaStR im lokalen Snapshot",
         byDecade = byDecade,
         heightBuckets = heightBuckets,
         topParks = topParks,
         avgPerPark = "${formatGermanNumber(avgPerPark, 1)} Anlagen/Park",
         assumptions = listOf(
-            StatsImpactFact("Quelle", "MaStR/Open-MaStR"),
+            StatsImpactFact("Quelle", "MaStR"),
             StatsImpactFact("Einheit", "Windanlage"),
             StatsImpactFact("Darstellung", "Windpark als UX-Einheit"),
             StatsImpactFact("Datenstand", "lokaler Snapshot, keine Live-Daten"),

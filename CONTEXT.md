@@ -73,7 +73,7 @@ An estimated citizen-facing value for expected municipal participation under §6
 _Avoid_: confirmed municipal payment without a payment source
 
 **Echte Stammdaten**:
-Public source-backed master data for wind energy installations, especially MaStR/Open-MaStR fields such as coordinates, installed capacity, status, type, height, and wind park assignment.
+Public source-backed master data for wind energy installations, especially MaStR fields such as coordinates, installed capacity, status, type, height, and wind park assignment.
 _Avoid_: demo data when the value comes from a public register
 
 **Geschaetzte Wirkungsdaten**:

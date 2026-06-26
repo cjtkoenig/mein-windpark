@@ -122,7 +122,7 @@ private val defaultFaqQuestions = listOf(
     FaqQuestionUiModel(
         id = "data-source",
         question = "Woher kommen die Daten?",
-        answer = "Die Anlagen-Stammdaten stammen aus öffentlichen Quellen wie MaStR/Open-MaStR und werden für den MVP als deutschlandweiter Snapshot vorverarbeitet. Die App nutzt diesen lokalen Datensatz zur Laufzeit, statt für die Grundfunktionen live eine externe API abzufragen.",
+        answer = "Die Anlagen-Stammdaten stammen aus öffentlichen Quellen wie MaStR und werden für den MVP als deutschlandweiter Snapshot vorverarbeitet. Die App nutzt diesen lokalen Datensatz zur Laufzeit, statt für die Grundfunktionen live eine externe API abzufragen.",
         icon = FaqQuestionIcon.Data,
         category = FaqCategory.DataTrust,
     ),
