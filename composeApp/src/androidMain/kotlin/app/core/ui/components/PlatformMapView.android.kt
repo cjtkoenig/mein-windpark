@@ -1,6 +1,7 @@
 package app.core.ui.components
 
 import android.webkit.JavascriptInterface
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.WebChromeClient
@@ -93,7 +94,7 @@ actual fun PlatformMapView(
             <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
             <style>
                 $css
-                
+
                 body, html {
                     margin: 0; padding: 0; width: 100%; height: 100%;
                     background: $bg;
@@ -103,11 +104,29 @@ actual fun PlatformMapView(
                 }
                 #offline-message {
                     display: none;
-                    padding: 20px;
-                    text-align: center;
+                    position: absolute;
+                    left: 16px;
+                    right: 16px;
+                    bottom: 16px;
+                    z-index: 1000;
+                    padding: 12px 14px;
                     font-family: sans-serif;
                     color: $primary;
-                    margin-top: 100px;
+                    background: rgba(255, 255, 255, 0.94);
+                    border: 1px solid rgba(38, 110, 80, 0.24);
+                    border-radius: 12px;
+                    box-shadow: 0 3px 12px rgba(0,0,0,0.18);
+                    pointer-events: none;
+                }
+                #offline-message h3 {
+                    margin: 0 0 4px 0;
+                    font-size: 14px;
+                    line-height: 18px;
+                }
+                #offline-message p {
+                    margin: 0;
+                    font-size: 12px;
+                    line-height: 16px;
                 }
                 .leaflet-control-zoom { display: none !important; }
                 .leaflet-control-attribution { font-size: 8px !important; }
@@ -131,8 +150,8 @@ actual fun PlatformMapView(
         <body>
             <div id="map"></div>
             <div id="offline-message">
-                <h3>Karte kann nicht geladen werden</h3>
-                <p>Bitte &Uuml;berpr&uuml;fen Sie Ihre Internetverbindung.</p>
+                <h3>Basiskarte offline nicht verf&uuml;gbar</h3>
+                <p>Windparkdaten, Suche und gespeicherte Eintr&auml;ge bleiben lokal nutzbar.</p>
             </div>
             <script>
                 $js
@@ -140,7 +159,67 @@ actual fun PlatformMapView(
             <script>
                 var map;
                 var markersGroup;
-                
+                var baseTileLayer;
+                var pendingBaseTiles = 0;
+                var loadedBaseTiles = 0;
+                var failedBaseTiles = 0;
+
+                function showOfflineNotice() {
+                    var message = document.getElementById('offline-message');
+                    if (message) {
+                        message.style.display = 'block';
+                    }
+                }
+
+                function hideOfflineNotice() {
+                    var message = document.getElementById('offline-message');
+                    if (message) {
+                        message.style.display = 'none';
+                    }
+                }
+
+                function updateBaseMapAvailability() {
+                    if (loadedBaseTiles > 0) {
+                        hideOfflineNotice();
+                    } else if (pendingBaseTiles === 0 && failedBaseTiles > 0) {
+                        showOfflineNotice();
+                    }
+                }
+
+                function onBaseTileLoadStart() {
+                    if (pendingBaseTiles === 0) {
+                        loadedBaseTiles = 0;
+                        failedBaseTiles = 0;
+                    }
+                    pendingBaseTiles += 1;
+                }
+
+                function onBaseTileLoaded() {
+                    pendingBaseTiles = Math.max(0, pendingBaseTiles - 1);
+                    loadedBaseTiles += 1;
+                    updateBaseMapAvailability();
+                }
+
+                function onBaseTileFailed() {
+                    pendingBaseTiles = Math.max(0, pendingBaseTiles - 1);
+                    failedBaseTiles += 1;
+                    updateBaseMapAvailability();
+                }
+
+                function createBaseTileLayer() {
+                    baseTileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                        referrerPolicy: 'origin',
+                        updateWhenIdle: true,
+                        keepBuffer: 1
+                    });
+                    baseTileLayer.on('tileloadstart', onBaseTileLoadStart);
+                    baseTileLayer.on('tileload', onBaseTileLoaded);
+                    baseTileLayer.on('tileerror', onBaseTileFailed);
+                    baseTileLayer.on('load', updateBaseMapAvailability);
+                    return baseTileLayer;
+                }
+
                 try {
                     map = L.map('map', {
                         zoomControl: false,
@@ -149,10 +228,7 @@ actual fun PlatformMapView(
                         preferCanvas: true
                     }).setView([$centerLatDefault, $centerLonDefault], $zoomDefault);
 
-                    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                        referrerPolicy: 'origin'
-                    }).addTo(map);
+                    createBaseTileLayer().addTo(map);
 
                     markersGroup = L.layerGroup().addTo(map);
 
@@ -168,13 +244,12 @@ actual fun PlatformMapView(
                     }
 
                     map.on('moveend', notifyMove);
-                    
+
                     // Immediately try loading markers since Leaflet is ready
                     updateParksFromAndroid();
                 } catch (e) {
                     console.error("Leaflet initialization failed", e);
-                    document.getElementById('map').style.display = 'none';
-                    document.getElementById('offline-message').style.display = 'block';
+                    showOfflineNotice();
                 }
 
                 function setCenter(lat, lon, zoom) {
@@ -182,8 +257,8 @@ actual fun PlatformMapView(
                     map.invalidateSize();
                     var currentCenter = map.getCenter();
                     var currentZoom = map.getZoom();
-                    if (Math.abs(currentCenter.lat - lat) > 0.0001 || 
-                        Math.abs(currentCenter.lng - lon) > 0.0001 || 
+                    if (Math.abs(currentCenter.lat - lat) > 0.0001 ||
+                        Math.abs(currentCenter.lng - lon) > 0.0001 ||
                         Math.abs(currentZoom - zoom) > 0.1) {
                         map.setView([lat, lon], zoom);
                     }
@@ -193,10 +268,10 @@ actual fun PlatformMapView(
                     if (!map) return;
                     map.invalidateSize();
                     if (!markersGroup) return;
-                    
+
                     var markers = JSON.parse(markersJson);
                     var leafletMarkers = [];
-                    
+
                     markers.forEach(function(item) {
                         if (item.kind === 'Cluster') {
                             var label = formatClusterLabel(item.count);
@@ -257,7 +332,7 @@ actual fun PlatformMapView(
                                 fillOpacity: 1.0,
                                 opacity: 1.0
                             });
-                            
+
                             parkMarker.on('click', function() {
                                 if (window.AndroidBridge && window.AndroidBridge.onParkClicked) {
                                     window.AndroidBridge.onParkClicked(item.parkId || item.id);
@@ -266,7 +341,7 @@ actual fun PlatformMapView(
                             leafletMarkers.push(parkMarker);
                         }
                     });
-                    
+
                     map.removeLayer(markersGroup);
                     markersGroup = L.layerGroup(leafletMarkers).addTo(map);
                 }
@@ -351,11 +426,12 @@ actual fun PlatformMapView(
                         android.view.ViewGroup.LayoutParams.MATCH_PARENT,
                         android.view.ViewGroup.LayoutParams.MATCH_PARENT
                     )
-                    
+
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
+                    settings.cacheMode = WebSettings.LOAD_DEFAULT
                     settings.userAgentString = "${settings.userAgentString} WindKlar/1.0 product.lifecycle.windenergy"
-                    
+
                     webViewClient = object : WebViewClient() {
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
@@ -364,7 +440,7 @@ actual fun PlatformMapView(
                             }, 500)
                         }
                     }
-                    
+
                     webChromeClient = object : WebChromeClient() {
                         override fun onConsoleMessage(consoleMessage: ConsoleMessage?): Boolean {
                             val msg = consoleMessage?.message() ?: ""
@@ -389,7 +465,7 @@ actual fun PlatformMapView(
                         mainHandler = mainHandler
                     )
                     addJavascriptInterface(bridge, "AndroidBridge")
-                    
+
                     webViewRef = this
                     loadDataWithBaseURL("file:///android_asset/", htmlContent, "text/html", "UTF-8", null)
                 }
