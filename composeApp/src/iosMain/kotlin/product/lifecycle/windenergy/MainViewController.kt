@@ -152,4 +152,3 @@ private fun FatalStartupError(message: String) {
 
 private const val SOURCE_DATABASE_NAME = "windklar_source.db"
 private const val USER_DATABASE_NAME = "windklar_user.db"
-}
