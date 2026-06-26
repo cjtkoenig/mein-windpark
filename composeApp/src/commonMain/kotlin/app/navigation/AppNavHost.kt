@@ -330,7 +330,12 @@ fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
                     viewModel = profileViewModel,
                     onReplayOnboarding = {
                         navigateTo(Route.Start)
-                    }
+                    },
+                    onCreateDataHint = {
+                        routeHistory = emptyList()
+                        currentRoute = Route.Map
+                        mapViewModel.startPinPlacement(reportPark = null)
+                    },
                 )
                 
                 is Route.Detail -> {

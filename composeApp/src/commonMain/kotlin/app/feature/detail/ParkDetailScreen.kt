@@ -27,10 +27,10 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Eco
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Euro
+import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -63,6 +63,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import app.core.util.formatGermanNumber
 import app.core.util.isRedundantMunicipality
 import app.core.ui.components.WindklarHeader
+import app.feature.report.DataHintDialog
 
 private val ScreenBackground @Composable get() = WindklarTheme.colors.screenBackground
 private val PrimaryGreen @Composable get() = WindklarTheme.colors.primaryGreen
@@ -80,6 +81,7 @@ fun ParkDetailScreen(
     onNavigateToCountry: () -> Unit,
 ) {
     val uiState = viewModel.uiState
+    var showParkDataHintDialog by rememberSaveable { mutableStateOf(false) }
 
     if (uiState.isLoading) {
         Box(
@@ -240,8 +242,31 @@ fun ParkDetailScreen(
             // Subtle Footer
             DataStatusFooter(dataQuality = park.dataQuality)
 
+            DataHintActionCard(
+                onClick = { showParkDataHintDialog = true }
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
         }
+    }
+
+    if (showParkDataHintDialog) {
+        DataHintDialog(
+            latitude = park.latitude,
+            longitude = park.longitude,
+            contextLabel = "Windpark ${park.name}",
+            defaultCategory = "wrong_technical_data",
+            onDismiss = { showParkDataHintDialog = false },
+            onSubmit = { category, confidence, description, suggestedValue ->
+                viewModel.submitParkDataHint(
+                    category = category,
+                    confidence = confidence,
+                    description = description,
+                    suggestedValue = suggestedValue,
+                    onSuccess = { showParkDataHintDialog = false },
+                )
+            },
+        )
     }
 }
 
@@ -409,6 +434,36 @@ private fun TurbineCard(turbine: WindTurbine) {
                     Spacer(modifier = Modifier.weight(1f))
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun DataHintActionCard(
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = WindklarTheme.colors.statusOrangeLight,
+        contentColor = WindklarTheme.colors.statusOrangeDark,
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Warning,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Text(
+                text = "Datenfehler zum Windpark melden",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
     }
 }

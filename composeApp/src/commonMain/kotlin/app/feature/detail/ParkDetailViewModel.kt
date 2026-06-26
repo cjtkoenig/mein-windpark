@@ -64,4 +64,31 @@ class ParkDetailViewModel(
             uiState = uiState.copy(isFavorite = nextFav)
         }
     }
+
+    fun submitParkDataHint(
+        category: String,
+        confidence: String,
+        description: String,
+        suggestedValue: String?,
+        onSuccess: () -> Unit,
+    ) {
+        val park = uiState.park ?: return
+        viewModelScope.launch {
+            repository.submitDataHint(
+                category = category,
+                confidence = confidence,
+                description = description,
+                status = "ready_for_review",
+                windTurbineId = null,
+                windParkId = park.id,
+                municipalityId = park.municipalityId,
+                latitude = park.latitude,
+                longitude = park.longitude,
+                suggestedValue = suggestedValue,
+                imageUri = null,
+            )
+            onSuccess()
+        }
+    }
+
 }

@@ -62,6 +62,7 @@ private val PaleGreen @Composable get() = WindklarTheme.colors.paleGreen
 fun ProfileScreen(
     viewModel: ProfileViewModel,
     onReplayOnboarding: () -> Unit,
+    onCreateDataHint: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val uiState = viewModel.uiState
@@ -95,7 +96,8 @@ fun ProfileScreen(
                     viewModel.exportDataHints { csvContent ->
                         platformSharer.shareText(csvContent, "WindKlar Datenhinweise")
                     }
-                }
+                },
+                onCreateDataHintClick = onCreateDataHint,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -192,6 +194,7 @@ private fun InfoSettingsCard(
     onClearHistoryClick: () -> Unit,
     onReplayOnboardingClick: () -> Unit,
     onExportDataHintsClick: () -> Unit,
+    onCreateDataHintClick: () -> Unit,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -231,6 +234,14 @@ private fun InfoSettingsCard(
                 icon = Icons.Outlined.Share,
                 label = "Datenhinweise exportieren",
                 onClick = onExportDataHintsClick
+            )
+
+            SettingsRowDivider()
+
+            SettingsActionRow(
+                icon = Icons.Outlined.Info,
+                label = "Datenhinweis erstellen",
+                onClick = onCreateDataHintClick
             )
 
             SettingsRowDivider()

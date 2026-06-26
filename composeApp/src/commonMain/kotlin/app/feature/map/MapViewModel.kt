@@ -381,8 +381,7 @@ class MapViewModel(
         }
     }
 
-    fun startPinPlacement() {
-        val reportPark = uiState.selectedPark
+    fun startPinPlacement(reportPark: WindPark? = uiState.selectedPark) {
         uiState = uiState.copy(
             isPinPlacementMode = true,
             placementMarkerLat = reportPark?.latitude ?: uiState.mapCenterLat,

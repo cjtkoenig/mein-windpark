@@ -39,10 +39,11 @@ import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ReportWindTurbineDialog(
-    currentLatitude: Double,
-    currentLongitude: Double,
-    parkName: String?,
+fun DataHintDialog(
+    latitude: Double?,
+    longitude: Double?,
+    contextLabel: String,
+    defaultCategory: String = "wrong_technical_data",
     onDismiss: () -> Unit,
     onSubmit: (category: String, confidence: String, description: String, suggestedValue: String?) -> Unit
 ) {
@@ -62,7 +63,7 @@ fun ReportWindTurbineDialog(
         "certain" to "Sicher"
     )
     
-    var selectedCategory by remember { mutableStateOf("missing_installation") }
+    var selectedCategory by remember { mutableStateOf(defaultCategory) }
     var selectedConfidence by remember { mutableStateOf("likely") }
     var description by remember { mutableStateOf("") }
     var suggestedValue by remember { mutableStateOf("") }
@@ -91,11 +92,8 @@ fun ReportWindTurbineDialog(
                     lineHeight = 18.sp
                 )
 
-                val contextText = parkName?.takeIf { it.isNotBlank() }
-                    ?.let { "Bezug: Windpark $it" }
-                    ?: "Bezug: manuell gesetzter Pin (kein Windpark zugeordnet)"
                 Text(
-                    text = contextText,
+                    text = "Bezug: $contextLabel",
                     color = WindklarTheme.colors.darkGreen.copy(alpha = 0.7f),
                     fontSize = 12.sp,
                     lineHeight = 16.sp,
@@ -184,11 +182,13 @@ fun ReportWindTurbineDialog(
                 }
                 
                 // Coordinates info
-                Text(
-                    text = "Gemeldete Koordinaten: ${currentLatitude.roundTo(5)}° N, ${currentLongitude.roundTo(5)}° O",
-                    color = WindklarTheme.colors.mutedGreen,
-                    fontSize = 12.sp
-                )
+                if (latitude != null && longitude != null) {
+                    Text(
+                        text = "Gemeldete Koordinaten: ${latitude.roundTo(5)}° N, ${longitude.roundTo(5)}° O",
+                        color = WindklarTheme.colors.mutedGreen,
+                        fontSize = 12.sp
+                    )
+                }
             }
         },
         confirmButton = {

@@ -31,13 +31,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Bolt
-import androidx.compose.material.icons.outlined.Eco
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.NearMe
-import androidx.compose.material.icons.outlined.Remove
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
@@ -85,7 +80,7 @@ import app.core.ui.components.EntityType
 import app.core.ui.components.PlatformMapView
 import app.core.ui.components.rememberLocationPermissionLauncher
 import app.core.ui.theme.WindklarTheme
-import app.feature.report.ReportWindTurbineDialog
+import app.feature.report.DataHintDialog
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import windklar.composeapp.generated.resources.Res
@@ -347,60 +342,28 @@ fun MapScreen(
             }
         }
 
-        // Floating Action Buttons (Zoom and Location controls)
-        Column(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 16.dp, bottom = if (uiState.isPinPlacementMode) 96.dp else 200.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            if (!uiState.isPinPlacementMode) {
-                // Report wind turbine
-                MapActionButton(
-                    icon = Icons.Outlined.Edit,
-                    contentDescription = "Datenhinweis erfassen",
-                    containerColor = PrimaryGreen,
-                    contentColor = Color.White,
-                    onClick = { viewModel.startPinPlacement() }
-                )
-                
-                // Center location (Real GPS or Fallback)
-                MapActionButton(
-                    icon = Icons.Outlined.NearMe,
-                    contentDescription = "Standort zentrieren",
-                    containerColor = WindklarTheme.colors.cardBackground,
-                    contentColor = PrimaryGreen,
-                    onClick = {
-                        viewModel.centerOnUserLocation(
-                            onPermissionRequired = {
-                                permissionLauncher()
-                            },
-                            onError = { message ->
-                                scope.launch {
-                                    snackbarHostState.showSnackbar(message)
-                                }
+        // Location stays visible; zoom is handled through map gestures on mobile.
+        if (!uiState.isPinPlacementMode) {
+            MapActionButton(
+                icon = Icons.Outlined.NearMe,
+                contentDescription = "Standort zentrieren",
+                containerColor = WindklarTheme.colors.cardBackground,
+                contentColor = PrimaryGreen,
+                onClick = {
+                    viewModel.centerOnUserLocation(
+                        onPermissionRequired = {
+                            permissionLauncher()
+                        },
+                        onError = { message ->
+                            scope.launch {
+                                snackbarHostState.showSnackbar(message)
                             }
-                        )
-                    }
-                )
-            }
-
-            // Zoom in
-            MapActionButton(
-                icon = Icons.Outlined.Add,
-                contentDescription = "Vergrößern",
-                containerColor = WindklarTheme.colors.cardBackground,
-                contentColor = PrimaryGreen,
-                onClick = { viewModel.onZoomChanged(uiState.zoomLevel + 1.0f) }
-            )
-
-            // Zoom out
-            MapActionButton(
-                icon = Icons.Outlined.Remove,
-                contentDescription = "Verkleinern",
-                containerColor = WindklarTheme.colors.cardBackground,
-                contentColor = PrimaryGreen,
-                onClick = { viewModel.onZoomChanged(uiState.zoomLevel - 1.0f) }
+                        }
+                    )
+                },
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 16.dp, bottom = 144.dp),
             )
         }
 
@@ -505,10 +468,12 @@ fun MapScreen(
         val reportLatitude = reportedLatitude
         val reportLongitude = reportedLongitude
 
-        ReportWindTurbineDialog(
-            currentLatitude = reportLatitude,
-            currentLongitude = reportLongitude,
-            parkName = reportPark?.name,
+        DataHintDialog(
+            latitude = reportLatitude,
+            longitude = reportLongitude,
+            contextLabel = reportPark?.name?.takeIf { it.isNotBlank() }?.let { "Windpark $it" }
+                ?: "manuell gesetzter Pin",
+            defaultCategory = "missing_installation",
             onDismiss = { showReportDialog = false },
             onSubmit = { category, confidence, description, suggestedValue ->
                 viewModel.submitDataHint(
@@ -624,11 +589,12 @@ private fun MapActionButton(
     contentDescription: String,
     containerColor: Color,
     contentColor: Color,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Surface(
         onClick = onClick,
-        modifier = Modifier.size(56.dp),
+        modifier = modifier.size(56.dp),
         shape = CircleShape,
         color = containerColor,
         shadowElevation = 10.dp,
