@@ -70,8 +70,13 @@ kotlin {
 
 sqldelight {
     databases {
-        create("AppDatabase") {
-            packageName.set("app.data.local.db")
+        create("SourceDatabase") {
+            packageName.set("app.data.local.source")
+            srcDirs("src/commonMain/sqldelightSource")
+        }
+        create("UserDatabase") {
+            packageName.set("app.data.local.user")
+            srcDirs("src/commonMain/sqldelightUser")
         }
     }
 }

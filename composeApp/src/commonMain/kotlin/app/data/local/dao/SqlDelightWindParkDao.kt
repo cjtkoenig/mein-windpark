@@ -1,11 +1,11 @@
 package app.data.local.dao
 
-import app.data.local.db.AppDatabase
-import app.data.local.db.Wind_park
+import app.data.local.source.SourceDatabase
+import app.data.local.source.Wind_park
 import app.data.local.entity.WindParkEntity
 
 class SqlDelightWindParkDao(
-    private val database: AppDatabase,
+    private val database: SourceDatabase,
 ) : WindParkDao {
     override suspend fun getAll(): List<WindParkEntity> {
         return database.windParkQueries.selectAllWindParks().executeAsList().map { it.toEntity() }

@@ -1,24 +1,11 @@
 package app.navigation
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,14 +14,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import app.data.seed.ImportProgress
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.Favorite
@@ -50,10 +31,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import app.core.ui.components.WindKlarBottomNav
 import app.core.ui.components.WindKlarBottomNavItem
 import app.core.ui.theme.WindklarTheme
-import app.data.local.db.AppDatabase
+import app.data.local.source.SourceDatabase
+import app.data.local.user.UserDatabase
 import app.data.repository.SqlDelightWindParkRepository
-import app.data.seed.SnapshotSeedDataImporter
-import app.data.snapshot.ComposeResourceSnapshotProvider
 import app.feature.detail.ParkDetailScreen
 import app.feature.detail.ParkDetailViewModel
 import app.feature.detail.RegionDetailScreen
@@ -74,157 +54,36 @@ import app.feature.stats.toImpactDetailUiState
 import app.core.location.LocationProvider
 
 @Composable
-fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
-    var isSeeded by remember { mutableStateOf(false) }
-    var seedError by remember { mutableStateOf<String?>(null) }
-    var retryCount by remember { mutableStateOf(0) }
-    var startRoute by remember { mutableStateOf<Route>(Route.Start) }
-    var importProgress by remember { mutableStateOf<ImportProgress>(ImportProgress.CheckingChecksum) }
+fun AppNavHost(
+    sourceDatabase: SourceDatabase,
+    userDatabase: UserDatabase,
+    locationProvider: LocationProvider,
+) {
+    var startRoute by remember { mutableStateOf<Route?>(null) }
 
-    LaunchedEffect(database, retryCount) {
-        try {
-            seedError = null
-            println("AppNavHost: Starting database seeding (attempt ${retryCount + 1})...")
-            val importer = SnapshotSeedDataImporter(
-                database = database,
-                snapshotProvider = ComposeResourceSnapshotProvider()
-            )
-            importer.importIfNeeded { progress ->
-                CoroutineScope(Dispatchers.Main).launch {
-                    importProgress = progress
-                }
-            }
-            println("AppNavHost: Database seeding succeeded!")
-            
-            val repositoryTemp = SqlDelightWindParkRepository(database)
-            val completed = repositoryTemp.isOnboardingCompleted()
-            startRoute = if (completed) Route.Map else Route.Start
-            
-            isSeeded = true
-        } catch (e: Throwable) {
-            println("AppNavHost ERROR: Database seeding failed!")
-            e.printStackTrace()
-            seedError = e.message ?: e.toString()
-        }
+    LaunchedEffect(sourceDatabase, userDatabase) {
+        val repositoryTemp = SqlDelightWindParkRepository(sourceDatabase, userDatabase)
+        val completed = repositoryTemp.isOnboardingCompleted()
+        startRoute = if (completed) Route.Map else Route.Start
     }
 
-    if (!isSeeded) {
+    val resolvedStartRoute = startRoute
+    if (resolvedStartRoute == null) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(WindklarTheme.colors.screenBackground)
-                .padding(24.dp),
+                .background(WindklarTheme.colors.screenBackground),
             contentAlignment = Alignment.Center
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                if (seedError != null) {
-                    Text(
-                        text = "Fehler beim Laden",
-                        color = WindklarTheme.colors.errorRed,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "Beim Laden der Windparkdaten ist ein Fehler aufgetreten:\n$seedError",
-                        color = WindklarTheme.colors.errorDarkRed,
-                        fontSize = 14.sp,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Button(
-                            onClick = { retryCount++ },
-                            colors = ButtonDefaults.buttonColors(containerColor = WindklarTheme.colors.primaryGreen)
-                        ) {
-                            Text("Erneut versuchen")
-                        }
-                        Button(
-                            onClick = { 
-                                println("AppNavHost: Seeding bypassed by user.")
-                                isSeeded = true 
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = WindklarTheme.colors.gray)
-                        ) {
-                            Text("Ohne Daten starten")
-                        }
-                    }
-                } else {
-                    Text(
-                        text = "WindKlar",
-                        color = WindklarTheme.colors.darkGreen,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    val (statusText, fraction) = when (val progress = importProgress) {
-                        ImportProgress.CheckingChecksum -> Pair("Datenbank wird überprüft...", null)
-                        ImportProgress.ReadingJson -> Pair("Daten-Snapshot wird geladen...", null)
-                        ImportProgress.DecodingJson -> Pair("Entpacke Windparks und Windanlagen...", null)
-                        is ImportProgress.SeedingParks -> {
-                            val percent = progress.current.toFloat() / progress.total.coerceAtLeast(1)
-                            val weighted = percent * 0.10f
-                            Pair("Schreibe Windparks (${progress.current} / ${progress.total})...", weighted)
-                        }
-                        is ImportProgress.SeedingTurbines -> {
-                            val percent = progress.current.toFloat() / progress.total.coerceAtLeast(1)
-                            val weighted = 0.10f + percent * 0.40f
-                            Pair("Schreibe Windanlagen (${progress.current} / ${progress.total})...", weighted)
-                        }
-                        is ImportProgress.SeedingMetrics -> {
-                            val percent = progress.current.toFloat() / progress.total.coerceAtLeast(1)
-                            val weighted = 0.50f + percent * 0.50f
-                            Pair("Schreibe Wirkungswerte (${progress.current} / ${progress.total})...", weighted)
-                        }
-                        ImportProgress.SeedingMetadata -> Pair("Schließe Import ab...", 1.0f)
-                        ImportProgress.Completed -> Pair("Import abgeschlossen!", 1.0f)
-                    }
-
-                    if (fraction != null) {
-                        LinearProgressIndicator(
-                            progress = { fraction },
-                            modifier = Modifier
-                                .size(width = 240.dp, height = 8.dp)
-                                .clip(RoundedCornerShape(4.dp)),
-                            color = WindklarTheme.colors.primaryGreen,
-                            trackColor = WindklarTheme.colors.trackGreen
-                        )
-                        Text(
-                            text = "${(fraction * 100).toInt()}%",
-                            color = WindklarTheme.colors.primaryGreen,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    } else {
-                        LinearProgressIndicator(
-                            modifier = Modifier
-                                .size(width = 240.dp, height = 8.dp)
-                                .clip(RoundedCornerShape(4.dp)),
-                            color = WindklarTheme.colors.primaryGreen,
-                            trackColor = WindklarTheme.colors.trackGreen
-                        )
-                    }
-                    Text(
-                        text = statusText,
-                        color = WindklarTheme.colors.mutedGreen,
-                        fontSize = 14.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                }
-            }
+            CircularProgressIndicator(color = WindklarTheme.colors.primaryGreen)
         }
         return
     }
 
-    val repository = remember(database) { SqlDelightWindParkRepository(database) }
-    var currentRoute: Route by remember(startRoute) { mutableStateOf(startRoute) }
+    val repository = remember(sourceDatabase, userDatabase) {
+        SqlDelightWindParkRepository(sourceDatabase, userDatabase)
+    }
+    var currentRoute: Route by remember(resolvedStartRoute) { mutableStateOf(resolvedStartRoute) }
     var routeHistory by remember { mutableStateOf(listOf<Route>()) }
     val coroutineScope = rememberCoroutineScope()
 

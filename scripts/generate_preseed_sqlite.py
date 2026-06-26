@@ -13,65 +13,84 @@ from typing import Any, Iterable
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SNAPSHOT = (
     REPO_ROOT
-    / "composeApp"
-    / "src"
-    / "commonMain"
-    / "composeResources"
-    / "files"
+    / "data"
     / "snapshots"
     / "windklar_snapshot.json"
 )
-DEFAULT_METADATA = DEFAULT_SNAPSHOT.with_name("windklar_snapshot_metadata.json")
-DEFAULT_OUTPUT = REPO_ROOT / "data" / "snapshots" / "windklar_seed.db"
+DEFAULT_OUTPUT = REPO_ROOT / "data" / "snapshots" / "windklar_source_seed.db"
+LEGACY_PRESEED = REPO_ROOT / "data" / "snapshots" / "windklar_seed.db"
 ANDROID_ASSETS_OUTPUT = (
-    REPO_ROOT / "androidApp" / "src" / "main" / "assets" / "windklar_seed.db"
+    REPO_ROOT / "androidApp" / "src" / "main" / "assets" / "windklar_source_seed.db"
 )
-# Mirrors SnapshotSeedDataImporter companion constants so the importer's
-# fast-path detects the preseeded DB and skips the full JSON import.
-SETTING_SNAPSHOT_IMPORT_VERSION_KEY = "snapshot_source_import_version"
-SETTING_SNAPSHOT_IMPORT_VERSION = "snapshot_source_v3_precomputed_summaries"
+IOS_RESOURCE_OUTPUT = (
+    REPO_ROOT / "iosApp" / "iosApp" / "Resources" / "windklar_source_seed.db"
+)
 SCHEMA_DIR = (
     REPO_ROOT
     / "composeApp"
     / "src"
     / "commonMain"
-    / "sqldelight"
+    / "sqldelightSource"
     / "app"
     / "data"
     / "local"
-    / "db"
+    / "source"
 )
 SCHEMA_FILES = (
     "WindPark.sq",
     "WindTurbine.sq",
     "Metric.sq",
     "SnapshotMetadata.sq",
-    "Favorite.sq",
-    "RecentWindPark.sq",
-    "DataHint.sq",
-    "Setting.sq",
     "Summary.sq",
 )
+SOURCE_TABLES = (
+    "wind_park",
+    "wind_turbine",
+    "metric",
+    "snapshot_metadata",
+    "park_operational_summary",
+    "region_summary",
+    "map_search_entry",
+    "national_stats_summary",
+)
+APP_READY_FIELDS = (
+    "parkOperationalSummaries",
+    "regionSummaries",
+    "mapSearchEntries",
+    "nationalStatsSummary",
+)
+
+
+def default_snapshot_path() -> Path:
+    snapshot_dir = REPO_ROOT / "data" / "snapshots"
+    dated_snapshots = [
+        path
+        for path in snapshot_dir.glob("windklar_snapshot_*.json")
+        if path.stem.removeprefix("windklar_snapshot_")[:4].isdigit()
+    ]
+    if dated_snapshots:
+        return sorted(dated_snapshots)[-1]
+    return DEFAULT_SNAPSHOT
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Generate windklar_seed.db from the bundled WindKlar JSON snapshot "
-            "and the current SQLDelight CREATE TABLE schema."
+            "Generate windklar_source_seed.db from a WindKlar pipeline JSON snapshot "
+            "and the current SQLDelight source-database CREATE TABLE schema."
         )
     )
     parser.add_argument(
         "--snapshot",
         type=Path,
-        default=DEFAULT_SNAPSHOT,
-        help=f"Path to windklar_snapshot.json (default: {DEFAULT_SNAPSHOT})",
+        default=default_snapshot_path(),
+        help="Path to a pipeline-generated windklar_snapshot*.json file.",
     )
     parser.add_argument(
         "--metadata",
         type=Path,
-        default=DEFAULT_METADATA,
-        help=f"Path to windklar_snapshot_metadata.json (default: {DEFAULT_METADATA})",
+        default=None,
+        help="Optional metadata wrapper JSON used to cross-check snapshot metadata.",
     )
     parser.add_argument(
         "--output",
@@ -149,6 +168,10 @@ def require_list(value: dict[str, Any], key: str) -> list[Any]:
     if not isinstance(nested, list):
         raise ValueError(f"Expected array field '{key}'.")
     return nested
+
+
+def is_app_ready_snapshot(snapshot: dict[str, Any]) -> bool:
+    return all(key in snapshot for key in APP_READY_FIELDS)
 
 
 def validate_metadata(snapshot: dict[str, Any], metadata_wrapper: dict[str, Any]) -> None:
@@ -558,14 +581,6 @@ def populate_database(connection: sqlite3.Connection, snapshot: dict[str, Any]) 
         map_search_count = insert_map_search_entries(connection, map_search_entries)
         national_summary_count = insert_national_stats_summary(connection, national_summary)
         insert_snapshot_metadata(connection, snapshot)
-        connection.execute(
-            """
-            INSERT INTO app_setting(key, value)
-            VALUES (?, ?)
-            ON CONFLICT(key) DO UPDATE SET value = excluded.value
-            """,
-            (SETTING_SNAPSHOT_IMPORT_VERSION_KEY, SETTING_SNAPSHOT_IMPORT_VERSION),
-        )
 
     return {
         "wind_park": park_count,
@@ -617,13 +632,6 @@ def validate_generated_database(
             f"expected {expected_commissioning_years}, got {actual_commissioning_years}."
         )
 
-    stored_import_version = connection.execute(
-        "SELECT value FROM app_setting WHERE key = ?",
-        (SETTING_SNAPSHOT_IMPORT_VERSION_KEY,),
-    ).fetchone()
-    if stored_import_version is None or stored_import_version[0] != SETTING_SNAPSHOT_IMPORT_VERSION:
-        raise ValueError("Snapshot import version setting is missing or outdated.")
-
     user_version = connection.execute("PRAGMA user_version").fetchone()[0]
     expected_user_version = current_sqldelight_schema_version()
     if user_version != expected_user_version:
@@ -632,10 +640,77 @@ def validate_generated_database(
         )
 
 
-def generate_database(snapshot_path: Path, metadata_path: Path, output_path: Path, force: bool) -> None:
+def package_seed_database(output_path: Path) -> None:
+    import shutil
+    ANDROID_ASSETS_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(output_path, ANDROID_ASSETS_OUTPUT)
+    print(f"Copied source preseed DB to Android assets: {ANDROID_ASSETS_OUTPUT}")
+
+    IOS_RESOURCE_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(output_path, IOS_RESOURCE_OUTPUT)
+    print(f"Copied source preseed DB to iOS resources: {IOS_RESOURCE_OUTPUT}")
+
+
+def generate_database_from_legacy_preseed(legacy_path: Path, output_path: Path, force: bool) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    if output_path.exists() and not force:
+        raise FileExistsError(f"{output_path} already exists. Use --force to replace it.")
+
+    temporary_output = output_path.with_name(output_path.name + ".tmp")
+    if temporary_output.exists():
+        temporary_output.unlink()
+
+    try:
+        connection = sqlite3.connect(temporary_output)
+        try:
+            connection.execute("PRAGMA foreign_keys = ON")
+            connection.execute("PRAGMA synchronous = OFF")
+            create_schema(connection)
+            connection.execute("ATTACH DATABASE ? AS legacy", (str(legacy_path),))
+            with connection:
+                for table in SOURCE_TABLES:
+                    connection.execute(f"INSERT INTO {table} SELECT * FROM legacy.{table}")
+            violations = connection.execute("PRAGMA foreign_key_check").fetchall()
+            if violations:
+                raise ValueError(f"Foreign key check failed: {violations[:5]}")
+            for table in SOURCE_TABLES:
+                source_count = connection.execute(f"SELECT COUNT(*) FROM legacy.{table}").fetchone()[0]
+                output_count = connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                if source_count != output_count:
+                    raise ValueError(f"{table} count mismatch: expected {source_count}, got {output_count}.")
+        finally:
+            connection.close()
+
+        temporary_output.replace(output_path)
+    except Exception:
+        if temporary_output.exists():
+            temporary_output.unlink()
+        raise
+
+    print(f"Wrote {output_path}")
+    print(f"Converted source tables from legacy preseed: {legacy_path}")
+    print(f"SQLDelight user_version={current_sqldelight_schema_version()}")
+    package_seed_database(output_path)
+
+
+def generate_database(snapshot_path: Path, metadata_path: Path | None, output_path: Path, force: bool) -> None:
     snapshot = read_json(snapshot_path)
-    metadata_wrapper = read_json(metadata_path)
-    validate_metadata(snapshot, metadata_wrapper)
+    if metadata_path is not None:
+        metadata_wrapper = read_json(metadata_path)
+        validate_metadata(snapshot, metadata_wrapper)
+
+    if not is_app_ready_snapshot(snapshot):
+        if LEGACY_PRESEED.exists():
+            print(
+                "Selected JSON snapshot is not app-ready; converting the existing "
+                f"legacy preseed instead: {LEGACY_PRESEED}"
+            )
+            generate_database_from_legacy_preseed(LEGACY_PRESEED, output_path, force)
+            return
+        missing = ", ".join(key for key in APP_READY_FIELDS if key not in snapshot)
+        raise ValueError(
+            f"Snapshot is missing app-ready fields ({missing}) and no legacy preseed exists."
+        )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if output_path.exists() and not force:
@@ -669,22 +744,14 @@ def generate_database(snapshot_path: Path, metadata_path: Path, output_path: Pat
     print(f"Rows: {formatted_counts}")
     print(f"SQLDelight user_version={current_sqldelight_schema_version()}")
 
-    if ANDROID_ASSETS_OUTPUT.parent.exists():
-        ANDROID_ASSETS_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-        import shutil
-        shutil.copy2(output_path, ANDROID_ASSETS_OUTPUT)
-        print(f"Copied preseed DB to Android assets: {ANDROID_ASSETS_OUTPUT}")
-    else:
-        print(
-            "Skipped Android assets copy (androidApp/src/main/assets not found)."
-        )
+    package_seed_database(output_path)
 
 
 def main() -> None:
     args = parse_args()
     generate_database(
         snapshot_path=args.snapshot.resolve(),
-        metadata_path=args.metadata.resolve(),
+        metadata_path=args.metadata.resolve() if args.metadata is not None else None,
         output_path=args.output.resolve(),
         force=args.force,
     )

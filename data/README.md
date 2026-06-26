@@ -1,8 +1,9 @@
 # WindKlar data pipeline
 
 This directory keeps public source-data work outside the app runtime. The
-Compose app receives only an app-ready JSON snapshot and imports that snapshot
-into SQLDelight.
+Compose app receives only an app-ready source SQLite seed database. JSON
+snapshots may exist as pipeline artifacts, but they are not bundled with or
+decoded by the app runtime.
 
 ## Directory layout
 
@@ -10,7 +11,7 @@ into SQLDelight.
   aggregating, calculating, validating, and exporting snapshots.
 - `raw/`: ignored MaStR downloads such as ZIP or XML exports.
 - `intermediate/`: ignored normalized JSONL files.
-- `snapshots/`: app-ready snapshot releases that are small enough to commit, or
+- `snapshots/`: ignored generated snapshot releases, source seed databases, and
   smoke snapshots used for demo/build checks.
 
 ## Source policy
@@ -26,12 +27,10 @@ Current repository snapshot:
 - Official MaStR export used: `Gesamtdatenexport_20260620_26.1.zip`
   from the MaStR datendownload page.
 - Raw MaStR exports are ignored and are not committed because they are large.
-- Full generated snapshot:
-  `data/snapshots/windklar_snapshot_2026-06-20.json` (ignored).
-- Bundled app snapshot:
-  `composeApp/src/commonMain/composeResources/files/snapshots/windklar_snapshot.json`.
-- Bundled app metadata:
-  `composeApp/src/commonMain/composeResources/files/snapshots/windklar_snapshot_metadata.json`.
+- Full generated snapshots live in `data/snapshots/windklar_snapshot_YYYY-MM-DD.json` (ignored).
+- Bundled app source database:
+  `androidApp/src/main/assets/windklar_source_seed.db` and
+  `iosApp/iosApp/Resources/windklar_source_seed.db`.
 
 ## Common commands
 
@@ -49,43 +48,32 @@ python -m data.pipeline aggregate --input data/intermediate/wind_turbines_repair
 python -m data.pipeline calculate --turbines data/intermediate/wind_turbines_repaired.jsonl --parks data/intermediate/wind_parks.json --output data/snapshots/windklar_snapshot_YYYY-MM-DD.json --quality-report data/snapshots/windklar_repair_report_YYYY-MM-DD.json
 ```
 
-Copy the selected demo snapshot to
-`composeApp/src/commonMain/composeResources/files/snapshots/windklar_snapshot.json`
-before building the app.
-
 ### Preseed SQLite generator
 
-The preseed path is active on Android. To regenerate a SQLDelight-compatible
-SQLite database from the bundled app snapshot, run this command from the
-repository root:
+To regenerate the SQLDelight-compatible source SQLite seed database from the
+latest local pipeline snapshot, run this command from the repository root:
 
 ```powershell
 python scripts/generate_preseed_sqlite.py --force
 ```
 
-By default this reads
-`composeApp/src/commonMain/composeResources/files/snapshots/windklar_snapshot.json`
-and `windklar_snapshot_metadata.json`, then writes
-`data/snapshots/windklar_seed.db` and copies the result to
-`androidApp/src/main/assets/windklar_seed.db`. The preseed database also
-contains the `app_setting` row for the snapshot metric import version, so
-`SnapshotSeedDataImporter` detects it via its fast-path checksum check and
-skips the full JSON import on first start.
+By default this reads the newest dated
+`data/snapshots/windklar_snapshot_*.json`, writes
+`data/snapshots/windklar_source_seed.db`, and copies the result to Android and
+iOS bundle resources. Pass `--snapshot <path>` to select a specific pipeline
+snapshot.
 
 The output directory is ignored, so the database can be regenerated manually
 when the bundled snapshot or SQLDelight schema changes.
 
 Runtime behavior:
 
-- Android (`MainActivity`): on first start, copies the bundled
-  `windklar_seed.db` asset to the app database path before creating the
-  SQLDelight driver. The importer then verifies the checksum and skips the
-  JSON import. Subsequent starts reuse the existing database file.
-- iOS: the preseed database is not yet added to the Xcode app bundle; iOS
-  falls back to the JSON import path. To activate iOS preseed, add
-  `windklar_seed.db` to the `iosApp` target resources and mirror the
-  `preseedDatabaseFromAssets` copy step in `MainViewController.kt` before
-  `NativeSqliteDriver` is created.
+- Android and iOS copy `windklar_source_seed.db` to `windklar_source.db` before
+  creating SQLDelight drivers. If the bundled `snapshot_metadata.checksum_sha256`
+  changes, only the source DB is replaced.
+- Local user data is stored separately in `windklar_user.db`; app updates do
+  not replace it.
+- There is no runtime JSON fallback and no "start without data" mode.
 
 ## Known limitations
 
@@ -102,5 +90,5 @@ Runtime behavior:
 - Impact metrics are MVP estimates based on documented assumptions.
 - Raw MaStR files are intentionally ignored because they are large and updated
   frequently.
-- The smoke snapshot remains useful for contract checks, but the currently
-  bundled app snapshot is the generated MaStR wind snapshot.
+- The smoke snapshot remains useful for contract checks, but the bundled app
+  artifact is the generated MaStR source SQLite seed database.

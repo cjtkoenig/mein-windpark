@@ -11,21 +11,23 @@ import app.core.model.MapSearchEntry
 import app.core.model.NationalStatsSummary
 import app.core.model.RegionSummary
 import app.data.local.dao.*
-import app.data.local.db.Map_search_entry
-import app.data.local.db.National_stats_summary
-import app.data.local.db.Region_summary
+import app.data.local.source.Map_search_entry
+import app.data.local.source.National_stats_summary
+import app.data.local.source.Region_summary
+import app.data.local.source.SourceDatabase
+import app.data.local.user.UserDatabase
 import app.data.local.entity.WindParkEntity
-import app.data.local.db.AppDatabase
-import app.data.snapshot.SnapshotAssumptionDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 class SqlDelightWindParkRepository(
-    private val database: AppDatabase,
+    private val sourceDatabase: SourceDatabase,
+    private val userDatabase: UserDatabase,
     private val json: Json = Json {
         ignoreUnknownKeys = true
         explicitNulls = false
@@ -35,14 +37,14 @@ class SqlDelightWindParkRepository(
         const val ONBOARDING_COMPLETED_KEY = "onboarding_completed"
     }
 
-    private val windParkDao: WindParkDao = SqlDelightWindParkDao(database)
-    private val windTurbineDao: WindTurbineDao = SqlDelightWindTurbineDao(database)
-    private val metricDao: MetricDao = SqlDelightMetricDao(database)
-    private val favoriteDao: FavoriteDao = SqlDelightFavoriteDao(database)
-    private val recentWindParkDao: RecentWindParkDao = SqlDelightRecentWindParkDao(database)
-    private val dataHintDao: DataHintDao = SqlDelightDataHintDao(database)
-    private val snapshotMetadataDao: SnapshotMetadataDao = SqlDelightSnapshotMetadataDao(database)
-    private val settingsDao: SettingsDao = SqlDelightSettingsDao(database)
+    private val windParkDao: WindParkDao = SqlDelightWindParkDao(sourceDatabase)
+    private val windTurbineDao: WindTurbineDao = SqlDelightWindTurbineDao(sourceDatabase)
+    private val metricDao: MetricDao = SqlDelightMetricDao(sourceDatabase)
+    private val favoriteDao: FavoriteDao = SqlDelightFavoriteDao(userDatabase)
+    private val recentWindParkDao: RecentWindParkDao = SqlDelightRecentWindParkDao(userDatabase)
+    private val dataHintDao: DataHintDao = SqlDelightDataHintDao(userDatabase)
+    private val snapshotMetadataDao: SnapshotMetadataDao = SqlDelightSnapshotMetadataDao(sourceDatabase)
+    private val settingsDao: SettingsDao = SqlDelightSettingsDao(userDatabase)
 
     override suspend fun getWindParks(): List<WindPark> = withContext(Dispatchers.Default) {
         val favorites = favoriteDao.getFavoriteIds().toSet()
@@ -93,7 +95,7 @@ class SqlDelightWindParkRepository(
         if (favoriteEntities.isEmpty()) return@withContext emptyList()
 
         favoriteEntities.mapNotNull { entity ->
-            val region = database.summaryQueries
+            val region = sourceDatabase.summaryQueries
                 .selectRegionSummary(entity.regionType.lowercase(), entity.regionId)
                 .executeAsOneOrNull()
                 ?: return@mapNotNull null
@@ -179,15 +181,15 @@ class SqlDelightWindParkRepository(
     }
 
     override suspend fun getMapSearchEntries(): List<MapSearchEntry> = withContext(Dispatchers.Default) {
-        database.summaryQueries.selectAllMapSearchEntries().executeAsList().map { it.toDomain() }
+        sourceDatabase.summaryQueries.selectAllMapSearchEntries().executeAsList().map { it.toDomain() }
     }
 
     override suspend fun getRegionSummaries(type: String): List<RegionSummary> = withContext(Dispatchers.Default) {
-        database.summaryQueries.selectRegionSummaries(type.lowercase()).executeAsList().map { it.toDomain() }
+        sourceDatabase.summaryQueries.selectRegionSummaries(type.lowercase()).executeAsList().map { it.toDomain() }
     }
 
     override suspend fun getNationalStatsSummary(): NationalStatsSummary? = withContext(Dispatchers.Default) {
-        database.summaryQueries.selectNationalStatsSummary().executeAsOneOrNull()?.toDomain()
+        sourceDatabase.summaryQueries.selectNationalStatsSummary().executeAsOneOrNull()?.toDomain()
     }
 
 
@@ -320,7 +322,7 @@ class SqlDelightWindParkRepository(
     )
 
     private fun getOperationalSummaryMap(): Map<String, OperationalSummary> =
-        database.summaryQueries.selectAllParkOperationalSummaries().executeAsList().associate { row ->
+        sourceDatabase.summaryQueries.selectAllParkOperationalSummaries().executeAsList().associate { row ->
             row.wind_park_id to OperationalSummary(
                 parkStatus = row.park_status,
                 validStats = ValidParkStats(
@@ -410,6 +412,18 @@ class SqlDelightWindParkRepository(
     private data class OperationalSummary(
         val parkStatus: String,
         val validStats: ValidParkStats,
+    )
+
+    @Serializable
+    private data class SnapshotAssumptionDto(
+        val id: String,
+        val label: String,
+        val value: Double,
+        val unit: String,
+        val sourceName: String,
+        val sourceUrl: String,
+        val sourceDate: String,
+        val calculationNote: String,
     )
 }
 

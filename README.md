@@ -17,7 +17,7 @@ The app is built for a university seminar with the Umweltbundesamt as seminar cu
 - `Windpark` is the primary citizen-facing unit for map, search, favorites, detail and municipality context.
 - Excludes offshore wind parks entirely, focusing strictly on wind energy installations on land (onshore).
 - MVP runtime data is local-first via SQLDelight.
-- Baseline data should come from a Germany-wide preprocessed JSON snapshot, not live API calls.
+- Baseline source data ships as a Germany-wide preprocessed SQLite seed database, not runtime JSON or live API calls.
 - Production, CO2 savings, household equivalents and municipal participation need source, timestamp, data-quality and calculation metadata.
 - Search is part of the map flow, not bottom navigation.
 - Favorites and recently viewed wind parks are local state.
@@ -71,17 +71,11 @@ Target local model:
 - `data_hint`
 - optional `snapshot_metadata`
 
-Current SQLDelight files live in `composeApp/src/commonMain/sqldelight/app/data/local/db`:
-- `WindPark.sq`
-- `WindTurbine.sq`
-- `Metric.sq`
-- `Favorite.sq`
-- `RecentWindPark.sq`
-- `DataHint.sq`
-- `SnapshotMetadata.sq`
+Current SQLDelight files are split by persistence boundary:
+- `composeApp/src/commonMain/sqldelightSource`: read-only source data (`wind_park`, `wind_turbine`, `metric`, summaries, search entries, `snapshot_metadata`).
+- `composeApp/src/commonMain/sqldelightUser`: persistent local user data (`favorite_*`, `recent_wind_park`, `data_hint`, `app_setting`).
 
-MaStR preprocessing lives outside the app in `data/`. The app imports
-only the app-ready JSON snapshot from Compose resources into SQLDelight.
+MaStR preprocessing lives outside the app in `data/`. The app runtime does not bundle or import snapshot JSON; it opens a preseeded source SQLite database plus a separate user SQLite database.
 
 Data-quality labels: `official`, `measured`, `derived`, `estimated`, `simulated`, `missing`.
 
@@ -91,7 +85,7 @@ Data-quality labels: `official`, `measured`, `derived`, `estimated`, `simulated`
 - `composeApp/src/commonMain/kotlin/app/navigation`: routes and app nav host.
 - `composeApp/src/commonMain/kotlin/app/feature/*`: feature UI, state and viewmodels.
 - `composeApp/src/commonMain/kotlin/app/core`: shared UI, models, theme and utilities.
-- `composeApp/src/commonMain/kotlin/app/data`: repositories, DAO contracts, entities and seed import contracts.
+- `composeApp/src/commonMain/kotlin/app/data`: repositories, DAO contracts and entities.
 - `data`: source-data pipeline, ignored raw/intermediate MaStR files and generated snapshot releases.
 
 Platform-specific code should stay thin. Prefer shared code in `commonMain` unless a platform API requires otherwise.
@@ -112,8 +106,9 @@ Platform-specific code should stay thin. Prefer shared code in `commonMain` unle
 - Search is implemented inside the `Map` flow as an overlay/sheet; the separate `SearchScreen`/`SearchViewModel`/`SearchUiState` placeholder has been removed.
 - `ReportWindTurbine` is implemented as a dialog composable (`ReportWindTurbineDialog`) triggered from the `MapScreen` pin-placement FAB.
 - All repositories/DAO contracts are wired through generated SQLDelight APIs.
-- Snapshot seed importer (`SnapshotSeedDataImporter`) runs on app startup with checksum-aware fast-path. Android first start uses a bundled preseed SQLite database (`windklar_seed.db`) copied before driver creation; iOS falls back to JSON import.
-- Data wireframe: `UI -> ViewModel -> Repository -> SQLDelight DAOs -> SQLite`.
+- Android and iOS copy/replace the bundled source SQLite database (`windklar_source_seed.db`) before driver creation when the bundled snapshot checksum changes.
+- User data lives in a separate `windklar_user.db` and is not replaced by source-data updates.
+- Data wireframe: `UI -> ViewModel -> Repository -> SQLDelight DAOs -> SourceDatabase/UserDatabase -> SQLite`.
 - `Favorites` supports both parks and regions; `Recents` records every opened park.
 - `FaqScreen` renders static content from `FaqUiState.defaultFaqQuestions` (no ViewModel).
 - AGP 9.x/KMP compatibility warning is accepted for the seminar MVP unless the build breaks.

@@ -1,2 +1,0 @@
--- Force re-seeding of snapshot data due to schema changes
-DELETE FROM snapshot_metadata;

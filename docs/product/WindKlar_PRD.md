@@ -315,7 +315,7 @@ Der MVP konzentriert sich auf Transparenz mit hohem Nutzen für Bürgerinnen und
 
 ### Aktuelles SQLDelight-Schema im Repository
 
-Das Repository enthält bereits konkrete SQLDelight-Schemadateien unter `composeApp/src/commonMain/sqldelight/app/data/local/db`:
+Das Repository enthält bereits konkrete SQLDelight-Schemadateien getrennt nach Persistenzgrenze unter `composeApp/src/commonMain/sqldelightSource` und `composeApp/src/commonMain/sqldelightUser`:
 
 - `WindPark.sq`: Tabelle `wind_park` mit Aggregatfeldern, Quellenmetadaten, Gruppierungsmethode und Datenqualität; Queries für Auswahl aller Einträge, Auswahl per ID, Textsuche und Upsert.
 - `WindTurbine.sq`: Tabelle `wind_turbine` für atomare MaStR-basierte Anlagen-Stammdaten.
@@ -337,7 +337,7 @@ Implementiertes lokales Zielschema:
 - `data_hint`: lokale Datenhinweise mit Kategorie, Betreffreferenz, Standort, Beschreibung, Hinweissicherheit und lokalem Status.
 - `snapshot_metadata`: optionale Metadaten für Quelle, Importzeitstempel, Version und Berechnungsannahmen.
 
-Die Quellen-Datenpipeline lebt jetzt außerhalb der App unter `data/`, und die App importiert nur den appfertigen JSON-Snapshot, der unter Compose-Ressourcen gebündelt ist. Rohe und intermediäre MaStR-Dateien werden bewusst ignoriert.
+Die Quellen-Datenpipeline lebt jetzt außerhalb der App unter `data/`. Die App bündelt keinen Runtime-JSON-Snapshot mehr, sondern öffnet eine appfertige Source-SQLite-Datenbank und eine separate User-SQLite-Datenbank. Rohe und intermediäre MaStR-Dateien werden bewusst ignoriert.
 
 Aktualisierte Modellierungsentscheidung: Das SQL-Schema enthält `wind_turbine` als atomare MaStR-basierte Einheit. Windpark-Zeilen sind Aggregate oder kuratierte Gruppierungen über diese Anlagenzeilen.
 
@@ -500,8 +500,8 @@ Figma ist die Quelle der Wahrheit für Screenset, Informationsarchitektur, Kompo
 - Suche ist im `Map`-Flow umgesetzt; der separate `SearchScreen`-/`SearchViewModel`-/`SearchUiState`-Platzhalter wurde entfernt.
 - `ReportWindTurbine` ist als Dialog-Composable (`ReportWindTurbineDialog`) umgesetzt und wird über den Pin-Placement-FAB in `MapScreen` ausgelöst.
 - Alle Repositories/DAO-Verträge sind über generierte SQLDelight-Datenbank-APIs verdrahtet.
-- Snapshot-Seed-Importer (`SnapshotSeedDataImporter`) läuft beim App-Start mit Checksum-aware Fast-Path.
-- Daten-Fluss: `UI -> ViewModel -> Repository -> SQLDelight DAOs -> SQLite`.
+- Stammdaten und lokale Nutzerdaten sind in getrennte SQLDelight-Datenbanken aufgeteilt: `windklar_source.db` wird aus `windklar_source_seed.db` ersetzt, `windklar_user.db` bleibt über App-Updates erhalten.
+- Daten-Fluss: `UI -> ViewModel -> Repository -> SQLDelight DAOs -> SourceDatabase/UserDatabase -> SQLite`.
 - `Favorites` unterstützt Parks und Regionen; `Recents` speichert jeden geöffneten Park.
 - Aktueller Datenstand: Die UI ist an reale Repository- und SQLDelight-Daten angebunden; Mock-`UiState`-Defaults sind durch echte Daten ersetzt.
 - Aktuelle Assets: Start-Hintergrund/Icon und Favoriten-Windpark-Thumbnails sind unter `composeResources/drawable` gebündelt.

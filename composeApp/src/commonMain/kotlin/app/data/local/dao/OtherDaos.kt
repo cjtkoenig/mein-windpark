@@ -1,10 +1,11 @@
 package app.data.local.dao
 
-import app.data.local.db.AppDatabase
-import app.data.local.db.Wind_turbine
-import app.data.local.db.Metric as DbMetric
-import app.data.local.db.Snapshot_metadata
-import app.data.local.db.Data_hint
+import app.data.local.source.SourceDatabase
+import app.data.local.source.Wind_turbine
+import app.data.local.source.Metric as DbMetric
+import app.data.local.source.Snapshot_metadata
+import app.data.local.user.Data_hint
+import app.data.local.user.UserDatabase
 import app.core.model.WindTurbine
 import app.core.model.Metric
 import app.core.model.DataHint
@@ -25,7 +26,7 @@ data class ValidParkStats(
     val capacityKw: Long,
 )
 
-class SqlDelightWindTurbineDao(private val database: AppDatabase) : WindTurbineDao {
+class SqlDelightWindTurbineDao(private val database: SourceDatabase) : WindTurbineDao {
     override suspend fun getByParkId(parkId: String): List<WindTurbine> {
         return database.windTurbineQueries.selectWindTurbinesByParkId(parkId).executeAsList().map { it.toDomain() }
     }
@@ -154,7 +155,7 @@ interface MetricDao {
     suspend fun insertOrReplace(metric: Metric)
 }
 
-class SqlDelightMetricDao(private val database: AppDatabase) : MetricDao {
+class SqlDelightMetricDao(private val database: SourceDatabase) : MetricDao {
     override suspend fun getForSubject(subjectType: String, subjectId: String): List<Metric> {
         return database.metricQueries.selectMetricsForSubject(subjectType, subjectId).executeAsList().map { it.toDomain() }
     }
@@ -256,7 +257,7 @@ interface FavoriteDao {
     suspend fun removeRegionFavorite(type: String, id: String)
 }
 
-class SqlDelightFavoriteDao(private val database: AppDatabase) : FavoriteDao {
+class SqlDelightFavoriteDao(private val database: UserDatabase) : FavoriteDao {
     override suspend fun getFavoriteIds(): List<String> {
         return database.favoriteQueries.selectFavoriteIds().executeAsList()
     }
@@ -306,7 +307,7 @@ interface RecentWindParkDao {
     suspend fun clear()
 }
 
-class SqlDelightRecentWindParkDao(private val database: AppDatabase) : RecentWindParkDao {
+class SqlDelightRecentWindParkDao(private val database: UserDatabase) : RecentWindParkDao {
     override suspend fun getRecentWindParkIds(limit: Long): List<String> {
         return database.recentWindParkQueries.selectRecentWindParks(limit).executeAsList()
     }
@@ -343,7 +344,7 @@ interface DataHintDao {
     )
 }
 
-class SqlDelightDataHintDao(private val database: AppDatabase) : DataHintDao {
+class SqlDelightDataHintDao(private val database: UserDatabase) : DataHintDao {
     override suspend fun getAll(): List<DataHint> {
         return database.dataHintQueries.selectDataHints().executeAsList().map { it.toDomain() }
     }
@@ -422,7 +423,7 @@ interface SnapshotMetadataDao {
     suspend fun getLatest(): Snapshot_metadata?
 }
 
-class SqlDelightSnapshotMetadataDao(private val database: AppDatabase) : SnapshotMetadataDao {
+class SqlDelightSnapshotMetadataDao(private val database: SourceDatabase) : SnapshotMetadataDao {
     override suspend fun getLatest(): Snapshot_metadata? {
         return database.snapshotMetadataQueries.selectLatestSnapshot().executeAsOneOrNull()
     }
@@ -435,7 +436,7 @@ interface SettingsDao {
     suspend fun upsertValue(key: String, value: String)
 }
 
-class SqlDelightSettingsDao(private val database: AppDatabase) : SettingsDao {
+class SqlDelightSettingsDao(private val database: UserDatabase) : SettingsDao {
     override suspend fun getValue(key: String): String? {
         return database.settingQueries.getSetting(key).executeAsOneOrNull()
     }
@@ -445,5 +446,4 @@ class SqlDelightSettingsDao(private val database: AppDatabase) : SettingsDao {
         database.settingQueries.updateSetting(value, key)
     }
 }
-
 
