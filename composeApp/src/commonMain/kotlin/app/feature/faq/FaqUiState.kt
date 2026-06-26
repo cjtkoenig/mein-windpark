@@ -86,7 +86,7 @@ private val defaultFaqQuestions = listOf(
     ),
     FaqQuestionUiModel(
         id = "agriculture",
-        question = "Kann die Fläche unter Windrädern weiter landwirtschaftlich genutzt werden?",
+        question = "Kann die Fläche unter Windanlagen weiter landwirtschaftlich genutzt werden?",
         answer = "In vielen Fällen ja. Dauerhaft benötigt werden vor allem Fundament, Kranstellfläche und Zuwegung. Die umliegenden Flächen können häufig weiter als Acker, Wiese oder Weide genutzt werden. Wie viel Fläche tatsächlich gebunden ist, hängt vom Standort, der Bauweise und den Zufahrten ab.",
         icon = FaqQuestionIcon.Agriculture,
         category = FaqCategory.LocalBenefit,
@@ -101,7 +101,7 @@ private val defaultFaqQuestions = listOf(
     FaqQuestionUiModel(
         id = "infrasound",
         question = "Ist Infraschall gefährlich?",
-        answer = "Windenergieanlagen erzeugen auch tieffrequenten Schall. Nach dem Stand der öffentlichen Bewertung liegen die Infraschallpegel moderner Anlagen in üblichen Wohnabständen meist deutlich unterhalb der Wahrnehmungsschwelle. Individuelle Beschwerden sollten trotzdem ernst genommen und lokal geprüft werden.",
+        answer = "Windenergieanlagen erzeugen auch tieffrequenten Schall. Nach dem Stand der öffentlichen Bewertung liegen die Infraschallpegel moderner Windanlagen in üblichen Wohnabständen meist deutlich unterhalb der Wahrnehmungsschwelle. Individuelle Beschwerden sollten trotzdem ernst genommen und lokal geprüft werden.",
         icon = FaqQuestionIcon.Noise,
         category = FaqCategory.Concerns,
     ),
@@ -114,7 +114,7 @@ private val defaultFaqQuestions = listOf(
     ),
     FaqQuestionUiModel(
         id = "standstill",
-        question = "Warum stehen Windräder manchmal still?",
+        question = "Warum stehen Windanlagen manchmal still?",
         answer = "Windanlagen können aus vielen Gründen stillstehen: zu wenig oder zu viel Wind, Wartung, technische Störungen, Netzengpässe, Schall- oder Schattenauflagen, Naturschutzabschaltungen oder Vereisung. WindKlar kennt im MVP keine Live-Betriebsursachen und sollte deshalb nur mögliche Gründe nennen, nicht die konkrete Ursache behaupten.",
         icon = FaqQuestionIcon.Warning,
         category = FaqCategory.Concerns,
@@ -122,7 +122,7 @@ private val defaultFaqQuestions = listOf(
     FaqQuestionUiModel(
         id = "data-source",
         question = "Woher kommen die Daten?",
-        answer = "Die Anlagen-Stammdaten stammen aus öffentlichen Quellen wie MaStR und werden für den MVP als deutschlandweiter Snapshot vorverarbeitet. Die App nutzt diesen lokalen Datensatz zur Laufzeit, statt für die Grundfunktionen live eine externe API abzufragen.",
+        answer = "Die Windanlagen-Stammdaten stammen aus öffentlichen Quellen wie MaStR und werden für den MVP als deutschlandweiter Snapshot vorverarbeitet. Die App nutzt diesen lokalen Datensatz zur Laufzeit, statt für die Grundfunktionen live eine externe API abzufragen.",
         icon = FaqQuestionIcon.Data,
         category = FaqCategory.DataTrust,
     ),
@@ -150,7 +150,7 @@ private val defaultFaqQuestions = listOf(
     FaqQuestionUiModel(
         id = "calculation-assumptions",
         question = "Welche Berechnungsannahmen nutzt WindKlar?",
-        answer = "WindKlar nutzt standardisierte, wissenschaftlich fundierte Richtwerte für seine Berechnungen:\n\n1) Volllaststunden: Standortspezifisch berechnet (bundesweiter Richtwert: ca. 2.000 h/a), um die Ertragsleistung zu schätzen.\n2) CO₂-Emissionsfaktor: Ein durchschnittlicher Wert des deutschen Strommixes von 380 g/kWh (0,38 kg/kWh), um die CO₂-Einsparung zu ermitteln.\n3) Haushaltsverbrauch: Ein typischer Jahresstromverbrauch von 3.500 kWh pro 3-Personen-Haushalt.\n4) Kommunale Beteiligung: Bis zu 0,2 ct/kWh der Jahresproduktion gemäß § 6 EEG für Anlagen an Land.",
+        answer = "WindKlar nutzt standardisierte, wissenschaftlich fundierte Richtwerte für seine Berechnungen:\n\n1) Volllaststunden: Standortspezifisch berechnet (bundesweiter Richtwert: ca. 2.000 h/a), um die Ertragsleistung zu schätzen.\n2) CO₂-Emissionsfaktor: Ein durchschnittlicher Wert des deutschen Strommixes von 380 g/kWh (0,38 kg/kWh), um die CO₂-Einsparung zu ermitteln.\n3) Haushaltsverbrauch: Ein typischer Jahresstromverbrauch von 3.500 kWh pro 3-Personen-Haushalt.\n4) Kommunale Beteiligung: Bis zu 0,2 ct/kWh der Jahresproduktion gemäß § 6 EEG für Windanlagen an Land.",
         icon = FaqQuestionIcon.Limits,
         category = FaqCategory.DataTrust,
     ),

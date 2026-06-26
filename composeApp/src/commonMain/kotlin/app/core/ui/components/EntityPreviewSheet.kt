@@ -333,7 +333,7 @@ fun EntityPreviewSheet(
                     )
                     MetricCard(
                         modifier = Modifier.weight(1f),
-                        label = "CO2 Einsparung",
+                        label = "CO₂-Einsparung",
                         value = co2Str,
                         icon = Icons.Outlined.Eco,
                     )
@@ -406,5 +406,4 @@ private fun MetricCard(
         }
     }
 }
-
 

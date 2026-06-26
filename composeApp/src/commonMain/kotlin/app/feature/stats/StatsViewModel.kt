@@ -331,7 +331,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                         ),
                         StatsImpactCard(
                             type = StatsImpactType.Turbines,
-                            title = "Anlagen",
+                            title = "Windanlagen",
                             value = formatInteger(activeTurbineCount),
                             description = "MaStR-Stammdaten im Snapshot",
                             quality = "official",
@@ -340,7 +340,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                         ),
                         StatsImpactCard(
                             type = StatsImpactType.Co2,
-                            title = "CO2 gespart",
+                            title = "CO₂ gespart",
                             value = formatCo2(totalCo2Kg),
                             description = "vermiedene Emissionen pro Jahr",
                             quality = "estimated",
@@ -388,7 +388,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                         StatsQualityNote(
                             label = "Wirkungswerte",
                             quality = "estimated",
-                            description = "Produktion, CO2 und kommunaler Nutzen für Windenergie an Land beruhen auf dokumentierten MVP-Annahmen.",
+                            description = "Produktion, CO₂ und kommunaler Nutzen für Windenergie an Land beruhen auf dokumentierten MVP-Annahmen.",
                         ),
                     ),
                     attribution = attribution,
@@ -532,8 +532,8 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
             ?: districts.first()
 
         val rank = districts.indexOfFirst { it.districtId == district.districtId } + 1
-        val contextLabel = recentPark?.let { "Zuletzt geöffnet: Gemeinde ${it.municipalityName}" }
-            ?: "Kein zuletzt geöffneter Park"
+        val contextLabel = recentPark?.let { "Zuletzt angesehen: Gemeinde ${it.municipalityName}" }
+            ?: "Kein zuletzt angesehener Windpark"
 
         return DistrictComparison(
             districtId = district.districtId,
@@ -609,7 +609,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
         metricsA: ComparisonMetrics,
         metricsB: ComparisonMetrics,
     ): List<ComparisonRow> = buildList {
-        add(comparisonRow("Anzahl Anlagen", metricsA.turbines.toDouble(), metricsB.turbines.toDouble()) {
+        add(comparisonRow("Anzahl Windanlagen", metricsA.turbines.toDouble(), metricsB.turbines.toDouble()) {
             formatInteger(it.roundToInt())
         }!!)
         add(comparisonRow("Leistung", metricsA.capacityMw, metricsB.capacityMw) {
@@ -618,7 +618,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
         add(comparisonRow("Jahresproduktion", metricsA.annualProductionKwh, metricsB.annualProductionKwh) {
             "${formatGermanNumber(it / 1_000_000.0, 1)} GWh"
         }!!)
-        add(comparisonRow("CO2-Einsparung", metricsA.co2Kg, metricsB.co2Kg) {
+        add(comparisonRow("CO₂-Einsparung", metricsA.co2Kg, metricsB.co2Kg) {
             "${formatGermanNumber(it / 1_000.0, 0)} t"
         }!!)
         add(comparisonRow("Haushaltsäquivalente", metricsA.households, metricsB.households) {
@@ -842,7 +842,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
             byDecade = byDecade,
             heightBuckets = heightBuckets,
             topParks = topParks,
-            avgPerPark = "${formatGermanNumber(totalTurbines.toDouble() / parkCount, 1)} Anlagen/Park",
+            avgPerPark = "${formatGermanNumber(totalTurbines.toDouble() / parkCount, 1)} Windanlagen je Windpark",
             assumptions = listOf(
                 StatsImpactFact("Quelle", "MaStR"),
                 StatsImpactFact("Einheit", "Windanlage"),
@@ -997,21 +997,21 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
         ComparisonOption(
             id = cityId,
             label = label,
-            description = "$districtName, $stateName · ${formatCapacity(installedCapacityMw)} · ${formatInteger(windParkCount)} Parks",
+            description = "$districtName, $stateName · ${formatCapacity(installedCapacityMw)} · ${formatInteger(windParkCount)} Windparks",
         )
 
     private fun DistrictStat.toComparisonOption(): ComparisonOption =
         ComparisonOption(
             id = districtId,
             label = label,
-            description = "$stateName · ${formatCapacity(installedCapacityMw)} · ${formatInteger(windParkCount)} Parks",
+            description = "$stateName · ${formatCapacity(installedCapacityMw)} · ${formatInteger(windParkCount)} Windparks",
         )
 
     private fun StateStat.toComparisonOption(): ComparisonOption =
         ComparisonOption(
             id = stateId,
             label = label,
-            description = "${formatCapacity(installedCapacityMw)} · ${formatInteger(windParkCount)} Parks",
+            description = "${formatCapacity(installedCapacityMw)} · ${formatInteger(windParkCount)} Windparks",
         )
 
     private fun List<Metric>.firstValue(metricType: String): Double? =
@@ -1098,7 +1098,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                         valueLabel = "${formatGermanNumber(capacityMw, 1)} MW",
                         progress = ((park.installedCapacityKw ?: 0L) / maxCapacity).toFloat().coerceIn(0f, 1f),
                         details = listOf(
-                            RankingDetailLine("Anlagen", formatGermanNumber(park.turbineCount)),
+                            RankingDetailLine("Windanlagen", formatGermanNumber(park.turbineCount)),
                             RankingDetailLine("Leistung", "${formatGermanNumber(capacityMw, 1)} MW"),
                             RankingDetailLine("Gemeinde", park.municipalityName),
                             RankingDetailLine("Datenqualität", formatDataQualityLabel(park.dataQuality)),
@@ -1118,7 +1118,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                         progress = (city.installedCapacityMw / maxCapacity).toFloat().coerceIn(0f, 1f),
                         details = listOf(
                             RankingDetailLine("Windparks", formatGermanNumber(city.windParkCount)),
-                            RankingDetailLine("Anlagen", formatGermanNumber(city.turbineCount)),
+                            RankingDetailLine("Windanlagen", formatGermanNumber(city.turbineCount)),
                             RankingDetailLine("Anteil am Bundesland", formatPercent(city.shareOfStateCapacity)),
                         )
                     )
@@ -1136,7 +1136,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                         progress = (district.installedCapacityMw / maxCapacity).toFloat().coerceIn(0f, 1f),
                         details = listOf(
                             RankingDetailLine("Windparks", formatGermanNumber(district.windParkCount)),
-                            RankingDetailLine("Anlagen", formatGermanNumber(district.turbineCount)),
+                            RankingDetailLine("Windanlagen", formatGermanNumber(district.turbineCount)),
                             RankingDetailLine("Anteil am Bundesland", formatPercent(district.shareOfStateCapacity)),
                         )
                     )
@@ -1154,7 +1154,7 @@ class StatsViewModel(private val repository: WindParkRepository) : ViewModel() {
                         progress = (state.installedCapacityMw / maxCapacity).toFloat().coerceIn(0f, 1f),
                         details = listOf(
                             RankingDetailLine("Windparks", formatGermanNumber(state.windParkCount)),
-                            RankingDetailLine("Anlagen", formatGermanNumber(state.turbineCount)),
+                            RankingDetailLine("Windanlagen", formatGermanNumber(state.turbineCount)),
                             RankingDetailLine("Anteil am Bund", formatPercent(state.shareOfNationalCapacity)),
                         )
                     )

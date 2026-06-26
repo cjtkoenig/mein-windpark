@@ -12,7 +12,7 @@ sealed interface Route {
     }
 
     data object Stats : Route {
-        override val title: String = "Statistiken"
+        override val title: String = "Statistik"
     }
 
     data object Favorites : Route {
@@ -44,8 +44,8 @@ sealed interface Route {
         override val title: String = when (metricType) {
             "Households" -> "Haushalte"
             "MunicipalBenefit" -> "Kommunaler Nutzen"
-            "Turbines" -> "Anlagen"
-            "Co2" -> "CO2 gespart"
+            "Turbines" -> "Windanlagen"
+            "Co2" -> "CO₂ gespart"
             else -> "Auswertung"
         }
     }

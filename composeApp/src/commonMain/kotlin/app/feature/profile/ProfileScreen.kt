@@ -108,7 +108,7 @@ fun ProfileScreen(
             title = { Text("Lokale Speicherung & Datenschutz", color = DarkGreen, fontWeight = FontWeight.Bold) },
             text = {
                 Text(
-                    "WindKlar speichert keine personenbezogenen Konten. Ihr Standort wird nur temporär zur Zentrierung der Karte verwendet und im MVP nicht dauerhaft gespeichert. Favoriten, Verlauf und Datenhinweise bleiben lokal auf Ihrem Gerät.",
+                    "WindKlar speichert keine personenbezogenen Konten. Ihr Standort wird nur temporär zur Zentrierung der Karte verwendet und im MVP nicht dauerhaft gespeichert. Favoriten, zuletzt angesehene Windparks und Datenhinweise bleiben lokal auf Ihrem Gerät.",
                     color = DarkGreen,
                     fontSize = 14.sp,
                     lineHeight = 20.sp
@@ -127,10 +127,10 @@ fun ProfileScreen(
     if (showClearHistoryDialog) {
         AlertDialog(
             onDismissRequest = { showClearHistoryDialog = false },
-            title = { Text("Verlauf löschen", color = DarkGreen, fontWeight = FontWeight.Bold) },
+            title = { Text("Zuletzt angesehen löschen", color = DarkGreen, fontWeight = FontWeight.Bold) },
             text = {
                 Text(
-                    "Möchten Sie den Verlauf der zuletzt angesehenen Windparks wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
+                    "Möchten Sie die Liste zuletzt angesehener Windparks wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
                     color = DarkGreen,
                     fontSize = 14.sp,
                     lineHeight = 20.sp
@@ -245,7 +245,7 @@ private fun InfoSettingsCard(
 
             SettingsActionRow(
                 icon = Icons.Outlined.DeleteSweep,
-                label = "Verlauf löschen",
+                label = "Zuletzt angesehen löschen",
                 onClick = onClearHistoryClick
             )
         }

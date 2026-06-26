@@ -243,7 +243,7 @@ fun MapScreen(
                                                     fontSize = 14.sp
                                                 )
                                                 Text(
-                                                    text = "${park.municipalityName} • ${park.turbineCount} Anlagen",
+                                                    text = "${park.municipalityName} • ${formatWindInstallationCount(park.turbineCount)}",
                                                     color = WindklarTheme.colors.mutedGreen,
                                                     fontSize = 12.sp
                                                 )
@@ -306,7 +306,7 @@ fun MapScreen(
                                                  }
                                                  is MapSearchResult.Park -> {
                                                      title = result.park.name
-                                                     subtitle = "${result.park.municipalityName} • ${result.park.turbineCount} Anlagen"
+                                                     subtitle = "${result.park.municipalityName} • ${formatWindInstallationCount(result.park.turbineCount)}"
                                                  }
                                              }
                                              
@@ -358,7 +358,7 @@ fun MapScreen(
                 // Report wind turbine
                 MapActionButton(
                     icon = Icons.Outlined.Edit,
-                    contentDescription = "Windanlage melden",
+                    contentDescription = "Datenhinweis erfassen",
                     containerColor = PrimaryGreen,
                     contentColor = Color.White,
                     onClick = { viewModel.startPinPlacement() }
@@ -404,7 +404,7 @@ fun MapScreen(
             )
         }
 
-        // Selected Park or Region Preview Card
+        // Selected wind park or region preview card
         if (!uiState.isPinPlacementMode) {
             uiState.selectedPreviewData?.let { previewData ->
                 EntityPreviewSheet(
@@ -614,6 +614,9 @@ private fun StatusChip(
         )
     }
 }
+
+private fun formatWindInstallationCount(count: Int): String =
+    "$count Windanlage${if (count == 1) "" else "n"}"
 
 @Composable
 private fun MapActionButton(

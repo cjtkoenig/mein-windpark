@@ -166,7 +166,7 @@ fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
                     val (statusText, fraction) = when (val progress = importProgress) {
                         ImportProgress.CheckingChecksum -> Pair("Datenbank wird überprüft...", null)
                         ImportProgress.ReadingJson -> Pair("Daten-Snapshot wird geladen...", null)
-                        ImportProgress.DecodingJson -> Pair("Entpacke Windparks und Turbinen...", null)
+                        ImportProgress.DecodingJson -> Pair("Entpacke Windparks und Windanlagen...", null)
                         is ImportProgress.SeedingParks -> {
                             val percent = progress.current.toFloat() / progress.total.coerceAtLeast(1)
                             val weighted = percent * 0.10f
@@ -175,12 +175,12 @@ fun AppNavHost(database: AppDatabase, locationProvider: LocationProvider) {
                         is ImportProgress.SeedingTurbines -> {
                             val percent = progress.current.toFloat() / progress.total.coerceAtLeast(1)
                             val weighted = 0.10f + percent * 0.40f
-                            Pair("Schreibe Windturbinen (${progress.current} / ${progress.total})...", weighted)
+                            Pair("Schreibe Windanlagen (${progress.current} / ${progress.total})...", weighted)
                         }
                         is ImportProgress.SeedingMetrics -> {
                             val percent = progress.current.toFloat() / progress.total.coerceAtLeast(1)
                             val weighted = 0.50f + percent * 0.50f
-                            Pair("Schreibe Leistungswerte (${progress.current} / ${progress.total})...", weighted)
+                            Pair("Schreibe Wirkungswerte (${progress.current} / ${progress.total})...", weighted)
                         }
                         ImportProgress.SeedingMetadata -> Pair("Schließe Import ab...", 1.0f)
                         ImportProgress.Completed -> Pair("Import abgeschlossen!", 1.0f)

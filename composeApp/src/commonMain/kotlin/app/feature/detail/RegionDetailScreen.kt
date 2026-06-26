@@ -201,7 +201,7 @@ fun RegionDetailScreen(
             val consumption = uiState.assumptions.firstOrNull { it.id == "household_consumption_kwh" }?.value ?: 3500.0
             val muniBenefit = uiState.assumptions.firstOrNull { it.id == "municipal_benefit_eur_per_kwh" }?.value ?: 0.002
 
-            val prodNote = "Geschätzte Stromerzeugung pro Jahr aller Windparks in dieser Region. Die zugrundeliegenden Volllaststunden der Parks betragen im Durchschnitt ${formatGermanNumber(flh.toInt())} h/a (bundesweiter Richtwert: 2.000 h/a)."
+            val prodNote = "Geschätzte Stromerzeugung pro Jahr aller Windparks in dieser Region. Die zugrundeliegenden Volllaststunden der Windparks betragen im Durchschnitt ${formatGermanNumber(flh.toInt())} h/a (bundesweiter Richtwert: 2.000 h/a)."
             val co2Note = "Berechnet aus der Jahresproduktion und dem CO₂-Emissionsfaktor des deutschen Strommixes von ${formatGermanNumber(co2Factor * 1000.0, 0)} g/kWh (bzw. ${formatGermanNumber(co2Factor, 2)} kg/kWh)."
             val houseNote = "Rechnerische Abdeckung von privaten Haushalten basierend auf einem durchschnittlichen Stromverbrauch von ${formatGermanNumber(consumption.toInt())} kWh/Jahr pro Haushalt."
 
@@ -225,7 +225,7 @@ fun RegionDetailScreen(
                     icon = Icons.Outlined.Bolt
                 ),
                 ImpactMetric(
-                    label = "Vermiedenes CO2",
+                    label = "Vermiedenes CO₂",
                     value = co2SavingsVal,
                     isMissing = uiState.co2SavingsTons == 0.0,
                     note = co2Note,
@@ -334,23 +334,23 @@ private fun RegionSummaryCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text("Windparks", color = WindklarTheme.colors.mutedGreen, fontSize = 12.sp)
                     Text(
-                        text = "$windParkCount Park${if (windParkCount == 1) "" else "s"}",
+                        text = "$windParkCount Windpark${if (windParkCount == 1) "" else "s"}",
                         color = WindklarTheme.colors.darkGreen,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Windräder", color = WindklarTheme.colors.mutedGreen, fontSize = 12.sp)
+                    Text("Windanlagen", color = WindklarTheme.colors.mutedGreen, fontSize = 12.sp)
                     Text(
-                        text = "${formatGermanNumber(turbineCount)} Anlage${if (turbineCount == 1) "" else "n"}",
+                        text = "${formatGermanNumber(turbineCount)} Windanlage${if (turbineCount == 1) "" else "n"}",
                         color = WindklarTheme.colors.darkGreen,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
                 Column(modifier = Modifier.weight(1.2f)) {
-                    Text("Gesamtleistung", color = WindklarTheme.colors.mutedGreen, fontSize = 12.sp)
+                    Text("Installierte Gesamtleistung", color = WindklarTheme.colors.mutedGreen, fontSize = 12.sp)
                     Text(
                         text = "${formatGermanNumber(installedCapacityMw, 1)} MW",
                         color = WindklarTheme.colors.darkGreen,
@@ -510,7 +510,7 @@ private fun WindParksSection(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                              Text(
-                                 text = "${formatGermanNumber(park.turbineCount)} Anlage${if (park.turbineCount == 1) "" else "n"}",
+                                 text = "${formatGermanNumber(park.turbineCount)} Windanlage${if (park.turbineCount == 1) "" else "n"}",
                                  color = WindklarTheme.colors.mutedGreen,
                                  fontSize = 12.sp
                              )

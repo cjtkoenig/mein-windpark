@@ -172,7 +172,7 @@ fun StatsScreen(
                     StatsSectionCard {
                         SectionHeader(
                             title = "Größenklassen der Windparks",
-                            subtitle = "Installierte Gesamtleistung pro Windpark, nicht pro einzelner Anlage",
+                            subtitle = "Installierte Gesamtleistung pro Windpark, nicht pro einzelner Windanlage",
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         CapacityClassChart(values = uiState.capacityClasses)
@@ -186,8 +186,8 @@ fun StatsScreen(
                             },
                         ) {
                             SectionHeader(
-                                title = "Region zum letzten Park",
-                                subtitle = "Aus dem zuletzt geöffneten Windpark abgeleitet",
+                                title = "Landkreis zum letzten Windpark",
+                                subtitle = "Aus dem zuletzt angesehenen Windpark abgeleitet",
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             DistrictComparisonBlock(comparison = comparison)
@@ -244,7 +244,7 @@ fun StatsScreen(
                         SourceFootnote(
                             text = when (uiState.rankingType) {
                                 RankingType.PARKS -> "Windparks im Snapshot basierend auf MaStR-Stammdaten."
-                                RankingType.CITIES -> "Städte und Gemeinden aggregiert nach dem Gemeindeschlüssel (AGS)."
+                                RankingType.CITIES -> "Gemeinden aggregiert nach dem Gemeindeschlüssel (AGS)."
                                 RankingType.DISTRICTS -> "Die Kreisebene wird aus den ersten fünf Stellen der AGS-Gemeindekennung abgeleitet; fehlende Kreisnamen werden angenähert."
                                 RankingType.STATES -> "Bundesländer aggregiert auf Basis der offiziellen Länderkennungen."
                             }
@@ -275,7 +275,7 @@ fun StatsScreen(
         FullRankingDialog(
             title = when (uiState.rankingType) {
                 RankingType.PARKS -> "Rangliste: Windparks"
-                RankingType.CITIES -> "Rangliste: Städte"
+                RankingType.CITIES -> "Rangliste: Gemeinden"
                 RankingType.DISTRICTS -> "Rangliste: Landkreise"
                 RankingType.STATES -> "Rangliste: Bundesländer"
             },
@@ -354,7 +354,7 @@ private fun StatsHeader(
     overviewCards: List<StatsOverviewCard>,
 ) {
     WindklarHeader(
-        title = "Statistiken",
+        title = "Statistik",
         subtitle = subtitle,
         snapshotInfoLine = snapshotInfoLine,
         bottomPadding = 48.dp,
@@ -615,7 +615,7 @@ private fun RankingTypeSwitch(
             onClick = { onSelected(RankingType.PARKS) },
         )
         RankingTypeSegment(
-            label = "Städte",
+            label = "Gemeinden",
             selected = selectedType == RankingType.CITIES,
             modifier = Modifier.weight(1f),
             onClick = { onSelected(RankingType.CITIES) },
@@ -808,7 +808,7 @@ private fun DistrictComparisonBlock(comparison: DistrictComparison) {
                 modifier = Modifier.weight(1f),
             )
             ComparisonValue(
-                label = "Anlagen",
+                label = "Windanlagen",
                 value = comparison.turbines,
                 modifier = Modifier.weight(1f),
             )
@@ -950,7 +950,7 @@ private fun CapacityClassChart(values: List<CapacityClassStat>) {
                                 shadowElevation = 3.dp,
                             ) {
                                 Text(
-                                    text = "${formatGermanNumber(value.count)} Parks (${value.percentOfTotal.percentLabel()})",
+                                    text = "${formatGermanNumber(value.count)} Windparks (${value.percentOfTotal.percentLabel()})",
                                     color = Color.White,
                                     fontSize = 11.sp,
                                     lineHeight = 14.sp,
@@ -1021,7 +1021,7 @@ private fun InteractiveComparisonCard(
     StatsSectionCard {
         SectionHeader(
             title = "Direktvergleich",
-            subtitle = "Zwei Regionen oder Windparks gegenüberstellen",
+            subtitle = "Zwei Gemeinden, Landkreise, Bundesländer oder Windparks gegenüberstellen",
         )
         Spacer(modifier = Modifier.height(14.dp))
         ComparisonTypeSwitch(
@@ -1103,7 +1103,7 @@ private fun InteractiveComparisonCard(
                 ComparisonDialogTarget.ParkA,
                 ComparisonDialogTarget.ParkB -> "Windpark auswählen"
                 ComparisonDialogTarget.CityA,
-                ComparisonDialogTarget.CityB -> "Stadt auswählen"
+                ComparisonDialogTarget.CityB -> "Gemeinde auswählen"
                 ComparisonDialogTarget.DistrictA,
                 ComparisonDialogTarget.DistrictB -> "Landkreis auswählen"
                 ComparisonDialogTarget.StateA,
@@ -1148,7 +1148,7 @@ private fun ComparisonTypeSwitch(
             onClick = { onSelected(ComparisonType.PARKS) },
         )
         ComparisonTypeSegment(
-            label = "Städte",
+            label = "Gemeinden",
             selected = selectedType == ComparisonType.CITIES,
             modifier = Modifier.weight(1f),
             onClick = { onSelected(ComparisonType.CITIES) },

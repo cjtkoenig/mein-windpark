@@ -42,7 +42,7 @@ class ParkDetailViewModel(
             val assumptions = ProductionContext.assumptionsWithCalculatedFullLoadHours(
                 assumptions = baseAssumptions,
                 fullLoadHours = parkFullLoadHours,
-                calculationNote = "Aus der Jahresproduktion dieses Parks und seiner installierten Leistung berechnet. Der Wert macht die im Datensatz implizit verwendeten standort- und anlagenspezifischen Ertragsannahmen sichtbar; bundesweiter Richtwert: 2.000 h/a.",
+                calculationNote = "Aus der Jahresproduktion dieses Windparks und seiner installierten Gesamtleistung berechnet. Der Wert macht die im Datensatz implizit verwendeten standort- und windanlagenspezifischen Ertragsannahmen sichtbar; bundesweiter Richtwert: 2.000 h/a.",
             )
 
             uiState = uiState.copy(

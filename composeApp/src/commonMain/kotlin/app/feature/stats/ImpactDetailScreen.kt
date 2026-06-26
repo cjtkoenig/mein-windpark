@@ -71,8 +71,8 @@ fun ImpactDetailScreen(
     val metricTitle = when (uiState.metricType) {
         "Households" -> "Haushalte"
         "MunicipalBenefit" -> "Kommunaler Nutzen"
-        "Turbines" -> "Anlagen"
-        "Co2" -> "CO2 gespart"
+        "Turbines" -> "Windanlagen"
+        "Co2" -> "CO₂ gespart"
         else -> "Auswertung"
     }
     val metricIcon = uiState.metricType.impactDetailIcon()
@@ -427,7 +427,7 @@ private fun TurbinesDetailContent(
         SectionTitle(title = "Was bedeutet das?")
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "Gezählt werden einzelne Windanlagen, nicht Windparks. Windparks sind in WindKlar die bürgernahe Gruppierung mehrerer Anlagen.",
+            text = "Gezählt werden einzelne Windanlagen, nicht Windparks. Windparks sind in WindKlar die bürgernahe Gruppierung mehrerer Windanlagen.",
             color = DarkText,
             fontSize = 14.sp,
             lineHeight = 21.sp,
@@ -479,7 +479,7 @@ private fun Co2DetailContent(
         )
     }
     ImpactSectionCard {
-        SectionTitle(title = "Top-Windparks nach CO2-Einsparung")
+        SectionTitle(title = "Top-Windparks nach CO₂-Einsparung")
         Spacer(modifier = Modifier.height(14.dp))
         ImpactRankingList(detail.topParks, onNavigateToParkDetail, onNavigateToRegionDetail)
     }

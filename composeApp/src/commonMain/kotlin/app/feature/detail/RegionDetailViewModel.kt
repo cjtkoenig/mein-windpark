@@ -167,7 +167,7 @@ class RegionDetailViewModel(
                                 progress = (capKw.toDouble() / maxCap).toFloat().coerceIn(0f, 1f),
                                 details = listOf(
                                     RankingDetailLine("Windparks", formatGermanNumber(parksCount)),
-                                    RankingDetailLine("Anlagen", formatGermanNumber(turbinesCount)),
+                                    RankingDetailLine("Windanlagen", formatGermanNumber(turbinesCount)),
                                     RankingDetailLine("Anteil am Bundesland", formatPercent(share)),
                                 )
                             )
@@ -196,7 +196,7 @@ class RegionDetailViewModel(
                                 progress = (capKw.toDouble() / maxCap).toFloat().coerceIn(0f, 1f),
                                 details = listOf(
                                     RankingDetailLine("Windparks", formatGermanNumber(parksCount)),
-                                    RankingDetailLine("Anlagen", formatGermanNumber(turbinesCount)),
+                                    RankingDetailLine("Windanlagen", formatGermanNumber(turbinesCount)),
                                     RankingDetailLine("Anteil am Landkreis", formatPercent(share)),
                                 )
                             )

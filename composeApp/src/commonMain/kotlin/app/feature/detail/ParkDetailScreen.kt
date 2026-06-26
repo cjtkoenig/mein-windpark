@@ -207,7 +207,7 @@ fun ParkDetailScreen(
                     icon = Icons.Outlined.Bolt
                 ),
                 ImpactMetric(
-                    label = "Vermiedene CO2-Emissionen",
+                    label = "Vermiedene CO₂-Emissionen",
                     value = co2Val,
                     isMissing = co2Metric?.value == null,
                     note = co2Note,
@@ -271,7 +271,7 @@ private fun SummaryCard(
                     Text(formatTurbineCount(park.turbineCount), color = DarkGreen, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Gesamtleistung", color = MutedGreen, fontSize = 12.sp)
+                    Text("Installierte Gesamtleistung", color = MutedGreen, fontSize = 12.sp)
                     val capStr = park.installedCapacityKw?.let { "${formatGermanNumber(it / 1000.0, 1)} MW" } ?: "k.A."
                     Text(capStr, color = DarkGreen, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
@@ -316,7 +316,7 @@ private fun TurbinesSection(turbines: List<WindTurbine>) {
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = if (turbinesExpanded) "Weniger Anlagen anzeigen" else "Alle Anlagen anzeigen",
+                        text = if (turbinesExpanded) "Weniger Windanlagen anzeigen" else "Alle Windanlagen anzeigen",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
@@ -346,7 +346,7 @@ private fun TurbineCard(turbine: WindTurbine) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = turbine.name.ifBlank { "Anlage #${turbine.id.takeLast(4)}" },
+                    text = turbine.name.ifBlank { "Windanlage #${turbine.id.takeLast(4)}" },
                     color = DarkGreen,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 15.sp,
@@ -418,6 +418,6 @@ private fun formatNumber(number: Int): String = formatGermanNumber(number)
 private fun formatAssumptionValue(value: Double): String = formatGermanNumber(value, 2, true)
 
 private fun formatTurbineCount(count: Int): String {
-    val unit = if (count == 1) "Windrad" else "Windräder"
+    val unit = if (count == 1) "Windanlage" else "Windanlagen"
     return "${formatGermanNumber(count)} $unit"
 }

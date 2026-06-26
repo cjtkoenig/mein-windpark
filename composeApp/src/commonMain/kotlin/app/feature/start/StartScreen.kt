@@ -67,13 +67,13 @@ fun StartScreen(
         OnboardingSlide(
             title = "Karte & Details",
             subtitle = "Erkunden Sie Ihre Region",
-            description = "Sehen Sie Leistungswerte, Betreiberinformationen und den finanziellen Nutzen für Ihre Gemeinde direkt auf der interaktiven Karte.",
+            description = "Sehen Sie installierte Gesamtleistung, Betreiberinformationen und den finanziellen Nutzen für Ihre Gemeinde direkt auf der interaktiven Karte.",
             icon = Icons.Outlined.Map
         ),
         OnboardingSlide(
             title = "Daten & Mitwirkung",
             subtitle = "Gemeinsam Daten verbessern",
-            description = "Wir kennzeichnen offizielle, geschätzte und berechnete Werte transparent. Entdecken Sie Fehler? Melden Sie uns einen Datenhinweis.",
+            description = "Wir kennzeichnen offizielle, geschätzte und berechnete Werte transparent. Entdecken Sie fehlende oder falsche Daten? Erfassen Sie einen Datenhinweis.",
             icon = Icons.Outlined.Feedback
         )
     )

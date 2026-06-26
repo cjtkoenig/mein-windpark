@@ -47,12 +47,12 @@ fun ReportWindTurbineDialog(
     onSubmit: (category: String, confidence: String, description: String, suggestedValue: String?) -> Unit
 ) {
     val categories = listOf(
-        "missing_installation" to "Fehlende Anlage",
+        "missing_installation" to "Fehlende Windanlage",
         "wrong_location" to "Falscher Standort",
         "wrong_status" to "Falscher Status",
         "wrong_wind_park_assignment" to "Falscher Windpark",
         "wrong_technical_data" to "Falsche technische Daten",
-        "installation_removed" to "Anlage entfernt",
+        "installation_removed" to "Windanlage entfernt",
         "other" to "Sonstiges"
     )
     
@@ -71,7 +71,7 @@ fun ReportWindTurbineDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Datenhinweis senden",
+                text = "Datenhinweis erfassen",
                 color = WindklarTheme.colors.darkGreen,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp
@@ -85,7 +85,7 @@ fun ReportWindTurbineDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "Helfen Sie mit, die Datenqualität zu verbessern. Ihr Hinweis wird lokal für den Review gespeichert.",
+                    text = "Helfen Sie mit, die Datenqualität zu verbessern. Ihr Datenhinweis wird lokal gespeichert.",
                     color = WindklarTheme.colors.mutedGreen,
                     fontSize = 13.sp,
                     lineHeight = 18.sp
@@ -136,7 +136,7 @@ fun ReportWindTurbineDialog(
                 OutlinedTextField(
                     value = suggestedValue,
                     onValueChange = { suggestedValue = it },
-                    label = { Text("Korrekturvorschlag (optional)") },
+                    label = { Text("Vorgeschlagener Wert (optional)") },
                     placeholder = { Text("z.B. Nabenhöhe 120m statt 100m") },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -205,7 +205,7 @@ fun ReportWindTurbineDialog(
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = WindklarTheme.colors.primaryGreen)
             ) {
-                Text("Absenden")
+                Text("Datenhinweis speichern")
             }
         },
         dismissButton = {

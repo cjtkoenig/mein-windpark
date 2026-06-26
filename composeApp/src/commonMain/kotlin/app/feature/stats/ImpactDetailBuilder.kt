@@ -179,7 +179,7 @@ internal fun buildTurbinesImpactDetail(
         byDecade = byDecade,
         heightBuckets = heightBuckets,
         topParks = topParks,
-        avgPerPark = "${formatGermanNumber(avgPerPark, 1)} Anlagen/Park",
+        avgPerPark = "${formatGermanNumber(avgPerPark, 1)} Windanlagen je Windpark",
         assumptions = listOf(
             StatsImpactFact("Quelle", "MaStR"),
             StatsImpactFact("Einheit", "Windanlage"),
