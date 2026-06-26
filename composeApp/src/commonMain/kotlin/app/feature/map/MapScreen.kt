@@ -108,6 +108,8 @@ fun MapScreen(
     viewModel: MapViewModel,
     onParkSelected: (parkId: String) -> Unit,
     onRegionSelected: (type: String, id: String) -> Unit,
+    modifier: Modifier = Modifier,
+    isVisible: Boolean = true,
 ) {
     val uiState = viewModel.uiState
     val scope = rememberCoroutineScope()
@@ -119,6 +121,13 @@ fun MapScreen(
     var showFilterSheet by remember { mutableStateOf(false) }
     var reportedLatitude by remember { mutableStateOf(0.0) }
     var reportedLongitude by remember { mutableStateOf(0.0) }
+
+    LaunchedEffect(isVisible) {
+        if (!isVisible) {
+            focusManager.clearFocus()
+            viewModel.onSearchFocusChanged(false)
+        }
+    }
 
     val permissionLauncher = rememberLocationPermissionLauncher { granted ->
         if (granted) {
@@ -136,7 +145,7 @@ fun MapScreen(
     }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(ScreenBackground),
     ) {

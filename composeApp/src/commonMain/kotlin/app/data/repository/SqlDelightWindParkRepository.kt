@@ -165,6 +165,18 @@ class SqlDelightWindParkRepository(
         }
     }
 
+    override suspend fun getFavoriteRegionSummaries(): List<RegionSummary> = withContext(Dispatchers.Default) {
+        val favoriteEntities = favoriteDao.getFavoriteRegions()
+        if (favoriteEntities.isEmpty()) return@withContext emptyList()
+
+        favoriteEntities.mapNotNull { entity ->
+            sourceDatabase.summaryQueries
+                .selectRegionSummary(entity.regionType.lowercase(), entity.regionId)
+                .executeAsOneOrNull()
+                ?.toDomain()
+        }
+    }
+
     override suspend fun isRegionFavorite(type: String, id: String): Boolean = withContext(Dispatchers.Default) {
         favoriteDao.isRegionFavorite(type, id)
     }

@@ -45,6 +45,7 @@ interface StatsRepository {
 interface SavedPlacesRepository {
     suspend fun getFavoriteWindParks(): List<WindPark>
     suspend fun getFavoriteRegions(): List<FavoriteRegion>
+    suspend fun getFavoriteRegionSummaries(): List<RegionSummary>
     suspend fun getRecentWindParks(limit: Long): List<WindPark>
     suspend fun getWindParks(): List<WindPark>
     suspend fun getMetricsForParks(parkIds: List<String>): List<Metric>

@@ -20,24 +20,12 @@ class FavoritesViewModel(private val repository: SavedPlacesRepository) : ViewMo
     fun loadData(force: Boolean = false) {
         if (isLoading || (!force && hasLoaded)) return
         isLoading = true
+        uiState = uiState.copy(isLoading = true)
         viewModelScope.launch {
             try {
                 val favs = repository.getFavoriteWindParks()
                 val recents = repository.getRecentWindParks(5)
-                val favRegions = repository.getFavoriteRegions()
-
-                val allParks = repository.getWindParks()
-                val favRegionParkIds = favRegions.flatMap { region ->
-                    allParks.filter { park ->
-                        when (region.type.lowercase()) {
-                            "city" -> park.municipalityId == region.id
-                            "district" -> park.districtId == region.id
-                            "state" -> park.stateId == region.id
-                            else -> false
-                        }
-                    }
-                }.map { it.id }.toSet()
-                val regionMetricsList = repository.getMetricsForParks(favRegionParkIds.toList())
+                val favRegionSummaries = repository.getFavoriteRegionSummaries()
 
                 // Batch load all metrics for favorites and recents to avoid N+1 DB queries
                 val batchParkIds = (favs.map { it.id } + recents.map { it.id }).distinct()
@@ -63,38 +51,20 @@ class FavoritesViewModel(private val repository: SavedPlacesRepository) : ViewMo
                     )
                 }
 
-                val favRegionUiList = favRegions.map { region ->
-                    val regionParks = allParks.filter { park ->
-                        when (region.type.lowercase()) {
-                            "city" -> park.municipalityId == region.id
-                            "district" -> park.districtId == region.id
-                            "state" -> park.stateId == region.id
-                            else -> false
-                        }
-                    }
-
-                    val regionParkIds = regionParks.map { it.id }.toSet()
-                    val regionMetrics = regionMetricsList.filter { it.subjectId in regionParkIds }
-
-                    val prodMetricSum = regionMetrics.filter { it.metricType == "annual_production" }.sumOf { it.value ?: 0.0 }
-                    val co2MetricSum = regionMetrics.filter { it.metricType == "co2_savings" }.sumOf { it.value ?: 0.0 }
-
-                    val prodStr = formatProduction(prodMetricSum)
-                    val co2Str = formatCo2(co2MetricSum)
-
+                val favRegionUiList = favRegionSummaries.map { region ->
                     FavoriteRegionUiModel(
-                        id = region.id,
+                        id = region.regionId,
                         name = region.name,
-                        type = region.type,
-                        typeLabel = when (region.type.lowercase()) {
+                        type = region.regionType,
+                        typeLabel = when (region.regionType.lowercase()) {
                             "city" -> "Gemeinde"
                             "district" -> "Landkreis"
                             "state" -> "Bundesland"
                             else -> "Region"
                         },
-                        production = prodStr,
-                        co2Reduction = co2Str,
-                        thumbnail = getThumbnailForId(region.id),
+                        production = formatProduction(region.annualProductionKwh),
+                        co2Reduction = formatCo2(region.co2SavingsKg),
+                        thumbnail = getThumbnailForId(region.regionId),
                         isFavorite = true
                     )
                 }
@@ -121,9 +91,16 @@ class FavoritesViewModel(private val repository: SavedPlacesRepository) : ViewMo
                 uiState = FavoritesUiState(
                     parks = favUiList,
                     regions = favRegionUiList,
-                    recents = recentUiList
+                    recents = recentUiList,
+                    isLoading = false,
+                    hasLoaded = true,
                 )
                 hasLoaded = true
+            } catch (e: Throwable) {
+                uiState = uiState.copy(
+                    isLoading = false,
+                    hasLoaded = true,
+                )
             } finally {
                 isLoading = false
             }

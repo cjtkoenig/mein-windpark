@@ -85,9 +85,9 @@ actual fun PlatformMapView(
     val htmlContent = remember(leafletCss, leafletJs) {
         val css = leafletCss ?: ""
         val js = leafletJs ?: ""
-        val centerLatDefault = 51.1657
-        val centerLonDefault = 10.4515
-        val zoomDefault = 6.0f
+        val centerLatDefault = centerLat
+        val centerLonDefault = centerLon
+        val zoomDefault = zoomLevel
         """
         <!DOCTYPE html>
         <html>
@@ -439,9 +439,9 @@ actual fun PlatformMapView(
                     webViewClient = object : WebViewClient() {
                         override fun onPageFinished(view: WebView?, url: String?) {
                             super.onPageFinished(view, url)
-                            mainHandler.postDelayed({
+                            mainHandler.post {
                                 isPageLoaded = true
-                            }, 500)
+                            }
                         }
                     }
 

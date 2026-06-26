@@ -4,6 +4,8 @@ data class FavoritesUiState(
     val parks: List<FavoriteParkUiModel> = emptyList(),
     val regions: List<FavoriteRegionUiModel> = emptyList(),
     val recents: List<FavoriteParkUiModel> = emptyList(),
+    val isLoading: Boolean = false,
+    val hasLoaded: Boolean = false,
 )
 
 

@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.Favorite
@@ -42,6 +43,9 @@ import app.feature.start.StartScreen
 import app.feature.stats.ImpactDetailScreen
 import app.feature.stats.StatsScreen
 import app.feature.stats.toImpactDetailUiState
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.snapshotFlow
 
 @Composable
 fun AppNavHost(appGraph: AppGraph) {
@@ -94,6 +98,18 @@ fun AppNavHost(appGraph: AppGraph) {
     val statsViewModel = remember(appGraph) { appGraph.statsViewModel() }
     val profileViewModel = remember(appGraph) { appGraph.profileViewModel() }
 
+    LaunchedEffect(appGraph) {
+        snapshotFlow { currentRoute }
+            .filter { it != Route.Start }
+            .first()
+        snapshotFlow { mapViewModel.uiState.isLoading }
+            .filter { !it }
+            .first()
+
+        launch { statsViewModel.loadIfNeeded() }
+        launch { favoritesViewModel.loadData() }
+    }
+
     Scaffold(
         bottomBar = {
             if (currentRoute != Route.Start) {
@@ -122,7 +138,30 @@ fun AppNavHost(appGraph: AppGraph) {
         },
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
-            when (val route = currentRoute) {
+            if (currentRoute != Route.Start) {
+                MapScreen(
+                    viewModel = mapViewModel,
+                    onParkSelected = { parkId ->
+                        navigateTo(Route.Detail(parkId))
+                    },
+                    onRegionSelected = { type, id ->
+                        navigateTo(Route.RegionDetail(type, id))
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(0f),
+                    isVisible = currentRoute is Route.Map,
+                )
+            }
+
+            if (currentRoute != Route.Map) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(1f)
+                        .background(WindklarTheme.colors.screenBackground),
+                ) {
+                    when (val route = currentRoute) {
                 Route.Start -> StartScreen(
                     onGetStartedClick = {
                         coroutineScope.launch {
@@ -132,15 +171,7 @@ fun AppNavHost(appGraph: AppGraph) {
                     },
                 )
 
-                Route.Map -> MapScreen(
-                    viewModel = mapViewModel,
-                    onParkSelected = { parkId ->
-                        navigateTo(Route.Detail(parkId))
-                    },
-                    onRegionSelected = { type, id ->
-                        navigateTo(Route.RegionDetail(type, id))
-                    },
-                )
+                Route.Map -> Unit
 
                 Route.Stats -> StatsScreen(
                     viewModel = statsViewModel,
@@ -224,6 +255,8 @@ fun AppNavHost(appGraph: AppGraph) {
                             navigateTo(Route.RegionDetail(type, id))
                         },
                     )
+                }
+            }
                 }
             }
         }

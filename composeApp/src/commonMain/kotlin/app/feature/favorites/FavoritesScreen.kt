@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Eco
 import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -84,7 +85,16 @@ fun FavoritesScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
 
-            if (uiState.parks.isEmpty() && uiState.regions.isEmpty()) {
+            if (uiState.isLoading && !uiState.hasLoaded && uiState.parks.isEmpty() && uiState.regions.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 32.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(color = PrimaryGreen)
+                }
+            } else if (uiState.hasLoaded && uiState.parks.isEmpty() && uiState.regions.isEmpty()) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),

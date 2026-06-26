@@ -89,9 +89,9 @@ actual fun PlatformMapView(
     val htmlContent = remember(leafletCss, leafletJs) {
         val css = leafletCss ?: ""
         val js = leafletJs ?: ""
-        val centerLatDefault = 51.1657
-        val centerLonDefault = 10.4515
-        val zoomDefault = 6.0f
+        val centerLatDefault = centerLat
+        val centerLonDefault = centerLon
+        val zoomDefault = zoomLevel
         """
         <!DOCTYPE html>
         <html>
@@ -462,13 +462,8 @@ actual fun PlatformMapView(
     val navigationDelegate = remember {
         object : NSObject(), WKNavigationDelegateProtocol {
             override fun webView(webView: WKWebView, didFinishNavigation: WKNavigation?) {
-                // Fallback in case window.onload doesn't trigger or gets blocked
-                platform.darwin.dispatch_after(
-                    platform.darwin.dispatch_time(platform.darwin.DISPATCH_TIME_NOW, 500_000_000 /* 500ms in ns */),
-                    platform.darwin.dispatch_get_main_queue()
-                ) {
-                    isPageLoaded = true
-                }
+                // Fallback in case window.onload doesn't trigger or gets blocked.
+                isPageLoaded = true
             }
         }
     }
