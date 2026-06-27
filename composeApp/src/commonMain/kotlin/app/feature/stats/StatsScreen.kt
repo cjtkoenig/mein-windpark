@@ -78,6 +78,9 @@ import app.core.ui.components.qualityColors
 import app.core.ui.components.RankingList
 import app.core.ui.components.RankingItemRow
 import app.core.ui.theme.WindklarTheme
+import org.jetbrains.compose.resources.painterResource
+import windklar.composeapp.generated.resources.Res
+import windklar.composeapp.generated.resources.header_background_quiet
 import app.core.ui.components.WindklarHeader
 import app.core.util.formatGermanNumber
 import kotlinx.coroutines.delay
@@ -357,6 +360,8 @@ private fun StatsHeader(
         title = "Statistik",
         subtitle = subtitle,
         snapshotInfoLine = snapshotInfoLine,
+        showDecorativeCircles = false,
+        backgroundPainter = painterResource(Res.drawable.header_background_quiet),
         bottomPadding = 48.dp,
         extraContent = {
             Row(

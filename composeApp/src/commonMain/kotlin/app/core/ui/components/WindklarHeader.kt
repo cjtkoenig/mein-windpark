@@ -1,6 +1,7 @@
 package app.core.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,8 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -37,6 +40,7 @@ fun WindklarHeader(
     breadcrumbs: (@Composable () -> Unit)? = null,
     snapshotInfoLine: String? = null,
     showDecorativeCircles: Boolean = true,
+    backgroundPainter: Painter? = null,
     bottomPadding: Dp = 48.dp,
     extraContent: (@Composable () -> Unit)? = null,
 ) {
@@ -54,6 +58,15 @@ fun WindklarHeader(
                 ),
             ),
     ) {
+        if (backgroundPainter != null) {
+            Image(
+                painter = backgroundPainter,
+                contentDescription = null,
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.Crop,
+            )
+        }
+
         // Decorative circles container (does not affect parent layout measurement)
         Box(
             modifier = Modifier

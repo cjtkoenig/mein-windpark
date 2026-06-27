@@ -43,6 +43,7 @@ import windklar.composeapp.generated.resources.Res
 import windklar.composeapp.generated.resources.favorite_windpark_alpen
 import windklar.composeapp.generated.resources.favorite_windpark_nordsee
 import windklar.composeapp.generated.resources.favorite_windpark_ostsee
+import windklar.composeapp.generated.resources.header_background_quiet
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import app.core.ui.components.WindklarHeader
@@ -172,6 +173,8 @@ private fun FavoritesHeader() {
     WindklarHeader(
         title = "Favoriten",
         subtitle = "Deine gespeicherten Windparks und Regionen",
+        showDecorativeCircles = false,
+        backgroundPainter = painterResource(Res.drawable.header_background_quiet),
         bottomPadding = 24.dp
     )
 }

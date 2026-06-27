@@ -1,7 +1,6 @@
 package app.feature.profile
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,7 +42,6 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -53,7 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import windklar.composeapp.generated.resources.Res
-import windklar.composeapp.generated.resources.windklar_app_icon
+import windklar.composeapp.generated.resources.profile_header_background
 
 private val ScreenBackground @Composable get() = WindklarTheme.colors.screenBackground
 private val PrimaryGreen @Composable get() = WindklarTheme.colors.primaryGreen
@@ -168,27 +166,11 @@ fun ProfileScreen(
 private fun ProfileHeader() {
     WindklarHeader(
         title = "Info & Einstellungen",
+        showDecorativeCircles = false,
+        backgroundPainter = painterResource(Res.drawable.profile_header_background),
         bottomPadding = 48.dp,
         extraContent = {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center,
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .background(Color.White.copy(alpha = 0.2f), CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Image(
-                        painter = painterResource(Res.drawable.windklar_app_icon),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(CircleShape),
-                    )
-                }
-            }
+            Spacer(modifier = Modifier.height(80.dp))
         }
     )
 }

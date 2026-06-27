@@ -48,6 +48,9 @@ import app.core.ui.components.FactListItem
 import app.core.ui.components.RankingList
 import app.core.ui.components.WindklarHeader
 import app.core.ui.theme.WindklarTheme
+import org.jetbrains.compose.resources.painterResource
+import windklar.composeapp.generated.resources.Res
+import windklar.composeapp.generated.resources.header_background_quiet
 
 @Composable
 fun ImpactDetailScreen(
@@ -90,6 +93,8 @@ fun ImpactDetailScreen(
         WindklarHeader(
             title = metricTitle,
             subtitle = metricSubtitle,
+            showDecorativeCircles = false,
+            backgroundPainter = painterResource(Res.drawable.header_background_quiet),
             navigationIcon = {
                 Box(
                     modifier = Modifier

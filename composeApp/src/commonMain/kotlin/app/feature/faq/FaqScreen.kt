@@ -54,6 +54,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.jetbrains.compose.resources.painterResource
+import windklar.composeapp.generated.resources.Res
+import windklar.composeapp.generated.resources.header_background_quiet
 
 private val ScreenBackground @Composable get() = WindklarTheme.colors.screenBackground
 private val PrimaryGreen @Composable get() = WindklarTheme.colors.primaryGreen
@@ -117,6 +120,8 @@ private fun FaqHeader() {
     WindklarHeader(
         title = "Häufige Fragen",
         subtitle = "Hintergründe zu Datenquellen und Berechnungen",
+        showDecorativeCircles = false,
+        backgroundPainter = painterResource(Res.drawable.header_background_quiet),
         bottomPadding = 24.dp
     )
 }

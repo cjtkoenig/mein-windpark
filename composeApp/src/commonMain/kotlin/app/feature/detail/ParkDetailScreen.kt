@@ -64,6 +64,9 @@ import app.core.util.formatGermanNumber
 import app.core.util.isRedundantMunicipality
 import app.core.ui.components.WindklarHeader
 import app.feature.report.DataHintDialog
+import org.jetbrains.compose.resources.painterResource
+import windklar.composeapp.generated.resources.Res
+import windklar.composeapp.generated.resources.header_background_quiet
 
 private val ScreenBackground @Composable get() = WindklarTheme.colors.screenBackground
 private val PrimaryGreen @Composable get() = WindklarTheme.colors.primaryGreen
@@ -118,6 +121,8 @@ fun ParkDetailScreen(
         WindklarHeader(
             title = park.name,
             subtitle = "Gemeinde ${park.municipalityName}",
+            showDecorativeCircles = false,
+            backgroundPainter = painterResource(Res.drawable.header_background_quiet),
             navigationIcon = {
                 Box(
                     modifier = Modifier

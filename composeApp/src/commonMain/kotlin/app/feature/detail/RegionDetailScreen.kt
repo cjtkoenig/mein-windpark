@@ -58,6 +58,9 @@ import app.core.ui.theme.WindklarTheme
 import app.core.util.formatGermanNumber
 import app.core.ui.components.WindklarHeader
 import app.core.util.isRedundantMunicipality
+import org.jetbrains.compose.resources.painterResource
+import windklar.composeapp.generated.resources.Res
+import windklar.composeapp.generated.resources.header_background_quiet
 
 
 
@@ -93,6 +96,8 @@ fun RegionDetailScreen(
         WindklarHeader(
             title = if (uiState.regionType.lowercase() == "district") cleanDistrictName(uiState.regionName) else uiState.regionName,
             subtitle = uiState.regionTypeLabel,
+            showDecorativeCircles = false,
+            backgroundPainter = painterResource(Res.drawable.header_background_quiet),
             navigationIcon = {
                 Box(
                     modifier = Modifier
