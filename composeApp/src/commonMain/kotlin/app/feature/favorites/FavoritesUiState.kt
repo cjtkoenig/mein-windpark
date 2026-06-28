@@ -34,4 +34,9 @@ enum class FavoriteParkThumbnail {
     Nordsee,
     Ostsee,
     Alpen,
+    Feld,
+    Waldkante,
+    Herbst,
+    Winter,
+    Dorf,
 }

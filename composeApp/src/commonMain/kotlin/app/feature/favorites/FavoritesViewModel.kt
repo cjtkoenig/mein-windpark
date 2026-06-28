@@ -130,10 +130,15 @@ class FavoritesViewModel(private val repository: SavedPlacesRepository) : ViewMo
 
     private fun getThumbnailForId(id: String): FavoriteParkThumbnail {
         val hash = id.hashCode().coerceAtLeast(0)
-        return when (hash % 3) {
+        return when (hash % 8) {
             0 -> FavoriteParkThumbnail.Nordsee
             1 -> FavoriteParkThumbnail.Ostsee
-            else -> FavoriteParkThumbnail.Alpen
+            2 -> FavoriteParkThumbnail.Alpen
+            3 -> FavoriteParkThumbnail.Feld
+            4 -> FavoriteParkThumbnail.Waldkante
+            5 -> FavoriteParkThumbnail.Herbst
+            6 -> FavoriteParkThumbnail.Winter
+            else -> FavoriteParkThumbnail.Dorf
         }
     }
 }

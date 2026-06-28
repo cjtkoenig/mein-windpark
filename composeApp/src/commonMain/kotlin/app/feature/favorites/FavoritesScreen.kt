@@ -38,8 +38,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import windklar.composeapp.generated.resources.Res
 import windklar.composeapp.generated.resources.favorite_windpark_alpen
+import windklar.composeapp.generated.resources.favorite_windpark_dorf
+import windklar.composeapp.generated.resources.favorite_windpark_feld
+import windklar.composeapp.generated.resources.favorite_windpark_herbst
 import windklar.composeapp.generated.resources.favorite_windpark_nordsee
 import windklar.composeapp.generated.resources.favorite_windpark_ostsee
+import windklar.composeapp.generated.resources.favorite_windpark_waldkante
+import windklar.composeapp.generated.resources.favorite_windpark_winter
 import windklar.composeapp.generated.resources.header_background_quiet
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
@@ -386,4 +391,9 @@ private fun FavoriteParkThumbnail.drawableResource(): DrawableResource = when (t
     FavoriteParkThumbnail.Nordsee -> Res.drawable.favorite_windpark_nordsee
     FavoriteParkThumbnail.Ostsee -> Res.drawable.favorite_windpark_ostsee
     FavoriteParkThumbnail.Alpen -> Res.drawable.favorite_windpark_alpen
+    FavoriteParkThumbnail.Feld -> Res.drawable.favorite_windpark_feld
+    FavoriteParkThumbnail.Waldkante -> Res.drawable.favorite_windpark_waldkante
+    FavoriteParkThumbnail.Herbst -> Res.drawable.favorite_windpark_herbst
+    FavoriteParkThumbnail.Winter -> Res.drawable.favorite_windpark_winter
+    FavoriteParkThumbnail.Dorf -> Res.drawable.favorite_windpark_dorf
 }
