@@ -1,4 +1,4 @@
-rootProject.name = "windklar"
+rootProject.name = "WindKlar"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
