@@ -552,7 +552,7 @@ function Main {
 
     $captured.Add((Capture-Page -Name "00-start" -OutputDirectory $OutputDir -Screen $screen -Scrollable $false))
 
-    Tap-Relative -Screen $screen -XRatio 0.82 -YRatio 0.105 -Label "Skip onboarding"
+    Tap-Relative -Screen $screen -XRatio 0.82 -YRatio 0.08 -Label "Skip onboarding"
     Write-Step "Wait ${PostOnboardingWaitSeconds}s for map and snapshot data"
     Start-Sleep -Seconds $PostOnboardingWaitSeconds
     $captured.Add((Capture-Page -Name "01-map" -OutputDirectory $OutputDir -Screen $screen -Scrollable $false))
