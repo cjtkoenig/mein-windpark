@@ -174,7 +174,7 @@ class MapViewModel(
                     zoomLevel = 8.0f,
                     selectedPark = null,
                     selectedPreviewData = null,
-                    previewSheetState = PreviewSheetState.Hidden,
+                    previewSheetState = PreviewSheetState.Peek,
                     showSearchOverlay = false,
                     searchQuery = ""
                 )
@@ -188,7 +188,7 @@ class MapViewModel(
                     zoomLevel = 10.0f,
                     selectedPark = null,
                     selectedPreviewData = null,
-                    previewSheetState = PreviewSheetState.Hidden,
+                    previewSheetState = PreviewSheetState.Peek,
                     showSearchOverlay = false,
                     searchQuery = ""
                 )
@@ -202,7 +202,7 @@ class MapViewModel(
                     zoomLevel = 12.0f,
                     selectedPark = null,
                     selectedPreviewData = null,
-                    previewSheetState = PreviewSheetState.Hidden,
+                    previewSheetState = PreviewSheetState.Peek,
                     showSearchOverlay = false,
                     searchQuery = ""
                 )

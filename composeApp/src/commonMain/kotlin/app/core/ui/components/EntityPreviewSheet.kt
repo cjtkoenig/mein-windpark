@@ -320,7 +320,9 @@ private fun SheetHeader(
                 }
             }
 
-            StatusPill(text = previewData.statusLabel)
+            if (previewData.type == EntityType.PARK) {
+                StatusPill(text = previewData.statusLabel)
+            }
         }
     }
 }
@@ -389,19 +391,8 @@ private fun MinimizedContent(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            StatusPill(text = previewData.statusLabel)
-            Surface(
-                shape = CircleShape,
-                color = WindklarTheme.colors.paleGreen,
-            ) {
-                Text(
-                    text = "Öffnen",
-                    color = WindklarTheme.colors.primaryGreen,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                )
+            if (previewData.type == EntityType.PARK) {
+                StatusPill(text = previewData.statusLabel)
             }
         }
     }
