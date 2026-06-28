@@ -111,9 +111,9 @@ fun MapScreen(
     val uiState = viewModel.uiState
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
-    
+
     val snackbarHostState = remember { SnackbarHostState() }
-    
+
     var showReportDialog by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
     var reportedLatitude by remember { mutableStateOf(0.0) }
@@ -199,7 +199,7 @@ fun MapScreen(
                         showFilterSheet = true
                     },
                 )
-                
+
                 // Search results dropdown overlay
                 if (uiState.showSearchOverlay) {
                     Surface(
@@ -298,10 +298,10 @@ fun MapScreen(
                                                 tint = WindklarTheme.colors.primaryGreen,
                                                 modifier = Modifier.size(18.dp)
                                             )
-                                            
+
                                              val title: String
                                              val subtitle: String
-                                             
+
                                              when (result) {
                                                  is MapSearchResult.State -> {
                                                      title = result.name
@@ -320,7 +320,7 @@ fun MapScreen(
                                                      subtitle = "${result.park.municipalityName} • ${formatWindInstallationCount(result.park.turbineCount)}"
                                                  }
                                              }
-                                             
+
                                              Column(modifier = Modifier.weight(1f)) {
                                                  Text(
                                                      text = title,
@@ -475,7 +475,7 @@ fun MapScreen(
                 onDismiss = { showFilterSheet = false },
             )
         }
-        
+
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
@@ -545,7 +545,7 @@ private fun SearchBar(
                 },
             placeholder = {
                 Text(
-                    text = "Windpark oder Gemeinde suchen...",
+                    text = "Windpark oder Ort suchen...",
                     color = MutedGreen,
                     fontSize = 15.sp,
                 )
