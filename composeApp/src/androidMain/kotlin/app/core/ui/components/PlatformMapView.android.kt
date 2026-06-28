@@ -149,6 +149,29 @@ actual fun PlatformMapView(
                     font-size: 11px;
                     box-shadow: 0 2px 8px rgba(0,0,0,0.25);
                 }
+                .windklar-turbine {
+                    width: 22px;
+                    height: 22px;
+                    color: $teal;
+                    background: rgba(255, 255, 255, 0.96);
+                    border: 1.5px solid $white;
+                    border-radius: 999px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 2px 7px rgba(0,0,0,0.28);
+                    box-sizing: border-box;
+                }
+                .windklar-turbine.selected {
+                    color: $error;
+                    transform: scale(1.12);
+                    box-shadow: 0 3px 9px rgba(0,0,0,0.34);
+                }
+                .windklar-turbine svg {
+                    width: 18px;
+                    height: 18px;
+                    display: block;
+                }
             </style>
         </head>
         <body>
@@ -167,6 +190,18 @@ actual fun PlatformMapView(
                 var pendingBaseTiles = 0;
                 var loadedBaseTiles = 0;
                 var failedBaseTiles = 0;
+
+                function notifyMove() {
+                    if (!map) return;
+                    var center = map.getCenter();
+                    var zoom = map.getZoom();
+                    var bounds = map.getBounds();
+                    var sw = bounds.getSouthWest();
+                    var ne = bounds.getNorthEast();
+                    if (window.AndroidBridge && window.AndroidBridge.onMapMoved) {
+                        window.AndroidBridge.onMapMoved(center.lat, center.lng, zoom, sw.lat, sw.lng, ne.lat, ne.lng);
+                    }
+                }
 
                 function showOfflineNotice() {
                     var message = document.getElementById('offline-message');
@@ -238,18 +273,8 @@ actual fun PlatformMapView(
 
                     markersGroup = L.layerGroup().addTo(map);
 
-                    function notifyMove() {
-                        var center = map.getCenter();
-                        var zoom = map.getZoom();
-                        var bounds = map.getBounds();
-                        var sw = bounds.getSouthWest();
-                        var ne = bounds.getNorthEast();
-                        if (window.AndroidBridge && window.AndroidBridge.onMapMoved) {
-                            window.AndroidBridge.onMapMoved(center.lat, center.lng, zoom, sw.lat, sw.lng, ne.lat, ne.lng);
-                        }
-                    }
-
                     map.on('moveend', notifyMove);
+                    setTimeout(notifyMove, 0);
 
                     // Immediately try loading markers since Leaflet is ready
                     updateParksFromAndroid();
@@ -268,6 +293,11 @@ actual fun PlatformMapView(
                         Math.abs(currentZoom - zoom) > 0.1) {
                         map.setView([lat, lon], zoom);
                     }
+                }
+
+                function turbineIconHtml(isSelected) {
+                    var selectedClass = isSelected ? ' selected' : '';
+                    return '<div class="windklar-turbine' + selectedClass + '" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M12 10.8V21"/><path d="M9.4 21H14.6"/><circle cx="12" cy="9" r="1.7" fill="currentColor" stroke="none"/><path d="M12 7.3V3.2"/><path d="M13.5 9.8L17.6 12.2"/><path d="M10.5 9.8L6.4 12.2"/></svg></div>';
                 }
 
                 function updateParks(markersJson, selectedId) {
@@ -296,14 +326,17 @@ actual fun PlatformMapView(
                             });
                             leafletMarkers.push(clusterMarker);
                         } else if (item.kind === 'Turbine') {
-                            var isSelected = item.parkId === selectedId;
+                            var isSelected = selectedId && item.parkId === selectedId;
                             var turbineIcon = L.divIcon({
                                 className: '',
-                                html: '<div style="width: 14px; height: 14px; background: ' + (isSelected ? '$error' : '$teal') + '; border: 1.5px solid $white; border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center;"><div style="width: 4px; height: 4px; background: $white; border-radius: 50%;"></div></div>',
-                                iconSize: [14, 14],
-                                iconAnchor: [7, 7]
+                                html: turbineIconHtml(isSelected),
+                                iconSize: [22, 22],
+                                iconAnchor: [11, 11]
                             });
-                            var turbineMarker = L.marker([item.latitude, item.longitude], { icon: turbineIcon });
+                            var turbineMarker = L.marker([item.latitude, item.longitude], {
+                                icon: turbineIcon,
+                                zIndexOffset: isSelected ? 700 : 200
+                            });
                             turbineMarker.on('click', function() {
                                 if (window.AndroidBridge && window.AndroidBridge.onParkClicked) {
                                     window.AndroidBridge.onParkClicked(item.parkId || item.id);
@@ -370,6 +403,7 @@ actual fun PlatformMapView(
                 window.onload = function() {
                     if (map) {
                         map.invalidateSize();
+                        setTimeout(notifyMove, 0);
                     }
                     if (window.AndroidBridge && window.AndroidBridge.onMapReady) {
                         window.AndroidBridge.onMapReady();
@@ -380,6 +414,7 @@ actual fun PlatformMapView(
                 var resizeObserver = new ResizeObserver(function() {
                     if (map) {
                         map.invalidateSize();
+                        setTimeout(notifyMove, 0);
                     }
                 });
                 resizeObserver.observe(document.getElementById('map'));

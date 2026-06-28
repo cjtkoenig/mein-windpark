@@ -6,10 +6,20 @@ import app.core.model.MapSearchEntry
 import app.core.model.WindPark
 import app.core.model.WindTurbine
 import app.data.repository.MapStartupSnapshot
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.floor
+import kotlin.math.ln
+import kotlin.math.pow
+import kotlin.math.sin
 
 private const val SearchResultLimit = 50
+internal const val TurbineMarkerMinZoom = 12.0f
+private const val TileSizePx = 256.0
+private const val FallbackViewportHeightPx = 1120.0
+private const val FallbackViewportWidthPx = 900.0
+private const val SmallClusterCollisionSpanPx = 16.0
 
 internal data class InitialMapData(
     val searchIndex: List<MapSearchIndexEntry>,
@@ -124,72 +134,121 @@ internal fun turbinesToMarkers(turbines: List<WindTurbine>): List<MapMarkerUiMod
     }
 
 internal fun markersForZoom(parks: List<WindPark>, zoom: Float): List<MapMarkerUiModel> {
-    val gridSize = when {
-        zoom < 6.5f -> 1.5
-        zoom < 7.5f -> 1.0
-        zoom < 8.5f -> 0.65
-        zoom < 9.5f -> 0.4
-        zoom < 10.25f -> 0.22
-        else -> null
+    if (parks.isEmpty()) {
+        return emptyList()
     }
 
-    if (gridSize == null) {
-        return parks.map { park ->
-            MapMarkerUiModel(
-                id = park.id,
-                latitude = park.latitude,
-                longitude = park.longitude,
-                kind = MapMarkerKind.Park,
-                count = 1,
-                parkId = park.id,
-            )
-        }
+    if (zoom >= TurbineMarkerMinZoom) {
+        return parks.map { it.toParkMarker() }
     }
 
-    return parks
-        .groupBy { park ->
-            val latBucket = floor(park.latitude / gridSize).toInt()
-            val lonBucket = floor(park.longitude / gridSize).toInt()
-            latBucket to lonBucket
-        }
-        .map { (bucket, bucketParks) ->
-            if (bucketParks.size == 1) {
-                val park = bucketParks.first()
+    val clusterRadius = clusterRadiusPixels(zoom)
+    val projectedBuckets = linkedMapOf<Pair<Int, Int>, MutableList<ProjectedPark>>()
+    parks.forEach { park ->
+        val projectedPark = park.projectForZoom(zoom)
+        val key = floor(projectedPark.x / clusterRadius).toInt() to
+            floor(projectedPark.y / clusterRadius).toInt()
+        projectedBuckets.getOrPut(key) { mutableListOf() }.add(projectedPark)
+    }
+
+    val zoomBand = (zoom * 10).toInt()
+    return projectedBuckets.flatMap { (bucket, bucketParks) ->
+        if (bucketParks.shouldClusterAt(zoom)) {
+            listOf(
                 MapMarkerUiModel(
-                    id = park.id,
-                    latitude = park.latitude,
-                    longitude = park.longitude,
-                    kind = MapMarkerKind.Park,
-                    count = 1,
-                    parkId = park.id,
-                )
-            } else {
-                MapMarkerUiModel(
-                    id = "cluster_${gridSize}_${bucket.first}_${bucket.second}",
-                    latitude = bucketParks.map { it.latitude }.average(),
-                    longitude = bucketParks.map { it.longitude }.average(),
+                    id = "cluster_${zoomBand}_${bucket.first}_${bucket.second}",
+                    latitude = bucketParks.map { it.park.latitude }.average(),
+                    longitude = bucketParks.map { it.park.longitude }.average(),
                     kind = MapMarkerKind.Cluster,
                     count = bucketParks.size,
                 )
-            }
+            )
+        } else {
+            bucketParks.map { it.park.toParkMarker() }
         }
+    }
 }
 
 internal fun fallbackBounds(centerLat: Double, centerLon: Double, zoom: Float): MapBounds {
-    val latSpan = when {
-        zoom > 16.0f -> 0.04
-        zoom > 15.0f -> 0.08
-        zoom > 14.0f -> 0.16
-        else -> 10.0
-    }
-    val lonSpan = latSpan * 1.5
+    val latSpan = fallbackVisibleLatitudeSpan(centerLat, zoom)
+    val lonSpan = fallbackVisibleLongitudeSpan(zoom)
     return MapBounds(
-        swLat = centerLat - latSpan,
-        swLon = centerLon - lonSpan,
-        neLat = centerLat + latSpan,
-        neLon = centerLon + lonSpan,
+        swLat = centerLat - latSpan / 2.0,
+        swLon = centerLon - lonSpan / 2.0,
+        neLat = centerLat + latSpan / 2.0,
+        neLon = centerLon + lonSpan / 2.0,
     )
 }
+
+internal fun fallbackVisibleLatitudeSpan(centerLat: Double, zoom: Float): Double {
+    val latitudeCorrection = cos(centerLat.coerceIn(-85.0, 85.0) * PI / 180.0)
+        .coerceAtLeast(0.25)
+    return (360.0 / mapScale(zoom) * FallbackViewportHeightPx * latitudeCorrection)
+        .coerceIn(0.003, 30.0)
+}
+
+private fun fallbackVisibleLongitudeSpan(zoom: Float): Double =
+    (360.0 / mapScale(zoom) * FallbackViewportWidthPx)
+        .coerceIn(0.003, 30.0)
+
+private data class ProjectedPark(
+    val park: WindPark,
+    val x: Double,
+    val y: Double,
+)
+
+private fun WindPark.toParkMarker() =
+    MapMarkerUiModel(
+        id = id,
+        latitude = latitude,
+        longitude = longitude,
+        kind = MapMarkerKind.Park,
+        count = 1,
+        parkId = id,
+    )
+
+private fun WindPark.projectForZoom(zoom: Float): ProjectedPark {
+    val scale = mapScale(zoom)
+    val latitudeRadians = latitude.coerceIn(-85.05112878, 85.05112878) * PI / 180.0
+    val sinLatitude = sin(latitudeRadians)
+    return ProjectedPark(
+        park = this,
+        x = (longitude + 180.0) / 360.0 * scale,
+        y = (0.5 - ln((1.0 + sinLatitude) / (1.0 - sinLatitude)) / (4.0 * PI)) * scale,
+    )
+}
+
+private fun List<ProjectedPark>.shouldClusterAt(zoom: Float): Boolean {
+    if (size < 2) return false
+    if (size >= denseClusterMinimum(zoom)) return true
+    return projectedSpanPx() <= SmallClusterCollisionSpanPx
+}
+
+private fun List<ProjectedPark>.projectedSpanPx(): Double {
+    val minX = minOf { it.x }
+    val maxX = maxOf { it.x }
+    val minY = minOf { it.y }
+    val maxY = maxOf { it.y }
+    return maxOf(maxX - minX, maxY - minY)
+}
+
+private fun denseClusterMinimum(zoom: Float): Int =
+    when {
+        zoom < 7.0f -> 4
+        zoom < 9.0f -> 5
+        else -> 6
+    }
+
+private fun clusterRadiusPixels(zoom: Float): Double =
+    when {
+        zoom < 7.0f -> 56.0
+        zoom < 9.0f -> 46.0
+        zoom < 11.0f -> 38.0
+        else -> 32.0
+    }
+
+private fun mapScale(zoom: Float): Double =
+    TileSizePx * 2.0.pow(zoom.toDouble())
 
 internal data class MapSearchIndexEntry(
     val result: MapSearchResult,

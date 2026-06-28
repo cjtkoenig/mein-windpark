@@ -24,10 +24,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
+import kotlin.math.pow
 
 import app.core.location.LocationProvider
 
 private const val SearchDebounceMillis = 80L
+private const val SelectedParkSearchZoom = 12.5f
+private const val SelectedParkFocusOffsetFraction = 0.22
 
 class MapViewModel(
     private val repository: MapRepository,
@@ -39,6 +42,7 @@ class MapViewModel(
 
     private var parkStatuses: Map<String, String> = emptyMap()
     private var viewportBounds: MapBounds? = null
+    private var viewportBoundsZoom: Float? = null
     private var filterJob: Job? = null
     private var searchJob: Job? = null
 
@@ -161,9 +165,9 @@ class MapViewModel(
 
     fun onSearchResultSelected(result: MapSearchResult) {
         searchJob?.cancel()
-        viewportBounds = null
         when (result) {
             is MapSearchResult.State -> {
+                clearViewportBounds()
                 uiState = uiState.copy(
                     mapCenterLat = result.latitude,
                     mapCenterLon = result.longitude,
@@ -177,6 +181,7 @@ class MapViewModel(
                 loadRegionMetrics(result.id, "state", result.name, null)
             }
             is MapSearchResult.District -> {
+                clearViewportBounds()
                 uiState = uiState.copy(
                     mapCenterLat = result.latitude,
                     mapCenterLon = result.longitude,
@@ -190,6 +195,7 @@ class MapViewModel(
                 loadRegionMetrics(result.id, "district", result.name, result.stateName)
             }
             is MapSearchResult.Municipality -> {
+                clearViewportBounds()
                 uiState = uiState.copy(
                     mapCenterLat = result.latitude,
                     mapCenterLon = result.longitude,
@@ -204,12 +210,13 @@ class MapViewModel(
             }
             is MapSearchResult.Park -> {
                 val park = result.park
-                val zoom = 12.0f
+                val zoom = SelectedParkSearchZoom
                 val focusedCenter = previewFocusedCenter(
                     latitude = park.latitude,
                     longitude = park.longitude,
                     zoom = zoom,
                 )
+                clearViewportBounds()
                 uiState = uiState.copy(
                     mapCenterLat = focusedCenter.first,
                     mapCenterLon = focusedCenter.second,
@@ -227,14 +234,17 @@ class MapViewModel(
     }
 
     fun onParkClicked(park: WindPark) {
+        val zoom = maxOf(uiState.zoomLevel, TurbineMarkerMinZoom)
         val focusedCenter = previewFocusedCenter(
             latitude = park.latitude,
             longitude = park.longitude,
-            zoom = uiState.zoomLevel,
+            zoom = zoom,
         )
+        clearViewportBounds()
         uiState = uiState.copy(
             mapCenterLat = focusedCenter.first,
             mapCenterLon = focusedCenter.second,
+            zoomLevel = zoom,
             selectedPark = park,
             previewSheetState = PreviewSheetState.Peek
         )
@@ -413,7 +423,7 @@ class MapViewModel(
     }
 
     fun centerOnLocation(lat: Double, lon: Double) {
-        viewportBounds = null
+        clearViewportBounds()
         uiState = uiState.copy(
             mapCenterLat = lat,
             mapCenterLon = lon,
@@ -445,13 +455,13 @@ class MapViewModel(
     }
 
     fun onZoomChanged(zoom: Float) {
-        viewportBounds = null
+        clearViewportBounds()
         uiState = uiState.copy(zoomLevel = zoom.coerceIn(5.0f, 18.0f))
         applyFilters()
     }
 
     fun onClusterClicked(lat: Double, lon: Double) {
-        viewportBounds = null
+        clearViewportBounds()
         uiState = uiState.copy(
             mapCenterLat = lat,
             mapCenterLon = lon,
@@ -464,7 +474,7 @@ class MapViewModel(
     }
 
     fun onMapMoved(lat: Double, lon: Double, zoom: Float) {
-        viewportBounds = null
+        clearViewportBounds()
         if (abs(uiState.mapCenterLat - lat) > 0.0001 || 
             abs(uiState.mapCenterLon - lon) > 0.0001 || 
             abs(uiState.zoomLevel - zoom) > 0.1) {
@@ -486,6 +496,7 @@ class MapViewModel(
         neLat: Double,
         neLon: Double,
     ) {
+        val nextZoom = zoom.coerceIn(5.0f, 18.0f)
         val nextBounds = MapBounds(
             swLat = minOf(swLat, neLat),
             swLon = swLon,
@@ -494,6 +505,7 @@ class MapViewModel(
         )
         val boundsChanged = viewportBounds?.isCloseTo(nextBounds) != true
         viewportBounds = nextBounds
+        viewportBoundsZoom = nextZoom
 
         if (boundsChanged ||
             abs(uiState.mapCenterLat - lat) > 0.0001 ||
@@ -503,7 +515,7 @@ class MapViewModel(
             uiState = uiState.copy(
                 mapCenterLat = lat,
                 mapCenterLon = lon,
-                zoomLevel = zoom.coerceIn(5.0f, 18.0f)
+                zoomLevel = nextZoom
             )
             applyFilters()
         }
@@ -537,7 +549,7 @@ class MapViewModel(
         val currentFilters = snapshot.filters
         val currentStatuses = parkStatuses
         val bounds = viewportBounds
-        val turbineBounds = bounds ?: fallbackBounds(snapshot.mapCenterLat, snapshot.mapCenterLon, snapshot.zoomLevel)
+        val markerBounds = bounds ?: fallbackBounds(snapshot.mapCenterLat, snapshot.mapCenterLon, snapshot.zoomLevel)
 
         filterJob = viewModelScope.launch {
             try {
@@ -546,16 +558,16 @@ class MapViewModel(
                     val rawParks = applyMapFilters(snapshot.parks, currentStatuses, currentFilters)
                     filterParksInBounds(
                         rawParks,
-                        bounds,
+                        markerBounds,
                     )
                 }
 
-                val markers = if (snapshot.zoomLevel > 14.0f) {
+                val markers = if (snapshot.zoomLevel >= TurbineMarkerMinZoom) {
                     val turbines = repository.getWindTurbinesInBounds(
-                        swLat = turbineBounds.swLat,
-                        swLon = turbineBounds.swLon,
-                        neLat = turbineBounds.neLat,
-                        neLon = turbineBounds.neLon,
+                        swLat = markerBounds.swLat,
+                        swLon = markerBounds.swLon,
+                        neLat = markerBounds.neLat,
+                        neLon = markerBounds.neLon,
                     )
                     withContext(Dispatchers.Default) {
                         val filteredTurbines = filterTurbines(turbines, currentFilters)
@@ -580,6 +592,33 @@ class MapViewModel(
                 )
             }
         }
+    }
+
+    private fun previewFocusedCenter(
+        latitude: Double,
+        longitude: Double,
+        zoom: Float,
+    ): Pair<Double, Double> {
+        val latSpan = focusedVisibleLatitudeSpan(latitude, zoom)
+        return latitude - (latSpan * SelectedParkFocusOffsetFraction) to longitude
+    }
+
+    private fun focusedVisibleLatitudeSpan(latitude: Double, zoom: Float): Double {
+        val bounds = viewportBounds
+        val boundsZoom = viewportBoundsZoom
+        if (bounds != null && boundsZoom != null) {
+            val currentSpan = bounds.neLat - bounds.swLat
+            if (currentSpan > 0.0) {
+                return (currentSpan * 2.0.pow((boundsZoom - zoom).toDouble()))
+                    .coerceIn(0.003, 30.0)
+            }
+        }
+        return fallbackVisibleLatitudeSpan(latitude, zoom)
+    }
+
+    private fun clearViewportBounds() {
+        viewportBounds = null
+        viewportBoundsZoom = null
     }
 
 }
@@ -613,25 +652,3 @@ private fun formatStatusLabel(status: String): String {
         else -> status
     }
 }
-
-private fun previewFocusedCenter(
-    latitude: Double,
-    longitude: Double,
-    zoom: Float,
-): Pair<Double, Double> {
-    val latSpan = visibleLatitudeSpan(zoom)
-    return latitude - (latSpan * 0.16) to longitude
-}
-
-private fun visibleLatitudeSpan(zoom: Float): Double =
-    when {
-        zoom >= 16.0f -> 0.04
-        zoom >= 15.0f -> 0.08
-        zoom >= 14.0f -> 0.16
-        zoom >= 13.0f -> 0.32
-        zoom >= 12.0f -> 0.64
-        zoom >= 11.0f -> 1.2
-        zoom >= 10.0f -> 2.4
-        zoom >= 9.0f -> 4.8
-        else -> 10.0
-    }
