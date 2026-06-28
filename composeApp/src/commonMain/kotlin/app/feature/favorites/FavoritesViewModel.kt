@@ -16,9 +16,11 @@ class FavoritesViewModel(private val repository: SavedPlacesRepository) : ViewMo
 
     private var hasLoaded = false
     private var isLoading = false
+    private var loadRequestId = 0
 
     fun loadData(force: Boolean = false) {
-        if (isLoading || (!force && hasLoaded)) return
+        if (!force && hasLoaded) return
+        val requestId = ++loadRequestId
         isLoading = true
         uiState = uiState.copy(isLoading = true)
         viewModelScope.launch {
@@ -88,21 +90,28 @@ class FavoritesViewModel(private val repository: SavedPlacesRepository) : ViewMo
                     )
                 }
 
-                uiState = FavoritesUiState(
-                    parks = favUiList,
-                    regions = favRegionUiList,
-                    recents = recentUiList,
-                    isLoading = false,
-                    hasLoaded = true,
-                )
-                hasLoaded = true
+                if (requestId == loadRequestId) {
+                    uiState = FavoritesUiState(
+                        parks = favUiList,
+                        regions = favRegionUiList,
+                        recents = recentUiList,
+                        isLoading = false,
+                        hasLoaded = true,
+                    )
+                    hasLoaded = true
+                }
             } catch (e: Throwable) {
-                uiState = uiState.copy(
-                    isLoading = false,
-                    hasLoaded = true,
-                )
+                if (requestId == loadRequestId) {
+                    uiState = uiState.copy(
+                        isLoading = false,
+                        hasLoaded = true,
+                    )
+                    hasLoaded = true
+                }
             } finally {
-                isLoading = false
+                if (requestId == loadRequestId) {
+                    isLoading = false
+                }
             }
         }
     }

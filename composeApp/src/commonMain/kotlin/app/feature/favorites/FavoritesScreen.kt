@@ -30,13 +30,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import windklar.composeapp.generated.resources.Res
@@ -47,13 +44,11 @@ import windklar.composeapp.generated.resources.header_background_quiet
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import app.core.ui.components.WindklarHeader
-import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.LaunchedEffect
 import app.core.ui.theme.WindklarTheme
 
 private val ScreenBackground @Composable get() = WindklarTheme.colors.screenBackground
 private val PrimaryGreen @Composable get() = WindklarTheme.colors.primaryGreen
-private val HeaderEndGreen @Composable get() = WindklarTheme.colors.headerEndGreen
 private val DarkGreen @Composable get() = WindklarTheme.colors.darkGreen
 private val MutedGreen @Composable get() = WindklarTheme.colors.mutedGreen
 private val PaleGreen @Composable get() = WindklarTheme.colors.paleGreen
@@ -69,7 +64,7 @@ fun FavoritesScreen(
     val uiState = viewModel.uiState
 
     LaunchedEffect(viewModel) {
-        viewModel.loadData()
+        viewModel.loadData(force = true)
     }
 
     Column(

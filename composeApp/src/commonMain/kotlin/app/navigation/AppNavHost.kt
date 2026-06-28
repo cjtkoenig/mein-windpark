@@ -128,6 +128,9 @@ fun AppNavHost(appGraph: AppGraph) {
                                 if (isSelected && route is Route.Map) {
                                     mapViewModel.minimizePreview()
                                 }
+                                if (route is Route.Favorites) {
+                                    favoritesViewModel.loadData(force = true)
+                                }
                                 routeHistory = emptyList()
                                 currentRoute = route
                             },
