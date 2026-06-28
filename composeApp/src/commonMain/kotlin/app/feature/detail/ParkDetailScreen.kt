@@ -1,6 +1,5 @@
 package app.feature.detail
 
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -317,7 +316,6 @@ private fun TurbinesSection(turbines: List<WindTurbine>) {
     var turbinesExpanded by rememberSaveable { mutableStateOf(false) }
 
     Column(
-        modifier = Modifier.animateContentSize(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
