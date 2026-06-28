@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Eco
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Info
@@ -62,6 +63,9 @@ import windklar.composeapp.generated.resources.header_background_quiet
 
 
 
+private val PrimaryGreen @Composable get() = WindklarTheme.colors.primaryGreen
+private val PaleGreen @Composable get() = WindklarTheme.colors.paleGreen
+
 @Composable
 fun RegionDetailScreen(
     viewModel: RegionDetailViewModel,
@@ -69,6 +73,7 @@ fun RegionDetailScreen(
     onParkSelected: (String) -> Unit,
     onRegionSelected: (String, String) -> Unit,
     onNavigateToCountry: () -> Unit,
+    onShowRegionOnMap: () -> Unit,
 ) {
     val uiState = viewModel.uiState
 
@@ -191,7 +196,8 @@ fun RegionDetailScreen(
                 installedCapacityMw = uiState.installedCapacityMw,
                 shareOfStateCapacity = uiState.shareOfStateCapacity,
                 shareOfNationalCapacity = uiState.shareOfNationalCapacity,
-                parentStateName = uiState.parentStateName ?: uiState.regionName
+                parentStateName = uiState.parentStateName ?: uiState.regionName,
+                onShowOnMap = onShowRegionOnMap
             )
 
             val productionVal = "${formatGermanNumber(uiState.annualProductionGwh, 1)} GWh/Jahr"
@@ -314,7 +320,8 @@ private fun RegionSummaryCard(
     installedCapacityMw: Double,
     shareOfStateCapacity: Float?,
     shareOfNationalCapacity: Float,
-    parentStateName: String
+    parentStateName: String,
+    onShowOnMap: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -421,6 +428,34 @@ private fun RegionSummaryCard(
                     color = WindklarTheme.colors.primaryGreen,
                     trackColor = WindklarTheme.colors.trackGreen
                 )
+            }
+            
+            Spacer(modifier = Modifier.height(2.dp))
+            
+            Surface(
+                onClick = onShowOnMap,
+                shape = RoundedCornerShape(12.dp),
+                color = PaleGreen,
+                contentColor = PrimaryGreen,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(vertical = 10.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Map,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Auf Karte zeigen",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

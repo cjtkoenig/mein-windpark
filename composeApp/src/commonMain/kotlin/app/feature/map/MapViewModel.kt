@@ -442,6 +442,68 @@ class MapViewModel(
         applyFilters()
     }
 
+    fun selectParkOnMap(parkId: String) {
+        val park = uiState.parks.firstOrNull { it.id == parkId } ?: return
+        onParkClicked(park)
+    }
+
+    fun selectRegionOnMap(type: String, id: String) {
+        viewModelScope.launch {
+            try {
+                val regionSummary = repository
+                    .getRegionSummaries(type)
+                    .firstOrNull { it.regionId == id } ?: return@launch
+                
+                val zoom = when (type.lowercase()) {
+                    "state" -> 8.0f
+                    "district" -> 10.0f
+                    "city" -> 12.0f
+                    else -> 10.0f
+                }
+                
+                clearViewportBounds()
+                uiState = uiState.copy(
+                    mapCenterLat = regionSummary.latitude,
+                    mapCenterLon = regionSummary.longitude,
+                    zoomLevel = zoom,
+                    selectedPark = null,
+                    selectedPreviewData = null,
+                    previewSheetState = PreviewSheetState.Peek,
+                    showSearchOverlay = false,
+                    searchQuery = ""
+                )
+                loadRegionMetrics(id, type, regionSummary.name, regionSummary.contextLabel)
+            } catch (e: Throwable) {
+                // Ignore
+            }
+        }
+    }
+
+    fun selectTurbineOnMap(parkId: String, turbineId: String) {
+        viewModelScope.launch {
+            try {
+                val park = uiState.parks.firstOrNull { it.id == parkId } ?: return@launch
+                val turbines = repository.getWindTurbinesForPark(parkId)
+                val turbine = turbines.firstOrNull { it.id == turbineId } ?: return@launch
+                
+                clearViewportBounds()
+                uiState = uiState.copy(
+                    mapCenterLat = turbine.latitude,
+                    mapCenterLon = turbine.longitude,
+                    zoomLevel = 15.0f,
+                    selectedPark = park,
+                    previewSheetState = PreviewSheetState.Peek,
+                    showSearchOverlay = false,
+                    searchQuery = ""
+                )
+                applyFilters()
+                loadParkPreviewData(park)
+            } catch (e: Throwable) {
+                // Ignore
+            }
+        }
+    }
+
     fun centerOnUserLocation(onPermissionRequired: () -> Unit, onError: (String) -> Unit) {
         if (!locationProvider.hasPermission()) {
             onPermissionRequired()

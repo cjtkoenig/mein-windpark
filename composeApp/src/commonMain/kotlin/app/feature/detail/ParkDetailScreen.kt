@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Eco
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
@@ -81,6 +82,8 @@ fun ParkDetailScreen(
     onBack: () -> Unit,
     onNavigateToRegion: (type: String, id: String) -> Unit,
     onNavigateToCountry: () -> Unit,
+    onShowParkOnMap: () -> Unit,
+    onShowTurbineOnMap: (String) -> Unit,
 ) {
     val uiState = viewModel.uiState
     var showParkDataHintDialog by rememberSaveable { mutableStateOf(false) }
@@ -182,7 +185,7 @@ fun ParkDetailScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             // Summary Card
-            SummaryCard(park = park)
+            SummaryCard(park = park, onShowOnMap = onShowParkOnMap)
 
             val prodMetric = uiState.metrics.firstOrNull { it.metricType == "annual_production" }
             val co2Metric = uiState.metrics.firstOrNull { it.metricType == "co2_savings" }
@@ -241,7 +244,7 @@ fun ParkDetailScreen(
             )
 
             // Individual Turbines List
-            TurbinesSection(turbines = uiState.turbines)
+            TurbinesSection(turbines = uiState.turbines, onShowTurbineOnMap = onShowTurbineOnMap)
 
             // Subtle Footer
             DataStatusFooter(dataQuality = park.dataQuality)
@@ -276,7 +279,8 @@ fun ParkDetailScreen(
 
 @Composable
 private fun SummaryCard(
-    park: app.core.model.WindPark
+    park: app.core.model.WindPark,
+    onShowOnMap: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -305,6 +309,32 @@ private fun SummaryCard(
                     Text(capStr, color = DarkGreen, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
+            Spacer(modifier = Modifier.height(4.dp))
+            Surface(
+                onClick = onShowOnMap,
+                shape = RoundedCornerShape(12.dp),
+                color = PaleGreen,
+                contentColor = PrimaryGreen,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(vertical = 10.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Map,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Auf Karte zeigen",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
         }
     }
 }
@@ -312,7 +342,10 @@ private fun SummaryCard(
 // Shared UI components used instead of local duplicates
 
 @Composable
-private fun TurbinesSection(turbines: List<WindTurbine>) {
+private fun TurbinesSection(
+    turbines: List<WindTurbine>,
+    onShowTurbineOnMap: (String) -> Unit
+) {
     var turbinesExpanded by rememberSaveable { mutableStateOf(false) }
 
     Column(
@@ -331,7 +364,7 @@ private fun TurbinesSection(turbines: List<WindTurbine>) {
         } else {
             val visibleTurbines = if (turbinesExpanded) turbines else turbines.take(3)
             visibleTurbines.forEach { turbine ->
-                TurbineCard(turbine = turbine)
+                TurbineCard(turbine = turbine, onShowOnMap = onShowTurbineOnMap)
             }
 
             if (turbines.size > 3) {
@@ -357,7 +390,10 @@ private fun TurbinesSection(turbines: List<WindTurbine>) {
 }
 
 @Composable
-private fun TurbineCard(turbine: WindTurbine) {
+private fun TurbineCard(
+    turbine: WindTurbine,
+    onShowOnMap: (String) -> Unit
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -382,6 +418,24 @@ private fun TurbineCard(turbine: WindTurbine) {
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(PaleGreen, CircleShape)
+                        .clickable { onShowOnMap(turbine.id) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Map,
+                        contentDescription = "Auf Karte zeigen",
+                        tint = PrimaryGreen,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                
                 Spacer(modifier = Modifier.width(8.dp))
                 StatusBadge(
                     text = turbine.status ?: "Unbekannt",

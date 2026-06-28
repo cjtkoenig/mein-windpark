@@ -231,6 +231,16 @@ fun AppNavHost(appGraph: AppGraph) {
                             navigateTo(Route.RegionDetail(type, id))
                         },
                         onNavigateToCountry = navigateToCountry,
+                        onShowParkOnMap = {
+                            mapViewModel.selectParkOnMap(route.parkId)
+                            routeHistory = emptyList()
+                            currentRoute = Route.Map
+                        },
+                        onShowTurbineOnMap = { turbineId ->
+                            mapViewModel.selectTurbineOnMap(route.parkId, turbineId)
+                            routeHistory = emptyList()
+                            currentRoute = Route.Map
+                        },
                     )
                 }
 
@@ -248,6 +258,11 @@ fun AppNavHost(appGraph: AppGraph) {
                             navigateTo(Route.RegionDetail(type, id))
                         },
                         onNavigateToCountry = navigateToCountry,
+                        onShowRegionOnMap = {
+                            mapViewModel.selectRegionOnMap(route.type, route.id)
+                            routeHistory = emptyList()
+                            currentRoute = Route.Map
+                        },
                     )
                 }
 
