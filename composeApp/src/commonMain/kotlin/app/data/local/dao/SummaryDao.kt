@@ -15,6 +15,8 @@ interface SummaryDao {
     suspend fun getMapStartupParks(favorites: Set<String>): Pair<List<WindPark>, Map<String, String>>
     suspend fun getAllMapSearchEntries(): List<MapSearchEntry>
     suspend fun getAllParkOperationalSummaries(): Map<String, ParkOperationalSummary>
+    suspend fun getParkOperationalSummary(parkId: String): ParkOperationalSummary?
+    suspend fun getParkOperationalSummariesByIds(parkIds: Collection<String>): Map<String, ParkOperationalSummary>
     suspend fun getRegionSummary(type: String, id: String): RegionSummary?
     suspend fun getRegionSummaries(type: String): List<RegionSummary>
     suspend fun getNationalStatsSummary(): NationalStatsSummary?

@@ -73,15 +73,17 @@ class SqlDelightWindParkRepository(
 
     override suspend fun getWindPark(id: String): WindPark? = withContext(Dispatchers.Default) {
         val entity = windParkDao.getById(id) ?: return@withContext null
-        val summary = getOperationalSummaryMap()[id]
+        val summary = summaryDao.getParkOperationalSummary(id)
         val isFav = favoriteDao.isFavorite(id)
         entity.toDomain(isFav, summary)
     }
 
     override suspend fun searchWindParks(query: String): List<WindPark> = withContext(Dispatchers.Default) {
         val favorites = favoriteDao.getFavoriteIds().toSet()
-        val summaries = getOperationalSummaryMap()
-        windParkDao.search(query)
+        val entities = windParkDao.search(query)
+        val parkIds = entities.map { it.id }
+        val summaries = summaryDao.getParkOperationalSummariesByIds(parkIds)
+        entities
             .filter { summaries[it.id]?.parkStatus != "Stillgelegt" }
             .map { it.toDomain(favorites.contains(it.id), summaries[it.id]) }
     }
@@ -89,7 +91,7 @@ class SqlDelightWindParkRepository(
     override suspend fun getFavoriteWindParks(): List<WindPark> = withContext(Dispatchers.Default) {
         val favorites = favoriteDao.getFavoriteIds()
         if (favorites.isEmpty()) return@withContext emptyList()
-        val summaries = getOperationalSummaryMap()
+        val summaries = summaryDao.getParkOperationalSummariesByIds(favorites)
         val entitiesMap = windParkDao.getByIds(favorites).associateBy { it.id }
         favorites.mapNotNull { id ->
             val summary = summaries[id]
@@ -153,7 +155,7 @@ class SqlDelightWindParkRepository(
         val favorites = favoriteDao.getFavoriteIds().toSet()
         val recentIds = recentWindParkDao.getRecentWindParkIds(limit)
         if (recentIds.isEmpty()) return@withContext emptyList()
-        val summaries = getOperationalSummaryMap()
+        val summaries = summaryDao.getParkOperationalSummariesByIds(recentIds)
         val entitiesMap = windParkDao.getByIds(recentIds).associateBy { it.id }
         recentIds.mapNotNull { id ->
             val summary = summaries[id]

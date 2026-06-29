@@ -75,6 +75,27 @@ class SqlDelightSummaryDao(
         }
     }
 
+    override suspend fun getParkOperationalSummary(parkId: String): ParkOperationalSummary? {
+        return database.summaryQueries.selectParkOperationalSummary(parkId).executeAsOneOrNull()?.let { row ->
+            ParkOperationalSummary(
+                parkStatus = row.park_status,
+                turbineCount = row.valid_turbine_count.toInt(),
+                capacityKw = row.valid_capacity_kw
+            )
+        }
+    }
+
+    override suspend fun getParkOperationalSummariesByIds(parkIds: Collection<String>): Map<String, ParkOperationalSummary> {
+        if (parkIds.isEmpty()) return emptyMap()
+        return database.summaryQueries.selectParkOperationalSummariesByIds(parkIds).executeAsList().associate { row ->
+            row.wind_park_id to ParkOperationalSummary(
+                parkStatus = row.park_status,
+                turbineCount = row.valid_turbine_count.toInt(),
+                capacityKw = row.valid_capacity_kw
+            )
+        }
+    }
+
     override suspend fun getRegionSummary(type: String, id: String): RegionSummary? {
         return database.summaryQueries.selectRegionSummary(type.lowercase(), id).executeAsOneOrNull()?.toDomain()
     }

@@ -101,6 +101,11 @@ SELECT *
 FROM park_operational_summary
 WHERE wind_park_id = ?;
 
+selectParkOperationalSummariesByIds:
+SELECT *
+FROM park_operational_summary
+WHERE wind_park_id IN ?;
+
 selectRegionSummaries:
 SELECT *
 FROM region_summary
