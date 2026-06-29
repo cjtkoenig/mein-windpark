@@ -86,6 +86,7 @@ enum class MapStatusFilter(val label: String) {
     All("Alle"),
     Active("Aktiv"),
     Planned("Geplant"),
+    Decommissioned("Stillgelegt"),
 }
 
 enum class MapParkSizeRange(val label: String) {

@@ -94,7 +94,6 @@ SELECT
 FROM wind_park
 JOIN park_operational_summary
     ON park_operational_summary.wind_park_id = wind_park.id
-WHERE park_operational_summary.park_status != 'Stillgelegt'
 ORDER BY wind_park.name;
 
 selectParkOperationalSummary:

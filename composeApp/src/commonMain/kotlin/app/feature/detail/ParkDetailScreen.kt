@@ -437,10 +437,22 @@ private fun TurbineCard(
                 }
                 
                 Spacer(modifier = Modifier.width(8.dp))
+                val statusLower = turbine.status?.lowercase() ?: ""
+                val (badgeBg, badgeFg) = when {
+                    statusLower == "in betrieb" || statusLower.contains("aktiv") || statusLower.contains("betrieb") -> {
+                        WindklarTheme.colors.paleGreen to WindklarTheme.colors.primaryGreen
+                    }
+                    statusLower.contains("stillgelegt") -> {
+                        WindklarTheme.colors.qualityMissingContainer to WindklarTheme.colors.qualityMissingContent
+                    }
+                    else -> {
+                        WindklarTheme.colors.statusOrangeLight to WindklarTheme.colors.statusOrangeDark
+                    }
+                }
                 StatusBadge(
                     text = turbine.status ?: "Unbekannt",
-                    containerColor = if (turbine.status?.lowercase() == "in betrieb") WindklarTheme.colors.paleGreen else WindklarTheme.colors.statusOrangeLight,
-                    contentColor = if (turbine.status?.lowercase() == "in betrieb") WindklarTheme.colors.primaryGreen else WindklarTheme.colors.statusOrangeDark,
+                    containerColor = badgeBg,
+                    contentColor = badgeFg,
                 )
             }
 

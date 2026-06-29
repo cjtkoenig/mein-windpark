@@ -56,9 +56,22 @@ internal fun buildInitialMapData(
     zoom: Float,
 ): InitialMapData {
     val parkById = snapshot.parks.associateBy { it.id }
+    val existingSearchParkIds = snapshot.searchEntries.filter { it.resultType == "park" }.map { it.targetId }.toSet()
+    val decommissionedSearchEntries = snapshot.parks
+        .filter { park -> !existingSearchParkIds.contains(park.id) }
+        .map { park ->
+            MapSearchIndexEntry(
+                result = MapSearchResult.Park(park),
+                typeRank = 3,
+                id = park.id.normalizeForSearch(),
+                name = park.name.normalizeForSearch(),
+                haystack = "${park.name} ${park.municipalityName} ${park.districtName} ${park.stateName}".normalizeForSearch(),
+                sortName = park.name,
+            )
+        }
     val searchIndex = snapshot.searchEntries.mapNotNull { entry ->
         entry.toSearchIndexEntry(parkById)
-    }
+    } + decommissionedSearchEntries
     val filteredParks = applyMapFilters(
         parks = snapshot.parks,
         statuses = snapshot.parkStatuses,
@@ -314,6 +327,7 @@ private fun statusMatches(status: String, filters: MapFilterState): Boolean {
         MapStatusFilter.All -> true
         MapStatusFilter.Active -> status == "Aktiv"
         MapStatusFilter.Planned -> status == "Geplant" || status == "Im Bau"
+        MapStatusFilter.Decommissioned -> status == "Stillgelegt"
     }
 }
 

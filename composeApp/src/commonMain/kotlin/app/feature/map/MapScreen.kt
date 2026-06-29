@@ -758,9 +758,14 @@ private fun MapFilterSheet(
                     }
                 }
 
+                val statusOptions = if (filters.includeDecommissioned) {
+                    MapStatusFilter.values().toList()
+                } else {
+                    listOf(MapStatusFilter.All, MapStatusFilter.Active, MapStatusFilter.Planned)
+                }
                 FilterChoiceSection(
                     title = "Status",
-                    options = MapStatusFilter.values().toList(),
+                    options = statusOptions,
                     selected = filters.status,
                     label = { it.label },
                     onSelected = onStatusSelected,

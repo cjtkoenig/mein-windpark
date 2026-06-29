@@ -131,7 +131,6 @@ class SqlDelightWindParkRepository(
     override suspend fun getWindPark(id: String): WindPark? = withContext(Dispatchers.Default) {
         val entity = windParkDao.getById(id) ?: return@withContext null
         val summary = operationalSummaryMap[id]
-        if (summary?.parkStatus == "Stillgelegt") return@withContext null
         val isFav = favoriteDao.isFavorite(id)
         entity.toDomain(isFav, summary?.validStats)
     }

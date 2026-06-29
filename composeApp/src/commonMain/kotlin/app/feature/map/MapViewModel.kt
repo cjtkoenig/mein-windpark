@@ -117,8 +117,17 @@ class MapViewModel(
     }
 
     fun setIncludeDecommissioned(includeDecommissioned: Boolean) {
+        val currentStatus = uiState.filters.status
+        val newStatus = if (!includeDecommissioned && currentStatus == MapStatusFilter.Decommissioned) {
+            MapStatusFilter.All
+        } else {
+            currentStatus
+        }
         uiState = uiState.copy(
-            filters = uiState.filters.copy(includeDecommissioned = includeDecommissioned)
+            filters = uiState.filters.copy(
+                includeDecommissioned = includeDecommissioned,
+                status = newStatus
+            )
         )
         applyFilters()
     }
@@ -150,8 +159,18 @@ class MapViewModel(
                 }
 
                 if (uiState.searchQuery == newQuery) {
+                    val filteredResults = if (!uiState.filters.includeDecommissioned) {
+                        combinedResults.filter { result ->
+                            if (result is MapSearchResult.Park) {
+                                val status = parkStatuses[result.park.id]
+                                status != "Stillgelegt"
+                            } else true
+                        }
+                    } else {
+                        combinedResults
+                    }
                     uiState = uiState.copy(
-                        searchResults = combinedResults,
+                        searchResults = filteredResults,
                         showSearchOverlay = true
                     )
                 }
