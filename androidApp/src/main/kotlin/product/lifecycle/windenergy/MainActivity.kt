@@ -13,59 +13,80 @@ import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import app.data.local.source.SourceDatabase
 import app.data.local.user.UserDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         val sourceDatabaseName = "windklar_source.db"
         val userDatabaseName = "windklar_user.db"
-        try {
-            ensureSourceDatabaseFromAssets(applicationContext, sourceDatabaseName)
-        } catch (error: Throwable) {
-            setContentView(fatalStartupView(error.message ?: error.toString()))
-            return
-        }
 
-        val sourceDriver = AndroidSqliteDriver(
-            schema = SourceDatabase.Schema,
-            context = applicationContext,
-            name = sourceDatabaseName,
-            callback = object : AndroidSqliteDriver.Callback(SourceDatabase.Schema) {
-                override fun onConfigure(db: SupportSQLiteDatabase) {
-                    super.onConfigure(db)
-                    db.setForeignKeyConstraintsEnabled(true)
-                    db.enableWriteAheadLogging()
-                    runCatching {
-                        db.execSQL("PRAGMA synchronous = NORMAL")
-                        db.execSQL("PRAGMA temp_store = MEMORY")
-                        db.execSQL("PRAGMA cache_size = -64000")
-                    }
-                }
+        scope.launch {
+            val fatalError = withContext(Dispatchers.IO) {
+                runCatching {
+                    ensureSourceDatabaseFromAssets(applicationContext, sourceDatabaseName)
+                }.exceptionOrNull()
             }
-        )
-        val userDriver = AndroidSqliteDriver(
-            schema = UserDatabase.Schema,
-            context = applicationContext,
-            name = userDatabaseName,
-            callback = object : AndroidSqliteDriver.Callback(UserDatabase.Schema) {
-                override fun onConfigure(db: SupportSQLiteDatabase) {
-                    super.onConfigure(db)
-                    runCatching {
-                        db.execSQL("PRAGMA synchronous = NORMAL")
-                        db.execSQL("PRAGMA temp_store = MEMORY")
-                    }
-                }
+
+            if (fatalError != null) {
+                setContentView(fatalStartupView(fatalError.message ?: fatalError.toString()))
+                return@launch
             }
-        )
-        val sourceDatabase = SourceDatabase(sourceDriver)
-        val userDatabase = UserDatabase(userDriver)
 
-        val locationProvider = app.core.location.AndroidLocationProvider(applicationContext)
+            val (sourceDatabase, userDatabase) = withContext(Dispatchers.IO) {
+                val sourceDriver = AndroidSqliteDriver(
+                    schema = SourceDatabase.Schema,
+                    context = applicationContext,
+                    name = sourceDatabaseName,
+                    callback = object : AndroidSqliteDriver.Callback(SourceDatabase.Schema) {
+                        override fun onConfigure(db: SupportSQLiteDatabase) {
+                            super.onConfigure(db)
+                            db.setForeignKeyConstraintsEnabled(true)
+                            db.enableWriteAheadLogging()
+                            runCatching {
+                                db.execSQL("PRAGMA synchronous = NORMAL")
+                                db.execSQL("PRAGMA temp_store = MEMORY")
+                                db.execSQL("PRAGMA cache_size = -64000")
+                            }
+                        }
+                    }
+                )
+                val userDriver = AndroidSqliteDriver(
+                    schema = UserDatabase.Schema,
+                    context = applicationContext,
+                    name = userDatabaseName,
+                    callback = object : AndroidSqliteDriver.Callback(UserDatabase.Schema) {
+                        override fun onConfigure(db: SupportSQLiteDatabase) {
+                            super.onConfigure(db)
+                            runCatching {
+                                db.execSQL("PRAGMA synchronous = NORMAL")
+                                db.execSQL("PRAGMA temp_store = MEMORY")
+                            }
+                        }
+                    }
+                )
+                Pair(SourceDatabase(sourceDriver), UserDatabase(userDriver))
+            }
 
-        setContent {
-            App(sourceDatabase, userDatabase, locationProvider)
+            val locationProvider = app.core.location.AndroidLocationProvider(applicationContext)
+
+            setContent {
+                App(sourceDatabase, userDatabase, locationProvider)
+            }
         }
     }
 
