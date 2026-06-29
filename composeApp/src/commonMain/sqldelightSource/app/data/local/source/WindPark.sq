@@ -111,3 +111,21 @@ SELECT *
 FROM wind_park
 WHERE id IN ?;
 
+selectWindParksByMunicipality:
+SELECT *
+FROM wind_park
+WHERE municipality_id = ?
+ORDER BY name;
+
+selectWindParksByDistrict:
+SELECT *
+FROM wind_park
+WHERE district_id = ?
+ORDER BY name;
+
+selectWindParksByState:
+SELECT *
+FROM wind_park
+WHERE state_id = ?
+ORDER BY name;
+

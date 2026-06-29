@@ -34,22 +34,12 @@ class RegionDetailViewModel(
         viewModelScope.launch {
             uiState = uiState.copy(isLoading = true)
 
-            val allParks = repository.getWindParks()
+            val regionParks = repository.getWindParksByRegion(regionType, regionId)
             val assumptions = repository.getSnapshotAssumptions()
             val attribution = repository.getSnapshotAttribution()
             val isFav = repository.isRegionFavorite(regionType, regionId)
 
             val newState = withContext(Dispatchers.Default) {
-                // Filter parks belonging to this region
-                val regionParks = allParks.filter { park ->
-                    when (regionType.lowercase()) {
-                        "city" -> park.municipalityId == regionId
-                        "district" -> park.districtId == regionId
-                        "state" -> park.stateId == regionId
-                        else -> false
-                    }
-                }
-
                 if (regionParks.isEmpty()) {
                     return@withContext RegionDetailUiState(
                         regionId = regionId,
@@ -114,13 +104,15 @@ class RegionDetailViewModel(
                 val installedCapacityKw = regionParks.sumOf { it.installedCapacityKw ?: 0L }
                 val installedCapacityMw = installedCapacityKw / 1000.0
 
-                val totalCapacityKw = allParks.sumOf { it.installedCapacityKw ?: 0L }
+                val nationalSummary = repository.getNationalStatsSummary()
+                val totalCapacityKw = nationalSummary?.installedCapacityKw ?: regionParks.sumOf { it.installedCapacityKw ?: 0L }
                 val totalCapacityMw = totalCapacityKw / 1000.0
                 val shareOfNationalCapacity = if (totalCapacityKw > 0) (installedCapacityKw.toDouble() / totalCapacityKw).toFloat() else 0f
 
                 val (shareOfStateCapacity, stateCapacityMw) = if (regionType.lowercase() == "city" || regionType.lowercase() == "district") {
-                    val stateParks = allParks.filter { it.stateId == firstPark.stateId }
-                    val stateCapKw = stateParks.sumOf { it.installedCapacityKw ?: 0L }
+                    val stateId = firstPark.stateId
+                    val stateSummary = repository.getRegionSummary("state", stateId)
+                    val stateCapKw = stateSummary?.installedCapacityKw ?: regionParks.sumOf { it.installedCapacityKw ?: 0L }
                     val stateCapMw = stateCapKw / 1000.0
                     val share = if (stateCapKw > 0) (installedCapacityKw.toDouble() / stateCapKw).toFloat() else 0f
                     Pair(share, stateCapMw)

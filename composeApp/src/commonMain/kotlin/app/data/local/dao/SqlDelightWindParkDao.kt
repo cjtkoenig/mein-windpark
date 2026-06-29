@@ -65,6 +65,18 @@ class SqlDelightWindParkDao(
         )
     }
 
+    override suspend fun getByMunicipality(municipalityId: String): List<WindParkEntity> {
+        return database.windParkQueries.selectWindParksByMunicipality(municipalityId).executeAsList().map { it.toEntity() }
+    }
+
+    override suspend fun getByDistrict(districtId: String): List<WindParkEntity> {
+        return database.windParkQueries.selectWindParksByDistrict(districtId).executeAsList().map { it.toEntity() }
+    }
+
+    override suspend fun getByState(stateId: String): List<WindParkEntity> {
+        return database.windParkQueries.selectWindParksByState(stateId).executeAsList().map { it.toEntity() }
+    }
+
     private fun Wind_park.toEntity() = WindParkEntity(
         id = id,
         name = name,

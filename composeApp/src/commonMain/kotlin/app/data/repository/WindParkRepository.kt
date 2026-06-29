@@ -30,6 +30,7 @@ interface MapRepository {
     suspend fun getWindTurbinesForPark(parkId: String): List<WindTurbine>
     suspend fun getWindTurbinesInBounds(swLat: Double, swLon: Double, neLat: Double, neLon: Double): List<WindTurbine>
     suspend fun getRegionSummaries(type: String): List<RegionSummary>
+    suspend fun getRegionSummary(type: String, id: String): RegionSummary?
 }
 
 interface StatsRepository {
@@ -73,11 +74,14 @@ interface ParkDetailRepository {
 
 interface RegionDetailRepository {
     suspend fun getWindParks(): List<WindPark>
+    suspend fun getWindParksByRegion(type: String, id: String): List<WindPark>
     suspend fun getMetricsForParks(parkIds: List<String>): List<Metric>
     suspend fun getSnapshotAssumptions(): List<SnapshotAssumption>
     suspend fun getSnapshotAttribution(): String
     suspend fun isRegionFavorite(type: String, id: String): Boolean
     suspend fun setRegionFavorite(type: String, id: String, isFavorite: Boolean)
+    suspend fun getRegionSummary(type: String, id: String): RegionSummary?
+    suspend fun getNationalStatsSummary(): NationalStatsSummary?
 }
 
 interface DataHintRepository {

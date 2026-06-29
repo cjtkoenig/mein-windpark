@@ -220,6 +220,24 @@ class SqlDelightWindParkRepository(
         summaryDao.getRegionSummaries(type)
     }
 
+    override suspend fun getWindParksByRegion(type: String, id: String): List<WindPark> = withContext(Dispatchers.Default) {
+        val favorites = favoriteDao.getFavoriteIds().toSet()
+        val summaries = getOperationalSummaryMap()
+        val entities = when (type.lowercase()) {
+            "city" -> windParkDao.getByMunicipality(id)
+            "district" -> windParkDao.getByDistrict(id)
+            "state" -> windParkDao.getByState(id)
+            else -> emptyList()
+        }
+        entities
+            .filter { summaries[it.id]?.parkStatus != "Stillgelegt" }
+            .map { it.toDomain(favorites.contains(it.id), summaries[it.id]) }
+    }
+
+    override suspend fun getRegionSummary(type: String, id: String): RegionSummary? = withContext(Dispatchers.Default) {
+        summaryDao.getRegionSummary(type, id)
+    }
+
     override suspend fun getNationalStatsSummary(): NationalStatsSummary? = withContext(Dispatchers.Default) {
         summaryDao.getNationalStatsSummary()
     }
