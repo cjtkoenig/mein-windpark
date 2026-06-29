@@ -145,11 +145,17 @@ class SqlDelightWindParkRepository(
     }
 
     override suspend fun getFavoriteWindParks(): List<WindPark> = withContext(Dispatchers.Default) {
-        val favorites = favoriteDao.getFavoriteIds().toSet()
+        val favorites = favoriteDao.getFavoriteIds()
+        if (favorites.isEmpty()) return@withContext emptyList()
         val summaries = operationalSummaryMap
-        windParkDao.getAll()
-            .filter { favorites.contains(it.id) && summaries[it.id]?.parkStatus != "Stillgelegt" }
-            .map { it.toDomain(true, summaries[it.id]?.validStats) }
+        favorites.mapNotNull { id ->
+            val summary = summaries[id]
+            if (summary?.parkStatus == "Stillgelegt") {
+                null
+            } else {
+                windParkDao.getById(id)?.toDomain(true, summary?.validStats)
+            }
+        }
     }
 
     override suspend fun isFavorite(parkId: String): Boolean = withContext(Dispatchers.Default) {

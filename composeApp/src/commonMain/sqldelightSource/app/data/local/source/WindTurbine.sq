@@ -44,8 +44,7 @@ selectWindTurbinesInBounds:
 SELECT *
 FROM wind_turbine
 WHERE latitude BETWEEN :swLat AND :neLat
-  AND longitude BETWEEN :swLon AND :neLon
-ORDER BY name;
+  AND longitude BETWEEN :swLon AND :neLon;
 
 countActiveWindTurbines:
 SELECT COUNT(*)
