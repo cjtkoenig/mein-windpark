@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import app.core.util.formatGermanNumber
 import kotlinx.coroutines.Job
+import app.core.ui.components.formatDataQuality
 
 class StatsViewModel(private val repository: StatsRepository) : ViewModel() {
     var uiState by mutableStateOf(StatsUiState())
@@ -715,7 +716,7 @@ class StatsViewModel(private val repository: StatsRepository) : ViewModel() {
                             RankingDetailLine("Windanlagen", formatGermanNumber(park.turbineCount)),
                             RankingDetailLine("Leistung", "${formatGermanNumber(capacityMw, 1)} MW"),
                             RankingDetailLine("Gemeinde", park.municipalityName),
-                            RankingDetailLine("Datenqualität", formatDataQualityLabel(park.dataQuality)),
+                            RankingDetailLine("Datenqualität", formatDataQuality(park.dataQuality)),
                         )
                     )
                 }
@@ -777,13 +778,4 @@ class StatsViewModel(private val repository: StatsRepository) : ViewModel() {
         }
     }
 
-    private fun formatDataQualityLabel(quality: String): String = when (quality.lowercase()) {
-        "official" -> "Offiziell"
-        "measured" -> "Gemessen"
-        "derived" -> "Abgeleitet"
-        "estimated" -> "Geschätzt"
-        "simulated" -> "Simuliert"
-        "missing" -> "Fehlend"
-        else -> quality
-    }
 }
