@@ -813,6 +813,10 @@ private fun CapacityClassChart(values: List<CapacityClassStat>) {
             ) {
                 val slotWidth = size.width / values.size.coerceAtLeast(1)
                 val barWidth = slotWidth * 0.58f
+                val cornerRadiusPx = 7.dp.toPx()
+                val cornerRadius = CornerRadius(cornerRadiusPx, cornerRadiusPx)
+                val stroke = Stroke(width = 1.dp.toPx())
+
                 values.forEachIndexed { index, value ->
                     val height = value.share.coerceIn(0f, 1f) * size.height
                     val left = index * slotWidth + (slotWidth - barWidth) / 2f
@@ -825,14 +829,14 @@ private fun CapacityClassChart(values: List<CapacityClassStat>) {
                         },
                         topLeft = Offset(left, size.height - height),
                         size = Size(barWidth, height),
-                        cornerRadius = CornerRadius(7.dp.toPx(), 7.dp.toPx()),
+                        cornerRadius = cornerRadius,
                     )
                     drawRoundRect(
                         color = trackGreen,
                         topLeft = Offset(left, 0f),
                         size = Size(barWidth, size.height),
-                        cornerRadius = CornerRadius(7.dp.toPx(), 7.dp.toPx()),
-                        style = Stroke(width = 1.dp.toPx()),
+                        cornerRadius = cornerRadius,
+                        style = stroke,
                     )
                 }
             }

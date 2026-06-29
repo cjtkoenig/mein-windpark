@@ -316,6 +316,9 @@ private fun HistogramChart(entries: List<ImpactBarEntry>, accentLast: Boolean = 
             ) {
                 val slotWidth = size.width / entries.size.coerceAtLeast(1)
                 val barWidth = slotWidth * 0.58f
+                val cornerRadiusPx = 6.dp.toPx()
+                val cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx, cornerRadiusPx)
+
                 entries.forEachIndexed { index, value ->
                     val height = value.ratio.coerceIn(0f, 1f) * size.height
                     val left = index * slotWidth + (slotWidth - barWidth) / 2f
@@ -324,7 +327,7 @@ private fun HistogramChart(entries: List<ImpactBarEntry>, accentLast: Boolean = 
                         color = if (isLast) accentGreen else primaryGreen.copy(alpha = 0.86f),
                         topLeft = Offset(left, size.height - height),
                         size = Size(barWidth, height),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx(), 6.dp.toPx()),
+                        cornerRadius = cornerRadius,
                     )
                 }
             }
