@@ -15,6 +15,8 @@ import app.data.local.entity.SnapshotMetadata
 import app.data.local.entity.WindParkEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -40,13 +42,15 @@ class SqlDelightWindParkRepository(
         const val ONBOARDING_COMPLETED_KEY = "onboarding_completed"
     }
 
+    private val snapshotMutex = Mutex()
     private var cachedSnapshotInfo: SnapshotInfo? = null
     private var hasCachedSnapshotInfo = false
     private var cachedAssumptions: List<SnapshotAssumption>? = null
 
+    private val summaryMutex = Mutex()
     private var cachedOperationalSummaryMap: Map<String, ParkOperationalSummary>? = null
-    private suspend fun getOperationalSummaryMap(): Map<String, ParkOperationalSummary> {
-        return cachedOperationalSummaryMap ?: summaryDao.getAllParkOperationalSummaries().also {
+    private suspend fun getOperationalSummaryMap(): Map<String, ParkOperationalSummary> = summaryMutex.withLock {
+        cachedOperationalSummaryMap ?: summaryDao.getAllParkOperationalSummaries().also {
             cachedOperationalSummaryMap = it
         }
     }
@@ -289,27 +293,29 @@ class SqlDelightWindParkRepository(
     }
 
     override suspend fun getSnapshotInfo(): SnapshotInfo? = withContext(Dispatchers.Default) {
-        if (hasCachedSnapshotInfo) return@withContext cachedSnapshotInfo
-        val metadata = snapshotMetadataDao.getLatest()
-        val limitations = metadata?.limitations
-            ?.takeIf { it.isNotBlank() }
-            ?.split("\n")
-            ?: emptyList()
-        val info = metadata?.let {
-            SnapshotInfo(
-                snapshotId = it.snapshotId,
-                sourceName = it.sourceName,
-                attribution = it.attribution,
-                mastrExportDate = it.mastrExportDate,
-                processedAt = it.processedAt,
-                pipelineVersion = it.pipelineVersion,
-                limitations = limitations,
-                isLocalSnapshot = true,
-            )
+        snapshotMutex.withLock {
+            if (hasCachedSnapshotInfo) return@withLock cachedSnapshotInfo
+            val metadata = snapshotMetadataDao.getLatest()
+            val limitations = metadata?.limitations
+                ?.takeIf { it.isNotBlank() }
+                ?.split("\n")
+                ?: emptyList()
+            val info = metadata?.let {
+                SnapshotInfo(
+                    snapshotId = it.snapshotId,
+                    sourceName = it.sourceName,
+                    attribution = it.attribution,
+                    mastrExportDate = it.mastrExportDate,
+                    processedAt = it.processedAt,
+                    pipelineVersion = it.pipelineVersion,
+                    limitations = limitations,
+                    isLocalSnapshot = true,
+                )
+            }
+            cachedSnapshotInfo = info
+            hasCachedSnapshotInfo = true
+            info
         }
-        cachedSnapshotInfo = info
-        hasCachedSnapshotInfo = true
-        info
     }
 
     override suspend fun getDataHints(): List<DataHint> = withContext(Dispatchers.Default) {
@@ -329,24 +335,26 @@ class SqlDelightWindParkRepository(
     }
 
     override suspend fun getSnapshotAssumptions(): List<SnapshotAssumption> = withContext(Dispatchers.Default) {
-        cachedAssumptions?.let { return@withContext it }
-        val raw = snapshotMetadataDao.getLatest()?.assumptionsJson ?: return@withContext emptyList()
-        val parsed = runCatching {
-            json.decodeFromString<List<SnapshotAssumptionDto>>(raw).map { assumption ->
-                SnapshotAssumption(
-                    id = assumption.id,
-                    label = assumption.label,
-                    value = assumption.value,
-                    unit = assumption.unit,
-                    sourceName = assumption.sourceName,
-                    sourceUrl = assumption.sourceUrl,
-                    sourceDate = assumption.sourceDate,
-                    calculationNote = assumption.calculationNote,
-                )
-            }
-        }.getOrDefault(emptyList())
-        cachedAssumptions = parsed
-        parsed
+        snapshotMutex.withLock {
+            cachedAssumptions?.let { return@withLock it }
+            val raw = snapshotMetadataDao.getLatest()?.assumptionsJson ?: return@withLock emptyList()
+            val parsed = runCatching {
+                json.decodeFromString<List<SnapshotAssumptionDto>>(raw).map { assumption ->
+                    SnapshotAssumption(
+                        id = assumption.id,
+                        label = assumption.label,
+                        value = assumption.value,
+                        unit = assumption.unit,
+                        sourceName = assumption.sourceName,
+                        sourceUrl = assumption.sourceUrl,
+                        sourceDate = assumption.sourceDate,
+                        calculationNote = assumption.calculationNote,
+                    )
+                }
+            }.getOrDefault(emptyList())
+            cachedAssumptions = parsed
+            parsed
+        }
     }
 
     override suspend fun getAllMetrics(): List<Metric> = withContext(Dispatchers.Default) {
