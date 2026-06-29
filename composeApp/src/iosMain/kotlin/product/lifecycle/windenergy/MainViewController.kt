@@ -1,4 +1,4 @@
-@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
+@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)
 
 package product.lifecycle.windenergy
 
@@ -23,6 +23,9 @@ import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
 import platform.UIKit.UIViewController
+import platform.Foundation.NSString
+import platform.Foundation.NSUTF8StringEncoding
+import platform.Foundation.create
 
 fun MainViewController(): UIViewController {
     try {
@@ -74,18 +77,9 @@ private fun ensureSourceDatabaseFromBundle(databaseName: String) {
 }
 
 private fun readBundledSnapshotChecksum(): String? {
-    val tempName = "windklar_source_bundle_check.db"
-    val tempPath = databasePath(tempName)
-    removeDatabaseFiles(tempName)
-    val bundlePath = NSBundle.mainBundle.pathForResource("windklar_source_seed", "db")
-        ?: error("windklar_source_seed.db fehlt im iOS-App-Bundle.")
-    val copied = NSFileManager.defaultManager.copyItemAtPath(bundlePath, tempPath, null)
-    check(copied) { "Temporäre Stammdatenbank konnte nicht kopiert werden." }
-    return try {
-        readSourceChecksum(tempName)
-    } finally {
-        removeDatabaseFiles(tempName)
-    }
+    val bundlePath = NSBundle.mainBundle.pathForResource("windklar_source_seed", "sha256")
+        ?: return null
+    return NSString.create(contentsOfFile = bundlePath, encoding = NSUTF8StringEncoding, error = null)?.toString()?.trim()
 }
 
 private fun readSourceChecksum(databaseName: String): String? = runCatching {
