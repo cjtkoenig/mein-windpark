@@ -13,12 +13,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import app.cash.sqldelight.db.QueryResult
+import app.cash.sqldelight.db.SqlSchema
 import app.cash.sqldelight.driver.native.NativeSqliteDriver
 import app.core.ui.theme.WindklarTheme
 import app.data.local.source.SourceDatabase
 import app.data.local.user.UserDatabase
+import co.touchlab.sqliter.SynchronousFlag
+import platform.Foundation.NSApplicationSupportDirectory
 import platform.Foundation.NSBundle
-import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
@@ -31,6 +34,7 @@ fun MainViewController(): UIViewController {
     try {
         ensureSourceDatabaseFromBundle(SOURCE_DATABASE_NAME)
     } catch (error: Throwable) {
+        println("MainViewController ERROR: Failed to prepare source database: ${error.message}")
         return ComposeUIViewController {
             WindklarTheme {
                 FatalStartupError(error.message ?: error.toString())
@@ -38,10 +42,8 @@ fun MainViewController(): UIViewController {
         }
     }
 
-    val sourceDriver = NativeSqliteDriver(SourceDatabase.Schema, SOURCE_DATABASE_NAME)
-    applyPragmas(sourceDriver, "source")
-    val userDriver = NativeSqliteDriver(UserDatabase.Schema, USER_DATABASE_NAME)
-    applyPragmas(userDriver, "user")
+    val sourceDriver = configuredNativeDriver(SourceDatabase.Schema, SOURCE_DATABASE_NAME)
+    val userDriver = configuredNativeDriver(UserDatabase.Schema, USER_DATABASE_NAME)
     val sourceDatabase = SourceDatabase(sourceDriver)
     val userDatabase = UserDatabase(userDriver)
     val locationProvider = app.core.location.IosLocationProvider()
@@ -64,15 +66,15 @@ private fun ensureSourceDatabaseFromBundle(databaseName: String) {
     }
 
     println("MainViewController: Replacing source database ($installedChecksum -> $bundledChecksum).")
-    removeDatabaseFiles(databaseName)
+    removeDatabaseFiles(targetPath)
     val bundlePath = NSBundle.mainBundle.pathForResource("windklar_source_seed", "db")
         ?: error("windklar_source_seed.db fehlt im iOS-App-Bundle.")
     val copied = NSFileManager.defaultManager.copyItemAtPath(bundlePath, targetPath, null)
     check(copied) { "Stammdatenbank konnte nicht aus dem App-Bundle kopiert werden." }
 
-    val copiedChecksum = readSourceChecksum(databaseName)
+    val copiedChecksum = readSourceChecksumOrThrow(databaseName)
     check(copiedChecksum == bundledChecksum) {
-        "Kopierte Stammdatenbank ist unvollständig oder beschädigt."
+        "Kopierte Stammdatenbank ist unvollständig oder beschädigt. Erwartet: $bundledChecksum, gefunden: $copiedChecksum"
     }
 }
 
@@ -82,10 +84,14 @@ private fun readBundledSnapshotChecksum(): String? {
     return NSString.create(contentsOfFile = bundlePath, encoding = NSUTF8StringEncoding, error = null)?.toString()?.trim()
 }
 
-private fun readSourceChecksum(databaseName: String): String? = runCatching {
-    val driver = NativeSqliteDriver(SourceDatabase.Schema, databaseName)
+private fun readSourceChecksum(databasePath: String): String? = runCatching {
+    readSourceChecksumOrThrow(databasePath)
+}.getOrNull()
+
+private fun readSourceChecksumOrThrow(databasePath: String): String? {
+    val driver = configuredNativeDriver(SourceDatabase.Schema, databasePath)
     try {
-        SourceDatabase(driver)
+        return SourceDatabase(driver)
             .snapshotMetadataQueries
             .selectLatestSnapshot()
             .executeAsOneOrNull()
@@ -93,36 +99,47 @@ private fun readSourceChecksum(databaseName: String): String? = runCatching {
     } finally {
         driver.close()
     }
-}.getOrNull()
-
-private fun applyPragmas(driver: NativeSqliteDriver, label: String) {
-    try {
-        driver.execute(null, "PRAGMA foreign_keys = ON;", 0)
-        driver.execute(null, "PRAGMA journal_mode = WAL;", 0)
-        driver.execute(null, "PRAGMA synchronous = NORMAL;", 0)
-        driver.execute(null, "PRAGMA temp_store = MEMORY;", 0)
-        driver.execute(null, "PRAGMA cache_size = -64000;", 0)
-        println("MainViewController: Successfully applied SQLite PRAGMAs on iOS ($label).")
-    } catch (e: Exception) {
-        println("MainViewController ERROR: Failed to apply PRAGMAs on iOS ($label): ${e.message}")
-    }
 }
 
+private fun configuredNativeDriver(
+    schema: SqlSchema<QueryResult.Value<Unit>>,
+    databaseName: String,
+): NativeSqliteDriver =
+    NativeSqliteDriver(
+        schema = schema,
+        name = databaseName,
+        onConfiguration = { configuration ->
+            configuration.copy(
+                extendedConfig = configuration.extendedConfig.copy(
+                    foreignKeyConstraints = true,
+                    synchronousFlag = SynchronousFlag.NORMAL,
+                ),
+            )
+        },
+    )
+
 private fun databasePath(databaseName: String): String {
-    val documentsDirectory = NSSearchPathForDirectoriesInDomains(
-        NSDocumentDirectory,
+    val applicationSupportDirectory = NSSearchPathForDirectoriesInDomains(
+        NSApplicationSupportDirectory,
         NSUserDomainMask,
         true,
     ).first() as String
-    return "$documentsDirectory/$databaseName"
+    val databaseDirectory = "$applicationSupportDirectory/databases"
+    NSFileManager.defaultManager.createDirectoryAtPath(
+        databaseDirectory,
+        withIntermediateDirectories = true,
+        attributes = null,
+        error = null,
+    )
+    return "$databaseDirectory/$databaseName"
 }
 
-private fun removeDatabaseFiles(databaseName: String) {
+private fun removeDatabaseFiles(databasePath: String) {
     val fileManager = NSFileManager.defaultManager
     listOf(
-        databasePath(databaseName),
-        databasePath("$databaseName-wal"),
-        databasePath("$databaseName-shm"),
+        databasePath,
+        "$databasePath-wal",
+        "$databasePath-shm",
     ).forEach { path ->
         if (fileManager.fileExistsAtPath(path)) {
             fileManager.removeItemAtPath(path, null)
